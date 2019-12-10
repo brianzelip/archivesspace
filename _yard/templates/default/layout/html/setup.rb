@@ -1,13 +1,13 @@
 def menu_lists
-  super + [ { :type => 'schema', :title => 'Schema List', :search_title => 'Schema List' } ]
+  super + [{ type: 'schema', title: 'Schema List', search_title: 'Schema List' }]
 end
 
 def layout
-  if object.is_a? YARD::CodeObjects::SchemaObject
-      @nav_url = 'schema_list.html'
-  else
-      @nav_url = url_for_list(!(defined?(@file) && @file) || options.index ? 'class' : 'file')
-  end
+  @nav_url = if object.is_a? YARD::CodeObjects::SchemaObject
+               'schema_list.html'
+             else
+               url_for_list(!(defined?(@file) && @file) || options.index ? 'class' : 'file')
+             end
 
   @path =
     if !object || object.is_a?(String)
@@ -21,5 +21,4 @@ def layout
     end
 
   erb(:layout)
-
 end

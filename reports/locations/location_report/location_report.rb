@@ -23,9 +23,11 @@ class LocationReport < AbstractReport
   def fix_row(row)
     ReportUtils.get_location_coordinate(row)
     row[:accessions] = LocationAccessionsSubreport.new(
-      self, row[:id], false).get_content
+      self, row[:id], false
+    ).get_content
     row[:resources] = LocationResourcesSubreport.new(
-      self, row[:id], false).get_content
+      self, row[:id], false
+    ).get_content
     row.delete(:id)
   end
 
@@ -36,5 +38,4 @@ class LocationReport < AbstractReport
   def identifier_field
     :record_title
   end
-
 end

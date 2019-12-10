@@ -1,5 +1,4 @@
 class DateCalculator
-
   attr_reader :min_begin, :max_end, :min_begin_date, :max_end_date
 
   def initialize(obj, label = nil, calculate = true)
@@ -19,27 +18,26 @@ class DateCalculator
   def calculate!
     DB.open do |db|
       date_query = db[:date]
-                     .filter(Sequel.|(Sequel.~(:begin => nil), Sequel.~(:end => nil)))
-                     .select(:begin, :end)
-
+                   .filter(Sequel.|(Sequel.~(begin: nil), Sequel.~(end: nil)))
+                   .select(:begin, :end)
 
       if @root_object.is_a?(Resource)
         ao_ids = db[:archival_object]
-                  .filter(:root_record_id => @root_object.id)
-                  .select(:id)
+                 .filter(root_record_id: @root_object.id)
+                 .select(:id)
 
         date_query = date_query
-                      .filter(Sequel.|({:resource_id => @resource.id},
-                                       {:archival_object_id => ao_ids}))
+                     .filter(Sequel.|({ resource_id: @resource.id },
+                                      { archival_object_id: ao_ids }))
       else
         ao_ids = [@root_object.id]
         parent_ids = [@root_object.id]
 
-        while(true) do
+        loop do
           ids = db[:archival_object]
-                 .filter(:parent_id => parent_ids)
-                 .select(:id)
-                 .map{|row| row[:id]}
+                .filter(parent_id: parent_ids)
+                .select(:id)
+                .map { |row| row[:id] }
 
           if ids.empty?
             break
@@ -50,19 +48,19 @@ class DateCalculator
         end
 
         date_query = date_query
-                       .filter(:archival_object_id => ao_ids)
+                     .filter(archival_object_id: ao_ids)
       end
 
       if @label
         label_id = db[:enumeration_value]
-                     .filter(:enumeration_id => db[:enumeration].filter(:name => 'date_label').select(:id))
-                     .filter(:value => @label)
-                     .select(:id)
+                   .filter(enumeration_id: db[:enumeration].filter(name: 'date_label').select(:id))
+                   .filter(value: @label)
+                   .select(:id)
 
-        date_query = date_query.filter(:label_id => label_id)
+        date_query = date_query.filter(label_id: label_id)
       end
 
-      date_query.map {|row|
+      date_query.map { |row|
         begin_raw = row[:begin]
         end_raw = row[:end] || begin_raw
 
@@ -80,18 +78,18 @@ class DateCalculator
 
   def to_hash
     {
-      :object => {:uri => @root_object.uri,
-                  :jsonmodel_type => @root_object.class.my_jsonmodel.record_type,
-                  :title => @root_object.title || @root_object.display_string,
-                  :id => @root_object.id},
-      :resource => @resource ? {:uri => @resource.uri, :title => @resource.title} : nil,
+      object: { uri: @root_object.uri,
+                jsonmodel_type: @root_object.class.my_jsonmodel.record_type,
+                title: @root_object.title || @root_object.display_string,
+                id: @root_object.id },
+      resource: @resource ? { uri: @resource.uri, title: @resource.title } : nil,
 
-      :label => @label,
+      label: @label,
 
-      :min_begin_date => @min_begin_date,
-      :min_begin => @min_begin,
-      :max_end_date => @max_end_date,
-      :max_end => @max_end
+      min_begin_date: @min_begin_date,
+      min_begin: @min_begin,
+      max_end_date: @max_end_date,
+      max_end: @max_end
     }
   end
 
@@ -125,5 +123,4 @@ class DateCalculator
       raise "Not a date: #{raw_date}"
     end
   end
-
 end

@@ -1,16 +1,15 @@
 class SubjectSubreport < AbstractSubreport
+  register_subreport('subject', ['accession', 'archival_object',
+                                 'digital_object', 'digital_object_component', 'resource'])
 
-	register_subreport('subject', ['accession', 'archival_object',
-		'digital_object', 'digital_object_component', 'resource'])
+  def initialize(parent_custom_report, id)
+    super(parent_custom_report)
 
-	def initialize(parent_custom_report, id)
-		super(parent_custom_report)
+    @id_type = parent_custom_report.record_type
+    @id = id
+  end
 
-		@id_type = parent_custom_report.record_type
-		@id = id
-	end
-
-	def query_string
+  def query_string
     "select
       subject.title as term,
       group_concat(distinct term.term_type_id separator ', ') as type,
@@ -29,11 +28,10 @@ class SubjectSubreport < AbstractSubreport
   end
 
   def fix_row(row)
-		ReportUtils.get_enum_values(row, [:type, :source, :authority])
-	end
+    ReportUtils.get_enum_values(row, [:type, :source, :authority])
+   end
 
-	def self.field_name
-		'subject'
-	end
-
+  def self.field_name
+    'subject'
+  end
 end

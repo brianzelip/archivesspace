@@ -1,5 +1,4 @@
 class AccessionNamesSubreport < AbstractSubreport
-
   def initialize(parent_report, accession_id)
     super(parent_report)
     @accession_id = accession_id
@@ -17,7 +16,7 @@ class AccessionNamesSubreport < AbstractSubreport
       left outer join name_family
         on name_family.agent_family_id = linked_agents_rlshp.agent_family_id
       left outer join name_corporate_entity
-        on name_corporate_entity.agent_corporate_entity_id = 
+        on name_corporate_entity.agent_corporate_entity_id =
         linked_agents_rlshp.agent_corporate_entity_id
     where accession_id = #{db.literal(@accession_id)}"
   end
@@ -25,5 +24,4 @@ class AccessionNamesSubreport < AbstractSubreport
   def fix_row(row)
     ReportUtils.get_enum_values(row, [:function, :role])
   end
-
 end

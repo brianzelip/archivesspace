@@ -1,5 +1,4 @@
 class AccessionClassificationsSubreport < AbstractSubreport
-
   def initialize(parent_report, accession_id)
     super(parent_report)
     @accession_id = accession_id
@@ -19,5 +18,4 @@ class AccessionClassificationsSubreport < AbstractSubreport
           = classification_rlshp.classification_term_id
     where accession_id = #{db.literal(@accession_id)}"
   end
-
 end

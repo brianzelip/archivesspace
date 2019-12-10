@@ -4,21 +4,18 @@ class ContainerProfile < Sequel::Model(:container_profile)
 
   set_model_scope :global
 
-  define_relationship(:name => :top_container_profile,
-                      :contains_references_to_types => proc {[TopContainer]},
-                      :is_array => false)
-
+  define_relationship(name: :top_container_profile,
+                      contains_references_to_types: proc { [TopContainer] },
+                      is_array: false)
 
   def validate
     super
-    validates_unique(:name, :message => "container profile name not unique")
+    validates_unique(:name, message: 'container profile name not unique')
   end
-
 
   def display_string
     "#{name} [#{depth}d, #{height}h, #{width}w #{dimension_units}] extent measured by #{extent_dimension}"
   end
-
 
   def self.sequel_to_jsonmodel(objs, opts = {})
     jsons = super
@@ -29,5 +26,4 @@ class ContainerProfile < Sequel::Model(:container_profile)
 
     jsons
   end
-
 end

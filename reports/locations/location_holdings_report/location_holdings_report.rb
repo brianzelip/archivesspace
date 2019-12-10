@@ -1,5 +1,4 @@
 class LocationHoldingsReport < AbstractReport
-
   register_report(
     params: [['locations', 'LocationList', 'The locations of interest']]
   )
@@ -17,9 +16,7 @@ class LocationHoldingsReport < AbstractReport
       @repo_id = JSONModel.parse_reference(@repository_uri)[:id]
 
       RequestContext.open(repo_id: @repo_id) do
-        unless current_user.can?(:view_repository)
-          raise AccessDeniedException, 'User does not have access to view the requested repository'
-        end
+        raise AccessDeniedException, 'User does not have access to view the requested repository' unless current_user.can?(:view_repository)
       end
     elsif ASUtils.present?(params['location_end'])
       @end_location = Location.get_or_die(JSONModel(:location).id_for(params['location_end']['ref']))
@@ -99,7 +96,6 @@ class LocationHoldingsReport < AbstractReport
     determinant_property = nil
 
     properties_to_compare.each do |property|
-
       if start_location[property] && end_location[property]
 
         if start_location[property] == end_location[property]
@@ -119,7 +115,6 @@ class LocationHoldingsReport < AbstractReport
         # If we hit a property that only one location has a value for, we can't use it for a range calculation
         break
       end
-
     end
 
     if matching_properties.empty? && determinant_property.nil?
@@ -140,17 +135,16 @@ class LocationHoldingsReport < AbstractReport
     end
 
     filters.collect { |filter| "(#{filter})" }.join(' AND ')
-  end                
+  end
 
   def fix_row(row)
     ReportUtils.get_location_coordinate(row)
     row[:containers] = LocationContainersSubreport
-                                .new(self, row[:id]).get_content
+                       .new(self, row[:id]).get_content
     row.delete(:id)
   end
 
   def identifier_field
     :record_title
   end
-
 end

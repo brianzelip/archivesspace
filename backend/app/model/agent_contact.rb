@@ -6,5 +6,4 @@ class AgentContact < Sequel::Model(:agent_contact)
   include Telephones
 
   set_model_scope :global
-
 end

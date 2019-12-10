@@ -7,26 +7,22 @@ RSpec::Matchers.define :have_node do |path|
     end
   end
   failure_message do |actual|
-    prefix = ""
-    while path.slice(0) == '/'
-      prefix << path.slice!(0)
-    end
-    root_frags = path.split('/').reject{|f| f.empty?}
+    prefix = ''
+    prefix << path.slice!(0) while path.slice(0) == '/'
+    root_frags = path.split('/').reject { |f| f.empty? }
     node_frags = []
     matched_node = nil
-    while(matched_node.nil? && root_frags.length > 1)
+    while matched_node.nil? && root_frags.length > 1
       node_frags.unshift(root_frags.pop)
       node_set = actual.xpath(prefix + root_frags.join('/'))
-      unless node_set.empty?
-        matched_node = prefix + root_frags.join('/')
-      end
+      matched_node = prefix + root_frags.join('/') unless node_set.empty?
     end
 
     if matched_node
-      display_xml = node_set.map {|node| node.to_xml.gsub(/[\n]/, ' ').strip}.join("\n====END\n\n==BEGIN\n")
+      display_xml = node_set.map { |node| node.to_xml.gsub(/[\n]/, ' ').strip }.join("\n====END\n\n==BEGIN\n")
       "Expected to find node: #{node_frags.join('/')} within the following XML:\n==BEGIN\n#{display_xml}\n====END"
-    elsif actual.respond_to?(:length) #node set
-      xml = actual.length > 0 ? actual.to_xml : "<Empty node set>."
+    elsif actual.respond_to?(:length) # node set
+      xml = !actual.empty? ? actual.to_xml : '<Empty node set>.'
       "Expected to find #{path} within node set: #{xml}."
     else
       "Expected XML document to contain node #{path}."
@@ -40,7 +36,6 @@ RSpec::Matchers.define :have_node do |path|
   end
 end
 
-
 RSpec::Matchers.define :have_attribute do |att, val|
   match do |node|
     if val
@@ -51,7 +46,7 @@ RSpec::Matchers.define :have_attribute do |att, val|
   end
 
   failure_message do |node|
-    if val and node.attr(att)
+    if val && node.attr(att)
       "Expected '#{node.name}/@#{att}' to be '#{val}', not '#{node.attr(att)}'."
     else
       "Expected the node '#{node.name}' to have the attribute '#{att}'."
@@ -62,7 +57,6 @@ RSpec::Matchers.define :have_attribute do |att, val|
     "Unexpected attribute '#{att}' on node '#{node.name}'."
   end
 end
-
 
 RSpec::Matchers.define :have_inner_text do |expected|
   regex_mode = expected.is_a?(Regexp)
@@ -77,12 +71,12 @@ RSpec::Matchers.define :have_inner_text do |expected|
 
   failure_message do |node|
     infinitive = regex_mode ? "match /#{expected}/" : "contain '#{expected}'"
-    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map{|n| n.name}.uniq.join(' | ') : node.name
+    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map { |n| n.name }.uniq.join(' | ') : node.name
     "Expected node '#{name}' to #{infinitive}. Found string: '#{node.inner_text}'."
   end
 
   failure_message_when_negated do |node|
-    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map{|n| n.name}.uniq.join(' | ') : node.name
+    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map { |n| n.name }.uniq.join(' | ') : node.name
     "Expected node '#{name}' to contain something other than '#{txt}'."
   end
 end
@@ -96,24 +90,23 @@ RSpec::Matchers.define :have_inner_markup do |expected|
     else
       markup = node.inner_html.strip.delete(' ').gsub("'", '"')
       expected_markup = expected.strip.delete(' ').gsub("'", '"')
-      markup == expected_markup 
+      markup == expected_markup
     end
   end
 
   failure_message do |node|
-      markup = node.inner_html.strip.delete(' ').gsub("'", '"')
-      expected_markup = expected.strip.delete(' ').gsub("'", '"')
+    markup = node.inner_html.strip.delete(' ').gsub("'", '"')
+    expected_markup = expected.strip.delete(' ').gsub("'", '"')
     infinitive = regex_mode ? "match /#{expected}/" : "contain '#{expected_markup}'"
-    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map{|n| n.name}.uniq.join(' | ') : node.name
+    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map { |n| n.name }.uniq.join(' | ') : node.name
     "Expected node '#{name}' to #{infinitive}. Found string: '#{markup}'."
   end
 
   failure_message_when_negated do |node|
-    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map{|n| n.name}.uniq.join(' | ') : node.name
+    name = node.is_a?(Nokogiri::XML::NodeSet) ? node.map { |n| n.name }.uniq.join(' | ') : node.name
     "Expected node '#{name}' to contain something other than '#{txt}'."
   end
 end
-
 
 RSpec::Matchers.define :have_tag do |expected|
   tag = expected.is_a?(Hash) ? expected.keys[0] : expected
@@ -123,27 +116,27 @@ RSpec::Matchers.define :have_tag do |expected|
     nodeset = if doc.namespaces.empty?
                 doc.xpath("//#{tag}")
               else
-                tag_frags = tag.gsub(/^\//, '').split('/')
+                tag_frags = tag.gsub(%r{^/}, '').split('/')
                 path_root = tag_frags.shift
                 tag = path_root =~ /^[^\[]+:.+/ ? path_root : "xmlns:#{path_root}"
                 selector = false
-                
+
                 tag_frags.each do |frag|
-        					join = (selector || frag =~ /^[^\[]+:.+/) ? '/' : '/xmlns:'
-        					tag << "#{join}#{frag}"
-        					if frag =~ /\[[^\]]*$/
+                  join = selector || frag =~ /^[^\[]+:.+/ ? '/' : '/xmlns:'
+                  tag << "#{join}#{frag}"
+                  if frag =~ /\[[^\]]*$/
                     selector = true
                   elsif frag =~ /\][^\[]*$/
                     selector = false
                   end
-					      end
+                end
                 doc.xpath("//#{tag}", doc.namespaces)
               end
-    
+
     if nodeset.empty?
       false
     elsif expected.is_a?(Hash)
-      nodeset.any? {|node|
+      nodeset.any? { |node|
         node.inner_text == expected.values[0]
       }
     else
@@ -164,29 +157,25 @@ RSpec::Matchers.define :have_tag do |expected|
   end
 end
 
-
 RSpec::Matchers.define :have_schema_location do |expected|
-
   match do |doc|
     schema_location = doc.xpath('/*').attr('xsi:schemaLocation')
     schema_location && schema_location.value == expected
   end
 
-  failure_message do |doc|
+  failure_message do |_doc|
     "Expected document's schema location to be #{expected}"
   end
 end
 
-
 RSpec::Matchers.define :have_namespaces do |expected|
-
   match do |doc|
     actual = doc.namespaces
-    if actual.size > expected.size
-      difference = actual.to_a - expected.to_a
-    else
-      difference = expected.to_a - actual.to_a
-    end
+    difference = if actual.size > expected.size
+                   actual.to_a - expected.to_a
+                 else
+                   expected.to_a - actual.to_a
+                 end
 
     diff = Hash[*difference.flatten]
 
@@ -197,4 +186,3 @@ RSpec::Matchers.define :have_namespaces do |expected|
     "Expected document to have namespaces #{expected.inspect}, not #{doc.namespaces.inspect}"
   end
 end
-

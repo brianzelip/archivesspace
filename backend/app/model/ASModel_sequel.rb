@@ -1,12 +1,9 @@
 module ASModel
-
   # Hooks for firing behaviour on Sequel::Model events
   module SequelHooks
-
     def self.included(base)
       base.extend(BlobHack)
     end
-
 
     # We can save quite a lot of database chatter by only refreshing our
     # top-level records upon save.  Pure-nested records don't need refreshing,
@@ -18,9 +15,7 @@ module ASModel
     end
 
     def before_create
-      if RequestContext.get(:current_username)
-        self.created_by = self.last_modified_by = RequestContext.get(:current_username)
-      end
+      self.created_by = self.last_modified_by = RequestContext.get(:current_username) if RequestContext.get(:current_username)
       self.create_time = Time.now
       self.system_mtime = self.user_mtime = Time.now
       super
@@ -43,14 +38,14 @@ module ASModel
            SlugHelpers.slug_data_updated?(self) &&
            SlugHelpers.is_slug_auto_enabled?(self) &&
            !AppConfig[:auto_generate_slugs_with_id]
-             SlugHelpers.generate_slug_for_agent_name!(self)
+          SlugHelpers.generate_slug_for_agent_name!(self)
         end
 
         # For all types
         # If the slug has changed manually, then make sure it's cleaned and deduped.
         if self[:slug] &&
-           (self.column_changed?(:slug) || !self.exists?) &&
-           !SlugHelpers::is_slug_auto_enabled?(self)
+           (column_changed?(:slug) || !exists?) &&
+           !SlugHelpers.is_slug_auto_enabled?(self)
           cleaned_slug = SlugHelpers.clean_slug(self[:slug])
           self[:slug] = SlugHelpers.run_dedupe_slug(cleaned_slug)
         end
@@ -70,28 +65,28 @@ module ASModel
         # there is no slug, auto generate a repo slug based on repo_code.
         if self.class == Repository &&
            (self[:slug].nil? || self[:slug].empty?)
-         cleaned_slug = SlugHelpers.clean_slug(self[:repo_code])
-         self[:slug] = SlugHelpers.run_dedupe_slug(cleaned_slug)
-         self[:is_slug_auto] = 1
+          cleaned_slug = SlugHelpers.clean_slug(self[:repo_code])
+          self[:slug] = SlugHelpers.run_dedupe_slug(cleaned_slug)
+          self[:is_slug_auto] = 1
         end
 
         # This block is the same as above, but a special case for Agent classes when generating by ID only.
         # We can't autogen an empty slug for an agent based on name, because the primary name field is required.
         # Running this code when generating by name breaks things because autogen is flipped off for the agent and then the name record update does't run like it should
         if SlugHelpers.is_agent_type?(self.class) &&
-          AppConfig[:auto_generate_slugs_with_id] == true &&
-          (self[:slug].nil? || self[:slug].empty?) &&
-          SlugHelpers.is_slug_auto_enabled?(self)
-            self[:is_slug_auto] = 0
+           AppConfig[:auto_generate_slugs_with_id] == true &&
+           (self[:slug].nil? || self[:slug].empty?) &&
+           SlugHelpers.is_slug_auto_enabled?(self)
+          self[:is_slug_auto] = 0
         end
       elsif self.class == Repository
-        if (!self.exists? && (self[:slug].nil? || self[:slug].empty?))
+        if !exists? && (self[:slug].nil? || self[:slug].empty?)
           cleaned_slug = SlugHelpers.clean_slug(self[:repo_code])
           self[:slug] = SlugHelpers.run_dedupe_slug(cleaned_slug)
           self[:is_slug_auto] = 1
-        elsif !SlugHelpers::is_slug_auto_enabled?(self) &&
+        elsif !SlugHelpers.is_slug_auto_enabled?(self) &&
               !self[:slug].nil? && !self[:slug].empty? &&
-              self.column_changed?(:slug)
+              column_changed?(:slug)
           cleaned_slug = SlugHelpers.clean_slug(self[:slug])
           self[:slug] = SlugHelpers.run_dedupe_slug(cleaned_slug)
         end
@@ -99,15 +94,11 @@ module ASModel
       end
     end
 
-
     def before_update
-      if RequestContext.get(:current_username)
-        self.last_modified_by = RequestContext.get(:current_username)
-      end
+      self.last_modified_by = RequestContext.get(:current_username) if RequestContext.get(:current_username)
       self.system_mtime = Time.now
       super
     end
-
 
     def around_save
       values_to_reapply = {}
@@ -115,19 +106,19 @@ module ASModel
       self.class.blob_columns_to_fix.each do |column|
         if self[column]
           values_to_reapply[column] = self[column]
-          self[column] = "around_save_placeholder"
+          self[column] = 'around_save_placeholder'
         end
       end
 
       ret = super
 
-      if !values_to_reapply.empty?
-        ps = self.class.dataset.where(:id => self.id).prepare(:update, :update_blobs,
-                                                             Hash[values_to_reapply.keys.map {|c| [c, :"$#{c}"]}])
+      unless values_to_reapply.empty?
+        ps = self.class.dataset.where(id: id).prepare(:update, :update_blobs,
+                                                      Hash[values_to_reapply.keys.map { |c| [c, :"$#{c}"] }])
 
-        ps.call(Hash[values_to_reapply.map {|k, v| [k, DB.blobify(v)]}])
+        ps.call(Hash[values_to_reapply.map { |k, v| [k, DB.blobify(v)] }])
 
-        self.refresh
+        refresh
       end
 
       ret
@@ -135,20 +126,18 @@ module ASModel
 
     private
 
-      module BlobHack
-        def self.extended(base)
-          blob_columns = base.db_schema.select {|column, defn| defn[:type] == :blob}.keys
+    module BlobHack
+      def self.extended(base)
+        blob_columns = base.db_schema.select { |_column, defn| defn[:type] == :blob }.keys
 
-          base.instance_eval do
-            @blob_columns_to_fix = (!blob_columns.empty? && DB.needs_blob_hack?) ? Array(blob_columns) : []
-          end
-        end
-
-        def blob_columns_to_fix
-          @blob_columns_to_fix
+        base.instance_eval do
+          @blob_columns_to_fix = !blob_columns.empty? && DB.needs_blob_hack? ? Array(blob_columns) : []
         end
       end
 
-
+      def blob_columns_to_fix
+        @blob_columns_to_fix
+      end
+    end
   end
 end

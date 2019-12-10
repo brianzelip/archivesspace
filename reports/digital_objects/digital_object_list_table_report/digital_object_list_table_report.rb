@@ -1,5 +1,4 @@
 class DigitalObjectListTableReport < AbstractReport
-
   register_report
 
   def query_string
@@ -12,7 +11,7 @@ class DigitalObjectListTableReport < AbstractReport
     from digital_object
 
       natural left outer join
-     
+
       (select
         digital_object_id as id,
         ifnull(expression, if(end is null, begin,

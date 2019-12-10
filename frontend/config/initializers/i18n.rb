@@ -2,7 +2,6 @@ require 'aspace_i18n_enumeration_support'
 require 'mixed_content_parser'
 
 module I18n
-
   # Override the I18n string pattern to take into account
   # JSONModel paths.. suppress the warning that ensues.
   silence_warnings do
@@ -13,26 +12,21 @@ module I18n
     )
   end
 
-
   def self.try_really_hard_to_find_a_key(exception, locale, key, opts)
-
-    substitutions = [[/\[\]/, ""],
-                     [/\/[0-9]+\//, "."],
-                     [/\]/, ""],
-                     [/\[/, "."]]
+    substitutions = [[/\[\]/, ''],
+                     [%r{/[0-9]+/}, '.'],
+                     [/\]/, ''],
+                     [/\[/, '.']]
 
     new_key = key.to_s
     substitutions.each do |pattern, replacement|
       new_key = new_key.gsub(pattern, replacement)
     end
 
-    if key.to_s != new_key
-      return translate(new_key.intern, opts.merge(:locale => locale))
-    end
+    return translate(new_key.intern, opts.merge(locale: locale)) if key.to_s != new_key
 
     ExceptionHandler.new.call(exception, locale, key, opts)
   end
-
 
   def self.t(input, options = {})
     # If a default was provided, we don't want to mark it as html safe.  Let the
@@ -42,7 +36,7 @@ module I18n
     if options.is_a?(String)
       # Sometimes people pass a second argument where they wanted a default.
       # We'll allow this for now.
-      options = {:default => options}
+      options = { default: options }
     end
 
     if options.is_a?(Hash)
@@ -50,16 +44,12 @@ module I18n
     else
       options = {}
     end
-    results = self.t_raw(input, options.merge(:default => 'aspace_i18n_lookup_failed', :raise => false))
+    results = t_raw(input, options.merge(default: 'aspace_i18n_lookup_failed', raise: false))
 
     if results == 'aspace_i18n_lookup_failed'
-      if default
-        default
-      else
-        "translation missing: #{input}"
-      end
+      default || "translation missing: #{input}"
     elsif results.nil?
-      ""
+      ''
     else
       results.html_safe
     end
@@ -87,23 +77,23 @@ class JSONModelI18nWrapper < Hash
   end
 
   def [](key)
-    return if not key.to_s.include?(".")
+    return unless key.to_s.include?('.')
 
-    (object, property) = key.to_s.split(".", 2)
+    (object, property) = key.to_s.split('.', 2)
 
     value = @mappings[object.intern][property]
 
     if parse_mixed_content?
       clean_mixed_content(value)
     else
-      CGI::escapeHTML(value)
+      CGI.escapeHTML(value)
     end
   end
 
   def key?(key)
-    return false if not key.to_s.include?(".")
+    return false unless key.to_s.include?('.')
 
-    (object, property) = key.to_s.split(".", 2)
+    (object, property) = key.to_s.split('.', 2)
 
     @mappings.key?(object.intern) && @mappings[object.intern].has_key?(property)
   end
@@ -122,7 +112,6 @@ class JSONModelI18nWrapper < Hash
     content = content.to_s
     return content if content.blank?
 
-    MixedContentParser::parse(content, @parse_mixed_content_path, { :wrap_blocks => false } ).to_s.html_safe
+    MixedContentParser.parse(content, @parse_mixed_content_path, wrap_blocks: false).to_s.html_safe
   end
-
 end

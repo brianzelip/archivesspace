@@ -1,7 +1,6 @@
 require 'java'
 
-class PdfController <  ApplicationController
-
+class PdfController < ApplicationController
   skip_before_action :verify_authenticity_token, only: :resource
 
   PDF_MUTEX = java.util.concurrent.Semaphore.new(AppConfig[:pui_max_concurrent_pdfs])
@@ -25,9 +24,9 @@ class PdfController <  ApplicationController
         filename = pdf.suggested_filename
 
         format.all do
-          fh = File.open(pdf_file.path, "r")
-          self.headers["Content-type"] = "application/pdf"
-          self.headers["Content-disposition"] = "attachment; filename=\"#{filename}\""
+          fh = File.open(pdf_file.path, 'r')
+          headers['Content-type'] = 'application/pdf'
+          headers['Content-disposition'] = "attachment; filename=\"#{filename}\""
           self.response_body = Enumerator.new do |y|
             begin
               while chunk = fh.read(4096)
@@ -44,5 +43,4 @@ class PdfController <  ApplicationController
       PDF_MUTEX.release
     end
   end
-
 end

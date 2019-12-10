@@ -2,7 +2,7 @@ require 'db/migrations/utils'
 
 Sequel.migration do
   up do
-    $stderr.puts("Populate OAI set fields with default values")
+    warn('Populate OAI set fields with default values')
     alter_table(:oai_config) do
       add_column(:repo_set_codes, String, text: true)
       add_column(:repo_set_description, String)
@@ -11,10 +11,9 @@ Sequel.migration do
     end
 
     # populate new fields with default values
-    self[:oai_config].update(:repo_set_codes => "[]",
-                             :sponsor_set_names => "[]",
-                             :repo_set_description => "",
-                             :sponsor_set_description => "")
+    self[:oai_config].update(repo_set_codes: '[]',
+                             sponsor_set_names: '[]',
+                             repo_set_description: '',
+                             sponsor_set_description: '')
   end
-
 end

@@ -101,7 +101,7 @@ describe 'Notes' do
     end
 
     [4, 5]. each do |i|
-      %w[label value].each do |field|
+      ['label', 'value'].each do |field|
         @driver.clear_and_send_keys([:id, "resource_notes__0__subnotes__3__items__#{i}__#{field}_"],
                                     'pogo')
       end

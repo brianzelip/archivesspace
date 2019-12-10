@@ -10,7 +10,7 @@ class NoteRenderer
   end
 
   def self.for(type)
-    result = @renderers.find {|renderer| renderer.handles_type?(type)}
+    result = @renderers.find { |renderer| renderer.handles_type?(type) }
 
     raise "No note renderer for '#{type}'" unless result
 
@@ -27,20 +27,19 @@ class NoteRenderer
     end
   end
 
-  def render(type, note, result)
+  def render(_type, _note, _result)
     # Must fill out note_text and label
-    raise "Implement this"
+    raise 'Implement this'
   end
 
   def render_partial(template, opts = {})
-    ApplicationController.new.render_to_string(opts.merge(:partial => 'shared/' + template))
+    ApplicationController.new.render_to_string(opts.merge(partial: 'shared/' + template))
   end
 
   def build_label(type, note)
-    note.has_key?('label') ? note['label'] :  I18n.t("enumerations._note_types.#{type}", :default => '')
+    note.has_key?('label') ? note['label'] : I18n.t("enumerations._note_types.#{type}", default: '')
   end
 end
-
 
 class MultipartNoteRenderer < NoteRenderer
   handles_notes ['note_multipart', 'note_bioghist']
@@ -50,17 +49,17 @@ class MultipartNoteRenderer < NoteRenderer
 
     notes = []
     ASUtils.wrap(note['subnotes']).each do |sub|
-      unless sub['publish'] == false
-        rendered_subnote = {}
-        NoteRenderer.for(sub['jsonmodel_type']).render(sub['jsonmodel_type'], sub, rendered_subnote)
+      next if sub['publish'] == false
 
-        notes << rendered_subnote['note_text']
-        result['subnotes'] ||= []
-        result['subnotes'] << sub.merge({
-                                          '_text' => rendered_subnote['note_text'],
-                                          '_title' => sub['title']
-                                        })
-      end
+      rendered_subnote = {}
+      NoteRenderer.for(sub['jsonmodel_type']).render(sub['jsonmodel_type'], sub, rendered_subnote)
+
+      notes << rendered_subnote['note_text']
+      result['subnotes'] ||= []
+      result['subnotes'] << sub.merge(
+        '_text' => rendered_subnote['note_text'],
+        '_title' => sub['title']
+      )
     end
 
     result['note_text'] = notes.join('<br/>')
@@ -68,18 +67,16 @@ class MultipartNoteRenderer < NoteRenderer
   end
 end
 
-
 class SinglepartNoteRenderer < NoteRenderer
   handles_notes ['note_singlepart', 'note_text', 'note_abstract',
                  'note_digital_object', 'note_langmaterial']
 
   def render(type, note, result)
     result['label'] = build_label(type, note)
-    result['note_text'] = ASUtils.wrap(note['content']).map {|s| process_mixed_content(s)}.join('<br/><br/>')
+    result['note_text'] = ASUtils.wrap(note['content']).map { |s| process_mixed_content(s) }.join('<br/><br/>')
     result
   end
 end
-
 
 class ERBNoteRenderer < NoteRenderer
   handles_notes ['note_chronology', 'note_definedlist', 'note_orderedlist',
@@ -87,7 +84,7 @@ class ERBNoteRenderer < NoteRenderer
 
   def render(type, note, result)
     result['label'] = build_label(type, note)
-    result['note_text'] = render_partial(type, :locals => {:note => note})
+    result['note_text'] = render_partial(type, locals: { note: note })
     result
   end
 end

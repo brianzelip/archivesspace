@@ -1,5 +1,4 @@
 class ResourceDeaccessionsListReport < AbstractReport
-
   register_report
 
   def template
@@ -22,7 +21,7 @@ class ResourceDeaccessionsListReport < AbstractReport
       level_id as level,
       date_expression,
       extent_number
-        
+
     from resource
 
       natural left outer join
@@ -32,14 +31,14 @@ class ResourceDeaccessionsListReport < AbstractReport
           concat(begin, ' - ', end))) separator ', ') as date_expression
       from date
       group by resource_id) as record_date
-      
+
       natural left outer join
       (select
         resource_id as id,
         sum(number) as extent_number
       from extent
       group by resource_id) as extent_cnt
-        
+
     where repo_id = #{db.literal(@repo_id)}"
   end
 
@@ -69,5 +68,4 @@ class ResourceDeaccessionsListReport < AbstractReport
   def identifier_field
     :identifier
   end
-
 end

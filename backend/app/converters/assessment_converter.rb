@@ -2,7 +2,6 @@ require 'date'
 
 require_relative 'converter'
 class AssessmentConverter < Converter
-
   require_relative 'lib/csv_converter'
   include ASpaceImport::CSVConvert
 
@@ -17,7 +16,7 @@ class AssessmentConverter < Converter
   # overriding this because we are special
   # this importer is self configuring, so it has to configure itself on each run
   def self.configuration
-    @config ||= self.configure
+    @config ||= configure
   end
 
   def self.reconfigure!
@@ -29,7 +28,6 @@ class AssessmentConverter < Converter
 
     super
   end
-
 
   def self.configure_cell_handlers(row)
     if row[0] == 'basic'
@@ -45,7 +43,7 @@ class AssessmentConverter < Converter
     records = 0
     agents = 0
     reviewers = 0
-    @field_headers = @section_headers.zip(row).map{|section, field|
+    @field_headers = @section_headers.zip(row).map { |section, field|
       hdr = "#{section}_#{field}"
       if hdr == 'basic_record'
         records += 1
@@ -84,20 +82,18 @@ class AssessmentConverter < Converter
         val_filter = record_to_uri
 
         config["records_#{records}".intern] = {
-          :record_type => Proc.new {|data|
+          record_type: proc { |data|
             JSONModel.parse_reference(data['uri'])[:type]
           },
-          :on_row_complete => Proc.new { |cache, record|
+          on_row_complete: proc { |cache, record|
+            assessment = cache.find { |obj| obj && obj.class.record_type == 'assessment' }
 
-            assessment = cache.find {|obj| obj && obj.class.record_type == 'assessment' }
-
-            assessment.records << {'ref' => record.uri}
+            assessment.records << { 'ref' => record.uri }
 
             # nil the record in the cache to avoid having it created
-            cache.map! {|obj| (obj && obj.key == record.key) ? nil : obj}
+            cache.map! { |obj| obj && obj.key == record.key ? nil : obj }
           }
         }
-
 
       elsif section_field.start_with?('basic_surveyed_by')
         agents += 1
@@ -105,17 +101,16 @@ class AssessmentConverter < Converter
         val_filter = user_to_uri
 
         config["agents_#{agents}".intern] = {
-          :record_type => Proc.new {|data|
+          record_type: proc { |data|
             JSONModel.parse_reference(data['uri'])[:type]
           },
-          :on_row_complete => Proc.new { |cache, agent|
+          on_row_complete: proc { |cache, agent|
+            assessment = cache.find { |obj| obj && obj.class.record_type == 'assessment' }
 
-            assessment = cache.find {|obj| obj && obj.class.record_type == 'assessment' }
-
-            assessment.surveyed_by << {'ref' => agent.uri}
+            assessment.surveyed_by << { 'ref' => agent.uri }
 
             # nil the agent in the cache to avoid having it created
-            cache.map! {|obj| (obj && obj.key == agent.key) ? nil : obj}
+            cache.map! { |obj| obj && obj.key == agent.key ? nil : obj }
           }
         }
 
@@ -125,17 +120,16 @@ class AssessmentConverter < Converter
         val_filter = user_to_uri
 
         config["reviewers_#{reviewers}".intern] = {
-          :record_type => Proc.new {|data|
+          record_type: proc { |data|
             JSONModel.parse_reference(data['uri'])[:type]
           },
-          :on_row_complete => Proc.new { |cache, agent|
+          on_row_complete: proc { |cache, agent|
+            assessment = cache.find { |obj| obj && obj.class.record_type == 'assessment' }
 
-            assessment = cache.find {|obj| obj && obj.class.record_type == 'assessment' }
-
-            assessment.reviewer << {'ref' => agent.uri}
+            assessment.reviewer << { 'ref' => agent.uri }
 
             # nil the agent in the cache to avoid having it created
-            cache.map! {|obj| (obj && obj.key == agent.key) ? nil : obj}
+            cache.map! { |obj| obj && obj.key == agent.key ? nil : obj }
           }
         }
 
@@ -146,11 +140,11 @@ class AssessmentConverter < Converter
         val_filter = boolean_to_s
 
         config[section_field.intern] = {
-          :record_type => 'assessment_attribute',
-          :on_row_complete => Proc.new { |cache, attr|
+          record_type: 'assessment_attribute',
+          on_row_complete: proc { |cache, attr|
             if attr.value == 'true'
-              assessment = cache.find {|obj| obj && obj.class.record_type == 'assessment' }
-              assessment.formats << { :value => 'true', :definition_id => defn[:id]  }
+              assessment = cache.find { |obj| obj && obj.class.record_type == 'assessment' }
+              assessment.formats << { value: 'true', definition_id: defn[:id] }
             end
           }
         }
@@ -165,13 +159,13 @@ class AssessmentConverter < Converter
           data_path = "#{section_field}.value"
 
           config[section_field.intern] = {
-            :record_type => 'assessment_attribute',
-            :on_row_complete => Proc.new { |cache, attr|
-              assessment = cache.find {|obj| obj && obj.class.record_type == 'assessment' }
+            record_type: 'assessment_attribute',
+            on_row_complete: proc { |cache, attr|
+              assessment = cache.find { |obj| obj && obj.class.record_type == 'assessment' }
               assessment.formats << {
-                :value => attr.value,
-                :note => attr.note,
-                :definition_id => defn[:id]
+                value: attr.value,
+                note: attr.note,
+                definition_id: defn[:id]
               }
             }
           }
@@ -185,11 +179,11 @@ class AssessmentConverter < Converter
         val_filter = boolean_to_s
 
         config[section_field.intern] = {
-          :record_type => 'assessment_attribute',
-          :on_row_complete => Proc.new { |cache, attr|
+          record_type: 'assessment_attribute',
+          on_row_complete: proc { |cache, attr|
             if attr.value == 'true'
-              assessment = cache.find {|obj| obj && obj.class.record_type == 'assessment' }
-              assessment.conservation_issues << { :value => 'true', :definition_id => defn[:id]  }
+              assessment = cache.find { |obj| obj && obj.class.record_type == 'assessment' }
+              assessment.conservation_issues << { value: 'true', definition_id: defn[:id] }
             end
           }
         }
@@ -201,35 +195,28 @@ class AssessmentConverter < Converter
     config
   end
 
-  def self.import_types(show_hidden = false)
+  def self.import_types(_show_hidden = false)
     [
-     {
-       :name => "assessment_csv",
-       :description => "Import Assessment records from a CSV file"
-     }
+      {
+        name: 'assessment_csv',
+        description: 'Import Assessment records from a CSV file'
+      }
     ]
   end
 
   def self.instance_for(type, input_file)
-    if type == "assessment_csv"
-      self.new(input_file)
-    else
-      nil
-    end
+    new(input_file) if type == 'assessment_csv'
   end
 
-
   private
-
 
   def self.normalize_label(label)
     label.strip.downcase.gsub(/[^a-z0-9]+/, '_').gsub(/_+$/, '')
   end
 
-
   def self.reformat_date
     # excel annoyingly reformats dates in csv, so let's try to do the right thing
-    @reformat_date ||= Proc.new {|val|
+    @reformat_date ||= proc { |val|
       if val.index('/')
         # assume it's mm/dd/yy unless mm is > 12
         (m, d, y) = val.split('/')
@@ -244,44 +231,40 @@ class AssessmentConverter < Converter
     @reformat_date
   end
 
-
   def self.normalize_boolean
-    @normalize_boolean ||= Proc.new {|val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? true : false }
+    @normalize_boolean ||= proc { |val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? true : false }
     @normalize_boolean
   end
 
-
   def self.boolean_to_s
-    @boolean_to_s ||= Proc.new {|val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? 'true' : 'false' }
+    @boolean_to_s ||= proc { |val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? 'true' : 'false' }
     @boolean_to_s
   end
 
-
   def self.record_to_uri
-    @record_types ||=  %w{resource archival_object accession digital_object}
-    @record_to_uri ||= Proc.new{|val|
-      (junk, type, id) = val.downcase.match(/^\s*([a-z_]*?)[_\/\. ]+(\d+)\s*$/).to_a
+    @record_types ||=  ['resource', 'archival_object', 'accession', 'digital_object']
+    @record_to_uri ||= proc { |val|
+      (junk, type, id) = val.downcase.match(%r{^\s*([a-z_]*?)[_/\. ]+(\d+)\s*$}).to_a
 
       unless type && id
         raise "Invalid basic_record reference #{val}. " +
-          "Must have the form [#{@record_types.join('|')}][delimiter]id. " +
-          "Where [delimiter] can be any of _ / . or space."
+              "Must have the form [#{@record_types.join('|')}][delimiter]id. " +
+              'Where [delimiter] can be any of _ / . or space.'
       end
 
       unless @record_types.include?(type)
         raise "Invalid basic_record reference #{val}. " +
-          "Record type #{type} not allowed. Must be one of #{@record_types.join(', ')}."
+              "Record type #{type} not allowed. Must be one of #{@record_types.join(', ')}."
       end
 
-      JSONModel::JSONModel(type.intern).uri_for(id, :repo_id => Thread.current[:request_context][:repo_id])
+      JSONModel::JSONModel(type.intern).uri_for(id, repo_id: Thread.current[:request_context][:repo_id])
     }
     @record_to_uri
   end
 
-
   def self.user_to_uri
-    @user_to_uri ||= Proc.new{|val|
-      unless (user = User.find(:username => val))
+    @user_to_uri ||= proc { |val|
+      unless (user = User.find(username: val))
         raise "User '#{val}' does not exist"
       end
 
@@ -292,20 +275,19 @@ class AssessmentConverter < Converter
 
   def self.match_definition(type, field)
     @defns ||= AssessmentAttributeDefinitions.get(Thread.current[:request_context][:repo_id]).definitions
-    type_defns = @defns.select{|d| d[:type] == type}
-    matched_defns = type_defns.select{|d| normalize_label(d[:label]) == normalize_label(field)}
+    type_defns = @defns.select { |d| d[:type] == type }
+    matched_defns = type_defns.select { |d| normalize_label(d[:label]) == normalize_label(field) }
 
     if matched_defns.empty?
       raise "Unknown #{type} in column header: #{field}. " +
-        "Allowed #{type}s for this repository: #{type_defns.map{|d| d[:label]}.join(', ')}"
+            "Allowed #{type}s for this repository: #{type_defns.map { |d| d[:label] }.join(', ')}"
     end
 
     if matched_defns.length > 1
       raise "Ambiguous #{type} type in column header: #{field}. " +
-        "Matched #{matched_defns.map{|d| d[:label]}.join(', ')}"
+            "Matched #{matched_defns.map { |d| d[:label] }.join(', ')}"
     end
 
     matched_defns.first
   end
-
 end

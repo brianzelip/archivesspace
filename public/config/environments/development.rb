@@ -50,7 +50,7 @@ Rails.application.configure do
   # If we're running with a prefix, write our on-the-fly compiled assets to the
   # right spot.  NOTE: Don't enable this for production, as it's handled
   # differently there due to precompilation.
-  config.assets.prefix = AppConfig[:public_proxy_prefix] + "assets"
+  config.assets.prefix = AppConfig[:public_proxy_prefix] + 'assets'
 
   # Raises error for missing translations
   # config.action_view.raise_on_missing_translations = true

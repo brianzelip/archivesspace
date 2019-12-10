@@ -2,7 +2,6 @@
 # memory at a time.
 
 class StreamingJsonReader
-
   def initialize(filename)
     @filename = filename
 
@@ -24,16 +23,14 @@ class StreamingJsonReader
     # exception, which adds a lot of overhead (about 30 seconds per import cycle
     # for 500,000 records instead of ~5 seconds using this method).
     #
-    @skip_next_character = org.codehaus.jackson.impl.ReaderBasedParser.java_class.declared_method("_skipWSOrEnd")
+    @skip_next_character = org.codehaus.jackson.impl.ReaderBasedParser.java_class.declared_method('_skipWSOrEnd')
     @skip_next_character.accessible = true
   end
-
 
   # True if the underlying JSON file was empty
   def empty?
     File.size(@filename) <= 2
   end
-
 
   # Fly through our file to work out how many records we have
   def determine_count
@@ -57,7 +54,6 @@ class StreamingJsonReader
 
     @count = result
   end
-
 
   # Parse and yield each record from our underlying JSON file.  If you call
   # `delete_current` we'll mark the record we just handed you as deleted, and it
@@ -84,12 +80,9 @@ class StreamingJsonReader
         skip_comma(parser)
       end
 
-      unless @count
-        @count = @record_index + 1
-      end
+      @count ||= @record_index + 1
     end
   end
-
 
   # Mark the record last yielded as deleted.
   def delete_current
@@ -105,13 +98,11 @@ class StreamingJsonReader
     end
   end
 
-
   private
 
   def skip_comma(parser)
     @skip_next_character.invoke(parser)
   end
-
 
   def with_record_stream
     stream = java.io.FileReader.new(@filename)
@@ -124,5 +115,4 @@ class StreamingJsonReader
       stream.close
     end
   end
-
 end

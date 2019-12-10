@@ -6,18 +6,18 @@ class IndexerEnumSource
     args
   end
 
-  def valid?(*stuff)
+  def valid?(*_stuff)
     true
   end
 end
 
-JSONModel::init(:enum_source => IndexerEnumSource.new)
+JSONModel.init(enum_source: IndexerEnumSource.new)
 
 require_relative 'factories'
 # require_relative "spec_helper_methods"
 
 FactoryBot.define do
-  to_create{|instance| instance}
+  to_create { |instance| instance }
 end
 
 RSpec.configure do |config|

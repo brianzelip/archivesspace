@@ -3,7 +3,7 @@ require 'csv'
 require_relative 'rtf_generator'
 require_relative 'csv_report_expander'
 
-#java_import org.xhtmlrenderer.pdf.ITextRenderer
+# java_import org.xhtmlrenderer.pdf.ITextRenderer
 
 class ReportGenerator
   attr_accessor :report
@@ -17,7 +17,7 @@ class ReportGenerator
   end
 
   def generate(file)
-    case(report.format)
+    case report.format
     when 'json'
       generate_json(file)
     when 'html'
@@ -86,11 +86,11 @@ class ReportGenerator
         end
 
         data = nil
-        if report.expand_csv
-          data = CsvReportExpander.new(rows, report.job).expand_csv
-        else
-          data = rows
-        end
+        data = if report.expand_csv
+                 CsvReportExpander.new(rows, report.job).expand_csv
+               else
+                 rows
+               end
 
         data.each do |row|
           csv << row
@@ -107,13 +107,13 @@ class ReportGenerator
     "'" => '&apos;',
     '<' => '&lt;',
     '>' => '&gt;'
-  }
+  }.freeze
 
   def xml_clean!(data)
     if data.is_a?(Array)
-      data.each {|item| xml_clean!(item)}
+      data.each { |item| xml_clean!(item) }
     elsif data.is_a?(Hash)
-      data.each {|_key, value| xml_clean!(value)}
+      data.each { |_key, value| xml_clean!(value) }
     elsif data.is_a?(String)
       data.gsub!(/[#{INVALID_CHARS.keys.join('')}]/) do |ch|
         INVALID_CHARS[ch]
@@ -165,9 +165,7 @@ class ReportGenerator
   end
 
   def template_path(file)
-    if File.exist?(File.join('app', 'views', 'reports', file))
-      return File.join('app', 'views', 'reports', file)
-    end
+    return File.join('app', 'views', 'reports', file) if File.exist?(File.join('app', 'views', 'reports', file))
 
     StaticAssetFinder.new('reports').find(file)
   end
@@ -176,22 +174,22 @@ class ReportGenerator
     [t('identifier_prefix', nil), record[report.identifier_field]].compact.join(' ') if report.identifier_field
   end
 
-  def t(key, default='')
+  def t(key, default = '')
     subreport_code = sub_report_code_stack.empty? ? nil : sub_report_code_stack.last
     special_translation = report.special_translation(key, subreport_code)
     if special_translation
       special_translation
     else
-      if default == ''
-        fallback = key
-      else
-        fallback = default
-      end
-      global = I18n.t("reports.translation_defaults.#{key}", :default => fallback)
+      fallback = if default == ''
+                   key
+                 else
+                   default
+                 end
+      global = I18n.t("reports.translation_defaults.#{key}", default: fallback)
       if sub_report_code_stack.empty?
-        I18n.t("reports.#{report.code}.#{key}", :default => global)
+        I18n.t("reports.#{report.code}.#{key}", default: global)
       else
-        I18n.t("reports.#{sub_report_code_stack.last}.#{key}", :default => global)
+        I18n.t("reports.#{sub_report_code_stack.last}.#{key}", default: global)
       end
     end
   end

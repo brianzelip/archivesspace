@@ -1,179 +1,160 @@
 module JSONSchemaUtils
-
   def self.fragment_join(fragment, property = nil)
-    fragment = fragment.gsub(/^#\//, "")
-    property = property.gsub(/^#\//, "") if property
+    fragment = fragment.gsub(%r{^#/}, '')
+    property = property.gsub(%r{^#/}, '') if property
 
-    if property && fragment != "" && fragment !~ /\/$/
-      fragment = "#{fragment}/"
-    end
+    fragment = "#{fragment}/" if property && fragment != '' && fragment !~ %r{/$}
 
     "#{fragment}#{property}"
   end
 
-
   def self.schema_path_lookup(schema, path)
-    if path.is_a? String
-      return self.schema_path_lookup(schema, path.split("/"))
-    end
+    return schema_path_lookup(schema, path.split('/')) if path.is_a? String
 
-    if schema.has_key?('properties')
-      schema = schema['properties']
-    end
+    schema = schema['properties'] if schema.has_key?('properties')
 
     if path.length == 1
       schema[path.first]
     else
-      if schema[path.first]
-        self.schema_path_lookup(schema[path.first], path.drop(1))
-      else
-        nil
-      end
+      schema_path_lookup(schema[path.first], path.drop(1)) if schema[path.first]
     end
   end
 
-
-
   SCHEMA_PARSE_RULES =
     [
-     {
-       :failed_attribute => ['Properties', 'IfMissing', 'ArchivesSpaceSubType'],
-       :pattern => /([A-Z]+: )?The property '.*?' did not contain a required property of '(.*?)'.*/,
-       :do => ->(msgs, message, path, type, property) {
-         if type && type =~ /ERROR/
-           msgs[:errors][fragment_join(path, property)] = ["Property is required but was missing"]
-         else
-           msgs[:warnings][fragment_join(path, property)] = ["Property was missing"]
-         end
-       }
-     },
+      {
+        failed_attribute: ['Properties', 'IfMissing', 'ArchivesSpaceSubType'],
+        pattern: /([A-Z]+: )?The property '.*?' did not contain a required property of '(.*?)'.*/,
+        do: lambda { |msgs, _message, path, type, property|
+          if type && type =~ /ERROR/
+            msgs[:errors][fragment_join(path, property)] = ['Property is required but was missing']
+          else
+            msgs[:warnings][fragment_join(path, property)] = ['Property was missing']
+          end
+        }
+      },
 
-     {
-       :failed_attribute => ['ArchivesSpaceType'],
-       :pattern => /The property '#(.*?)' was not a well-formed date/,
-       :do => ->(msgs, message, path, property) {
-         msgs[:errors][fragment_join(path)] = ["Not a valid date"]
-       }
-     },
+      {
+        failed_attribute: ['ArchivesSpaceType'],
+        pattern: /The property '#(.*?)' was not a well-formed date/,
+        do: lambda { |msgs, _message, path, _property|
+          msgs[:errors][fragment_join(path)] = ['Not a valid date']
+        }
+      },
 
-     {
-       :failed_attribute => ['Pattern'],
-       :pattern => /The property '#\/.*?' did not match the regex '(.*?)' in schema/,
-       :do => ->(msgs, message, path, regexp) {
-         msgs[:errors][fragment_join(path)] = ["Did not match regular expression: #{regexp}"]
-       }
-     },
+      {
+        failed_attribute: ['Pattern'],
+        pattern: %r{The property '#/.*?' did not match the regex '(.*?)' in schema},
+        do: lambda { |msgs, _message, path, regexp|
+          msgs[:errors][fragment_join(path)] = ["Did not match regular expression: #{regexp}"]
+        }
+      },
 
-     {
-       :failed_attribute => ['MinLength'],
-       :pattern => /The property '#\/.*?' was not of a minimum string length of ([0-9]+) in schema/,
-       :do => ->(msgs, message, path, length) {
-         msgs[:errors][fragment_join(path)] = ["Must be at least #{length} characters"]
-       }
-     },
+      {
+        failed_attribute: ['MinLength'],
+        pattern: %r{The property '#/.*?' was not of a minimum string length of ([0-9]+) in schema},
+        do: lambda { |msgs, _message, path, length|
+          msgs[:errors][fragment_join(path)] = ["Must be at least #{length} characters"]
+        }
+      },
 
-     {
-       :failed_attribute => ['MaxLength'],
-       :pattern => /The property '#\/.*?' was not of a maximum string length of ([0-9]+) in schema/,
-       :do => ->(msgs, message, path, length) {
-         msgs[:errors][fragment_join(path)] = ["Must be #{length} characters or fewer"]
-       }
-     },
+      {
+        failed_attribute: ['MaxLength'],
+        pattern: %r{The property '#/.*?' was not of a maximum string length of ([0-9]+) in schema},
+        do: lambda { |msgs, _message, path, length|
+          msgs[:errors][fragment_join(path)] = ["Must be #{length} characters or fewer"]
+        }
+      },
 
-     {
-       :failed_attribute => ['MinItems'],
-       :pattern => /The property '#\/.*?' did not contain a minimum number of items ([0-9]+) in schema/,
-       :do => ->(msgs, message, path, items) {
-         msgs[:errors][fragment_join(path)] = ["At least #{items} item(s) is required"]
-       }
-     },
+      {
+        failed_attribute: ['MinItems'],
+        pattern: %r{The property '#/.*?' did not contain a minimum number of items ([0-9]+) in schema},
+        do: lambda { |msgs, _message, path, items|
+          msgs[:errors][fragment_join(path)] = ["At least #{items} item(s) is required"]
+        }
+      },
 
-     {
-       :failed_attribute => ['Enum'],
-       :pattern => /The property '#\/.*?' value "(.*?)" .*values: (.*) in schema/,
-       :do => ->(msgs, message, path, invalid, valid_set) {
-         msgs[:errors][fragment_join(path)] = ["Invalid value '#{invalid}'.  Must be one of: #{valid_set}"]
-       }
-     },
-     
-     {
-       :failed_attribute => ['ArchivesSpaceDynamicEnum'],
-       :pattern => /The property '#\/.*?' value "(.*?)" .*values: (.*) in schema/,
-       :do => ->(msgs, message, path, invalid, valid_set) {
-         msgs[:attribute_types][fragment_join(path)] = 'ArchivesSpaceDynamicEnum'
-         msgs[:errors][fragment_join(path)] = ["Invalid value '#{invalid}'.  Must be one of: #{valid_set}"]
-       }
-     },
-     {
-       :failed_attribute => ['ArchivesSpaceReadOnlyDynamicEnum'],
-       :pattern => /The property '#\/.*?' value "(.*?)" .*values: (.*) in schema/,
-       :do => ->(msgs, message, path, invalid, valid_set) {
-         msgs[:attribute_types][fragment_join(path)] = 'ArchivesSpaceReadOnlyDynamicEnum'
-         msgs[:errors][fragment_join(path)] = ["Protected read-only list #{path}. Invalid value '#{invalid}'.  Must be one of: #{valid_set}"]
-       }
-     },
+      {
+        failed_attribute: ['Enum'],
+        pattern: %r{The property '#/.*?' value "(.*?)" .*values: (.*) in schema},
+        do: lambda { |msgs, _message, path, invalid, valid_set|
+          msgs[:errors][fragment_join(path)] = ["Invalid value '#{invalid}'.  Must be one of: #{valid_set}"]
+        }
+      },
 
-     {
-       :failed_attribute => ['Type', 'ArchivesSpaceType'],
-       :pattern => /The property '#\/.*?' of type (.*?) did not match the following type: (.*?) in schema/,
-       :do => ->(msgs, message, path, actual_type, desired_type) {
-         if actual_type !~ /JSONModel/ || message[:failed_attribute] == 'ArchivesSpaceType'
-           # We'll skip JSONModels because the specific problem with the
-           # document will have already been listed separately.
+      {
+        failed_attribute: ['ArchivesSpaceDynamicEnum'],
+        pattern: %r{The property '#/.*?' value "(.*?)" .*values: (.*) in schema},
+        do: lambda { |msgs, _message, path, invalid, valid_set|
+          msgs[:attribute_types][fragment_join(path)] = 'ArchivesSpaceDynamicEnum'
+          msgs[:errors][fragment_join(path)] = ["Invalid value '#{invalid}'.  Must be one of: #{valid_set}"]
+        }
+      },
+      {
+        failed_attribute: ['ArchivesSpaceReadOnlyDynamicEnum'],
+        pattern: %r{The property '#/.*?' value "(.*?)" .*values: (.*) in schema},
+        do: lambda { |msgs, _message, path, invalid, valid_set|
+          msgs[:attribute_types][fragment_join(path)] = 'ArchivesSpaceReadOnlyDynamicEnum'
+          msgs[:errors][fragment_join(path)] = ["Protected read-only list #{path}. Invalid value '#{invalid}'.  Must be one of: #{valid_set}"]
+        }
+      },
 
-           msgs[:state][fragment_join(path)] ||= []
-           msgs[:state][fragment_join(path)] << desired_type
+      {
+        failed_attribute: ['Type', 'ArchivesSpaceType'],
+        pattern: %r{The property '#/.*?' of type (.*?) did not match the following type: (.*?) in schema},
+        do: lambda { |msgs, message, path, actual_type, desired_type|
+          if actual_type !~ /JSONModel/ || message[:failed_attribute] == 'ArchivesSpaceType'
+            # We'll skip JSONModels because the specific problem with the
+            # document will have already been listed separately.
 
-           if msgs[:state][fragment_join(path)].length == 1
-             msgs[:errors][fragment_join(path)] = ["Must be a #{desired_type} (you provided a #{actual_type})"]
-             # a little better messages for malformed uri 
-             if desired_type =~ /uri$/
-              msgs[:errors][fragment_join(path)].first << " (malformed or invalid uri? check if referenced object exists.)"
-             end
-           else
-             msgs[:errors][fragment_join(path)] = ["Must be one of: #{msgs[:state][fragment_join(path)].join (", ")} (you provided a #{actual_type})"]
-           end
-         end
+            msgs[:state][fragment_join(path)] ||= []
+            msgs[:state][fragment_join(path)] << desired_type
 
-       }
-     },
+            if msgs[:state][fragment_join(path)].length == 1
+              msgs[:errors][fragment_join(path)] = ["Must be a #{desired_type} (you provided a #{actual_type})"]
+              # a little better messages for malformed uri
+              msgs[:errors][fragment_join(path)].first << ' (malformed or invalid uri? check if referenced object exists.)' if desired_type =~ /uri$/
+            else
+              msgs[:errors][fragment_join(path)] = ["Must be one of: #{msgs[:state][fragment_join(path)].join ', '} (you provided a #{actual_type})"]
+            end
+          end
+        }
+      },
 
-     {
-       :failed_attribute => ['custom_validation'],
-       :pattern => /Validation failed for '(.*?)': (.*?) in schema /,
-       :do => ->(msgs, message, path, property, msg) {
-         property = (property && !property.empty?) ? property : nil
-         msgs[:errors][fragment_join(path, property)] = [msg]
-       }
-     },
+      {
+        failed_attribute: ['custom_validation'],
+        pattern: /Validation failed for '(.*?)': (.*?) in schema /,
+        do: lambda { |msgs, _message, path, property, msg|
+          property = property && !property.empty? ? property : nil
+          msgs[:errors][fragment_join(path, property)] = [msg]
+        }
+      },
 
-     {
-       :failed_attribute => ['custom_validation'],
-       :pattern => /Warning generated for '(.*?)': (.*?) in schema /,
-       :do => ->(msgs, message, path, property, msg) {
-         msgs[:warnings][fragment_join(path, property)] = [msg]
-       }
-     },
+      {
+        failed_attribute: ['custom_validation'],
+        pattern: /Warning generated for '(.*?)': (.*?) in schema /,
+        do: lambda { |msgs, _message, path, property, msg|
+          msgs[:warnings][fragment_join(path, property)] = [msg]
+        }
+      },
 
-     {
-       :failed_attribute => ['custom_validation'],
-       :pattern => /Validation error code: (.*?) in schema /,
-       :do => ->(msgs, message, path, error_code) {
-         msgs[:errors]['coded_errors'] = [error_code]
-       }
-     },
+      {
+        failed_attribute: ['custom_validation'],
+        pattern: /Validation error code: (.*?) in schema /,
+        do: lambda { |msgs, _message, _path, error_code|
+          msgs[:errors]['coded_errors'] = [error_code]
+        }
+      },
 
-
-     # Catch all
-     {
-       :failed_attribute => nil,
-       :pattern => /^(.*)$/,
-       :do => ->(msgs, message, path, msg) {
-         msgs[:errors]['unknown'] = [msg]
-       }
-     }
-    ]
-
+      # Catch all
+      {
+        failed_attribute: nil,
+        pattern: /^(.*)$/,
+        do: lambda { |msgs, _message, _path, msg|
+          msgs[:errors]['unknown'] = [msg]
+        }
+      }
+    ].freeze
 
   # For a given error, find its list of sub errors.
   def self.extract_suberrors(errors)
@@ -183,14 +164,12 @@ module JSONSchemaUtils
       if !error[:errors]
         error
       else
-        self.extract_suberrors(error[:errors])
+        extract_suberrors(error[:errors])
       end
     end
 
     result.flatten
   end
-
-
 
   # Given a list of error messages produced by JSON schema validation, parse
   # them into a structured format like:
@@ -199,36 +178,32 @@ module JSONSchemaUtils
   #   :errors => {:attr1 => "(What was wrong with attr1)"},
   #   :warnings => {:attr2 => "(attr2 not quite right either)"}
   # }
-  def self.parse_schema_messages(messages, validator)
-
-    messages = self.extract_suberrors(messages)
+  def self.parse_schema_messages(messages, _validator)
+    messages = extract_suberrors(messages)
 
     msgs = {
-      :errors => {},
-      :warnings => {},
+      errors: {},
+      warnings: {},
       # to lookup e.g., msgs[:attribute_types]['extents/0/extent_type'] => 'ArchivesSpaceDynamicEnum'
-      :attribute_types => {},
-      :state => {}              # give the parse rules somewhere to store useful state for a run
+      attribute_types: {},
+      state: {} # give the parse rules somewhere to store useful state for a run
     }
 
     messages.each do |message|
-
       SCHEMA_PARSE_RULES.each do |rule|
-        if (rule[:failed_attribute].nil? || rule[:failed_attribute].include?(message[:failed_attribute])) and
-            message[:message] =~ rule[:pattern]
-          rule[:do].call(msgs, message, message[:fragment],
-                         *message[:message].scan(rule[:pattern]).flatten)
+        next unless (rule[:failed_attribute].nil? || rule[:failed_attribute].include?(message[:failed_attribute])) &&
+                    message[:message] =~ (rule[:pattern])
 
-          break
-        end
+        rule[:do].call(msgs, message, message[:fragment],
+                       *message[:message].scan(rule[:pattern]).flatten)
+
+        break
       end
-
     end
 
     msgs.delete(:state)
     msgs
   end
-
 
   # Given a hash representing a record tree, map across the hash and this
   # model's schema in lockstep.
@@ -239,17 +214,14 @@ module JSONSchemaUtils
   # the node in the record tree.
   #
   def self.map_hash_with_schema(record, schema, transformations = [])
-    return record if not record.is_a?(Hash)
+    return record unless record.is_a?(Hash)
 
-    if schema.is_a?(String)
-      schema = resolve_schema_reference(schema)
-    end
+    schema = resolve_schema_reference(schema) if schema.is_a?(String)
 
     # Sometimes a schema won't specify anything other than the required type
     # (like {'type' => 'object'}).  If there's nothing more to check, we're
     # done.
-    return record if !schema.has_key?("properties")
-
+    return record unless schema.has_key?('properties')
 
     # Apply transformations to the current level of the tree
     transformations.each do |transform|
@@ -263,47 +235,46 @@ module JSONSchemaUtils
       k = k.to_s
       properties = schema['properties']
 
-      if properties.has_key?(k) && (properties[k]["type"] == "object")
-        result[k] = self.map_hash_with_schema(v, properties[k], transformations)
+      if properties.has_key?(k) && (properties[k]['type'] == 'object')
+        result[k] = map_hash_with_schema(v, properties[k], transformations)
 
-      elsif v.is_a?(Array) && properties.has_key?(k) && (properties[k]["type"] == "array")
+      elsif v.is_a?(Array) && properties.has_key?(k) && (properties[k]['type'] == 'array')
 
         # Arrays are tricky because they can either consist of a single type, or
         # a number of different types.
 
-        if properties[k]["items"]["type"].is_a?(Array)
-          result[k] = v.map {|elt|
+        result[k] = if properties[k]['items']['type'].is_a?(Array)
+                      v.map { |elt|
+                        if elt.is_a?(Hash)
+                          next_schema = determine_schema_for(elt, properties[k]['items']['type'])
+                          map_hash_with_schema(elt, next_schema, transformations)
+                        elsif elt.is_a?(Array)
+                          raise "Nested arrays aren't supported here (yet)"
+                        else
+                          elt
+                        end
+                      }
 
-            if elt.is_a?(Hash)
-              next_schema = determine_schema_for(elt, properties[k]["items"]["type"])
-              self.map_hash_with_schema(elt, next_schema, transformations)
-            elsif elt.is_a?(Array)
-              raise "Nested arrays aren't supported here (yet)"
-            else
-              elt
-            end
-          }
+                    # The array contains a single type of object
+                    elsif properties[k]['items']['type'] === 'object'
+                      v.map { |elt| map_hash_with_schema(elt, properties[k]['items'], transformations) }
+                    else
+                      # Just one valid type
+                      v.map { |elt| map_hash_with_schema(elt, properties[k]['items']['type'], transformations) }
+                    end
 
-        # The array contains a single type of object
-        elsif properties[k]["items"]["type"] === "object"
-          result[k] = v.map {|elt| self.map_hash_with_schema(elt, properties[k]["items"], transformations)}
-        else
-          # Just one valid type
-          result[k] = v.map {|elt| self.map_hash_with_schema(elt, properties[k]["items"]["type"], transformations)}
-        end
-
-      elsif (v.is_a?(Hash) || v.is_a?(Array)) && (properties.has_key?(k) && properties[k]["type"].is_a?(Array))
+      elsif (v.is_a?(Hash) || v.is_a?(Array)) && (properties.has_key?(k) && properties[k]['type'].is_a?(Array))
         # Multiple possible types for this single value
 
-        results = (v.is_a?(Array) ? v : [v]).map {|elt|
-          next_schema = determine_schema_for(elt, properties[k]["type"])
-          self.map_hash_with_schema(elt, next_schema, transformations)
+        results = (v.is_a?(Array) ? v : [v]).map { |elt|
+          next_schema = determine_schema_for(elt, properties[k]['type'])
+          map_hash_with_schema(elt, next_schema, transformations)
         }
 
         result[k] = v.is_a?(Array) ? results : results[0]
 
-      elsif properties.has_key?(k) && JSONModel.parse_jsonmodel_ref(properties[k]["type"])
-        result[k] = self.map_hash_with_schema(v, properties[k]["type"], transformations)
+      elsif properties.has_key?(k) && JSONModel.parse_jsonmodel_ref(properties[k]['type'])
+        result[k] = map_hash_with_schema(v, properties[k]['type'], transformations)
       else
         result[k] = v
       end
@@ -340,9 +311,7 @@ module JSONSchemaUtils
       result = {}
 
       hash.each do |k, v|
-        if schema["properties"].has_key?(k.to_s) && (!drop_readonly || !schema["properties"][k.to_s]["readonly"])
-          result[k] = v
-        end
+        result[k] = v if schema['properties'].has_key?(k.to_s) && (!drop_readonly || !schema['properties'][k.to_s]['readonly'])
       end
 
       result
@@ -352,20 +321,17 @@ module JSONSchemaUtils
     map_hash_with_schema(hash, schema, [fn])
   end
 
-
   def self.apply_schema_defaults(hash, schema)
     fn = proc do |hash, schema|
       result = hash.clone
 
-      schema["properties"].each do |property, definition|
-
-        if definition.has_key?("default") && !hash.has_key?(property.to_s) && !hash.has_key?(property.intern)
-          result[property] = definition["default"]
+      schema['properties'].each do |property, definition|
+        if definition.has_key?('default') && !hash.has_key?(property.to_s) && !hash.has_key?(property.intern)
+          result[property] = definition['default']
         elsif definition['type'] == 'array' && !hash.has_key?(property.to_s) && !hash.has_key?(property.intern)
           # Array values that weren't provided default to empty
           result[property] = []
         end
-
       end
 
       result
@@ -374,41 +340,35 @@ module JSONSchemaUtils
     map_hash_with_schema(hash, schema, [fn])
   end
 
-
   private
 
   def self.resolve_schema_reference(schema_reference)
     # This should be a reference to a different JSONModel type.  Resolve it
     # and return its schema.
     ref = JSONModel.parse_jsonmodel_ref(schema_reference)
-    raise "Invalid schema given: #{schema_reference}" if !ref
+    raise "Invalid schema given: #{schema_reference}" unless ref
 
     JSONModel.JSONModel(ref[0]).schema
   end
 
-
   def self.determine_schema_for(elt, possible_schemas)
     # A number of different types.  Match them up based on the value of the 'jsonmodel_type' property
-    schema_types = possible_schemas.map {|schema| schema.is_a?(Hash) ? schema["type"] : schema}
+    schema_types = possible_schemas.map { |schema| schema.is_a?(Hash) ? schema['type'] : schema }
 
-    jsonmodel_type = elt["jsonmodel_type"] || elt[:jsonmodel_type]
+    jsonmodel_type = elt['jsonmodel_type'] || elt[:jsonmodel_type]
 
-    if !jsonmodel_type
-      raise JSONModel::ValidationException.new(:errors => {"record" => ["Can't unambiguously match #{elt.inspect} against schema types: #{schema_types.inspect}. " +
-                                                             "Resolve this by adding a 'jsonmodel_type' property to #{elt.inspect}"]})
+    unless jsonmodel_type
+      raise JSONModel::ValidationException.new(errors: { 'record' => ["Can't unambiguously match #{elt.inspect} against schema types: #{schema_types.inspect}. " +
+                                                             "Resolve this by adding a 'jsonmodel_type' property to #{elt.inspect}"] })
     end
 
-    next_schema = schema_types.find {|type|
+    next_schema = schema_types.find { |type|
       (type.is_a?(String) && type.include?("JSONModel(:#{jsonmodel_type})")) ||
-      (type.is_a?(Hash) && type["jsonmodel_type"] === jsonmodel_type)
+        (type.is_a?(Hash) && type['jsonmodel_type'] === jsonmodel_type)
     }
 
-    if next_schema.nil?
-      raise "Couldn't determine type of '#{elt.inspect}'.  Must be one of: #{schema_types.inspect}"
-    end
+    raise "Couldn't determine type of '#{elt.inspect}'.  Must be one of: #{schema_types.inspect}" if next_schema.nil?
 
     next_schema
   end
-
-
 end

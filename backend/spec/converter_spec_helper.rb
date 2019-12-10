@@ -1,6 +1,5 @@
 require 'spec_helper'
 
-
 def convert(path_to_some_xml)
   converter = my_converter.new(path_to_some_xml)
   converter.run
@@ -8,7 +7,6 @@ def convert(path_to_some_xml)
 
   json
 end
-
 
 def get_tempfile_path(src)
   tmp = ASUtils.tempfile("doc-#{Time.now.to_i}")

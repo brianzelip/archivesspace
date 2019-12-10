@@ -141,9 +141,7 @@ describe 'RDE' do
     stupid = modal.find_element(:css, '.add-rows-form input').attribute('value')
 
     warn stupid
-    unless stupid == '9'
-      9.times { modal.find_element(:css, '.add-rows-form input').send_keys(:arrow_up) }
-    end
+    9.times { modal.find_element(:css, '.add-rows-form input').send_keys(:arrow_up) } unless stupid == '9'
 
     @driver.wait_for_ajax
     modal.find_element(:css, '.add-rows-form .btn.btn-primary').click
@@ -360,9 +358,7 @@ describe 'Digital Object RDE' do
     # especailly when headless. The key is not being sent, so we'll try the
     # up arror method to add the rows.
     stupid = modal.find_element(:css, '.add-rows-form input').attribute('value')
-    unless stupid == '9'
-      9.times { modal.find_element(:css, '.add-rows-form input').send_keys(:arrow_up) }
-    end
+    9.times { modal.find_element(:css, '.add-rows-form input').send_keys(:arrow_up) } unless stupid == '9'
 
     modal.find_element(:css, '.add-rows-form .btn.btn-primary').click
 

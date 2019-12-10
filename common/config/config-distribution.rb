@@ -8,34 +8,26 @@ class AppConfig
   def self.[](parameter)
     parameter = resolve_alias(parameter)
 
-    if !@@parameters.has_key?(parameter)
-      raise "No value set for config parameter: #{parameter}"
-    end
+    raise "No value set for config parameter: #{parameter}" unless @@parameters.has_key?(parameter)
 
     val = @@parameters[parameter]
 
     val.respond_to?(:call) ? val.call : val
   end
 
-
   def self.[]=(parameter, value)
     parameter = resolve_alias(parameter)
 
-    if changed?(parameter)
-      $stderr.puts("WARNING: The parameter '#{parameter}' was already set")
-    end
+    warn("WARNING: The parameter '#{parameter}' was already set") if changed?(parameter)
 
     @@changed_from_default[parameter] = true
     @@parameters[parameter] = value
   end
 
-
   def self.resolve_alias(parameter)
     if aliases[parameter]
 
-      if deprecated_parameters[parameter]
-        $stderr.puts("WARNING: The parameter '#{parameter}' is now deprecated.  Please use '#{aliases[parameter]}' instead.")
-      end
+      warn("WARNING: The parameter '#{parameter}' is now deprecated.  Please use '#{aliases[parameter]}' instead.") if deprecated_parameters[parameter]
 
       aliases[parameter]
     else
@@ -43,43 +35,35 @@ class AppConfig
     end
   end
 
-
   def self.aliases
     @@aliases ||= {}
   end
-
 
   def self.deprecated_parameters
     @@deprecated_parameters ||= {}
   end
 
-
   def self.has_key?(parameter)
     @@parameters.has_key?(resolve_alias(parameter))
   end
 
-
   def self.load_overrides_from_properties
     # Override defaults from the command-line if specified
     java.lang.System.get_properties.each do |property, value|
-      if property =~ /aspace.config.(.*)/
-        @@parameters[resolve_alias($1.intern)] = value
-      end
+      @@parameters[resolve_alias(Regexp.last_match(1).intern)] = value if property =~ /aspace.config.(.*)/
     end
   end
-
 
   def self.load_overrides_from_environment
     # Override defaults from the environment
     ENV.each do |envvar, value|
-      if envvar =~ /^APPCONFIG_/
-        # Convert envvar to property: i.e. turn APPCONFIG_DB_URL into :db_url
-        property = envvar.partition('_').last.downcase.to_sym
-        @@parameters[resolve_alias(property)] = parse_environment_value(value)
-      end
+      next unless envvar =~ /^APPCONFIG_/
+
+      # Convert envvar to property: i.e. turn APPCONFIG_DB_URL into :db_url
+      property = envvar.partition('_').last.downcase.to_sym
+      @@parameters[resolve_alias(property)] = parse_environment_value(value)
     end
   end
-
 
   def self.load_into(obj)
     @@parameters.each do |config, value|
@@ -87,15 +71,14 @@ class AppConfig
     end
   end
 
-
   def self.dump_sanitized
     protected_terms = /(key|password|secret)/
-    Hash[@@parameters.map {|k, v|
+    Hash[@@parameters.map { |k, v|
            if k == :db_url
              [k, AppConfig[:db_url_redacted]]
-           elsif k.to_s =~ protected_terms or v.to_s =~ protected_terms
-             [k, "[SECRET]"]
-           elsif v.is_a? (Proc)
+           elsif k.to_s =~ protected_terms || v.to_s =~ protected_terms
+             [k, '[SECRET]']
+           elsif v.is_a? Proc
              [k, v.call]
            else
              [k, v]
@@ -103,48 +86,42 @@ class AppConfig
          }]
   end
 
-
   def self.get_preferred_config_path
-
-    if java.lang.System.getProperty("aspace.config")
+    if java.lang.System.getProperty('aspace.config')
       # Explicit Java property
-      java.lang.System.getProperty("aspace.config")
+      java.lang.System.getProperty('aspace.config')
     elsif ENV['ASPACE_CONFIG'] && File.exist?(ENV['ASPACE_CONFIG'])
-      # Setting a system config 
+      # Setting a system config
       ENV['ASPACE_CONFIG']
-    elsif ENV['ASPACE_LAUNCHER_BASE'] && File.exist?(File.join(ENV['ASPACE_LAUNCHER_BASE'], "config", "config.rb"))
-      File.join(ENV['ASPACE_LAUNCHER_BASE'], "config", "config.rb")
-    elsif java.lang.System.getProperty("catalina.base")
+    elsif ENV['ASPACE_LAUNCHER_BASE'] && File.exist?(File.join(ENV['ASPACE_LAUNCHER_BASE'], 'config', 'config.rb'))
+      File.join(ENV['ASPACE_LAUNCHER_BASE'], 'config', 'config.rb')
+    elsif java.lang.System.getProperty('catalina.base')
       # Tomcat users
-      File.join(java.lang.System.getProperty("catalina.base"), "conf", "config.rb")
-    elsif __FILE__.index(java.lang.System.getProperty("java.io.tmpdir")) != 0
-      File.join(get_devserver_base, "config", "config.rb")
+      File.join(java.lang.System.getProperty('catalina.base'), 'conf', 'config.rb')
+    elsif __FILE__.index(java.lang.System.getProperty('java.io.tmpdir')) != 0
+      File.join(get_devserver_base, 'config', 'config.rb')
     else
-      File.join(Dir.home, ".aspace_config.rb")
+      File.join(Dir.home, '.aspace_config.rb')
     end
-
   end
 
   def self.get_devserver_base
-    File.join(ENV.fetch("GEM_HOME"), "..", "..")
+    File.join(ENV.fetch('GEM_HOME'), '..', '..')
   end
 
   def self.find_user_config
     possible_locations = [
-                          get_preferred_config_path,
-                          File.join(File.dirname(__FILE__), "config.rb"),
-                          File.join(File.dirname(__FILE__), "..", "..", "config", "config.rb"),
-                         ]
+      get_preferred_config_path,
+      File.join(File.dirname(__FILE__), 'config.rb'),
+      File.join(File.dirname(__FILE__), '..', '..', 'config', 'config.rb')
+    ]
 
     possible_locations.each do |config|
-      if config and File.exist?(config)
-        return config
-      end
+      return config if config && File.exist?(config)
     end
 
     nil
   end
-
 
   def self.load_user_config
     config = find_user_config
@@ -154,26 +131,22 @@ class AppConfig
       load config
     end
 
-    self.load_overrides_from_environment
-    self.load_overrides_from_properties
+    load_overrides_from_environment
+    load_overrides_from_properties
   end
-
 
   def self.demo_db_url
-    "jdbc:derby:#{File.join(AppConfig[:data_directory], "archivesspace_demo_db")};create=true;aspacedemo=true"
+    "jdbc:derby:#{File.join(AppConfig[:data_directory], 'archivesspace_demo_db')};create=true;aspacedemo=true"
   end
-
 
   def self.read_defaults
-    File.read(File.join(File.dirname(__FILE__), "config-defaults.rb"))
+    File.read(File.join(File.dirname(__FILE__), 'config-defaults.rb'))
   end
-
 
   def self.load_defaults
     eval(read_defaults)
     @@changed_from_default = {}
   end
-
 
   def self.reload
     @@parameters = {}
@@ -185,7 +158,6 @@ class AppConfig
 
     AppConfig.load_user_config
   end
-
 
   def self.changed?(parameter)
     @@changed_from_default[resolve_alias(parameter)]
@@ -205,10 +177,7 @@ class AppConfig
     value = value.to_i if value =~ /^\d+$/
     value
   end
-
 end
-
-
 
 ## Application defaults
 ##

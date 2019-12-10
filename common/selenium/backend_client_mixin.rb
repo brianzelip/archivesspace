@@ -3,7 +3,6 @@
 require 'ashttp'
 
 module BackendClientMethods
-
   class ASpaceUser
     attr_reader :username
     attr_reader :password
@@ -14,20 +13,17 @@ module BackendClientMethods
     end
   end
 
-
   def set_repo(repo)
     if repo.respond_to?(:uri)
       set_repo(repo.uri)
-    elsif repo.is_a?(String) && repo.match(/^\/repositories\/\d+/)
+    elsif repo.is_a?(String) && repo.match(%r{^/repositories/\d+})
       set_repo(JSONModel(:repository).id_for(repo))
     else
       JSONModel.set_repository(repo)
     end
   end
 
-
   def do_http_request(url, req)
-
     req['X-ArchivesSpace-Session'] = @current_session
 
     ASHTTP.start_uri(url) do |http|
@@ -36,10 +32,9 @@ module BackendClientMethods
     end
   end
 
-
   def run_index_round
     if ENV['ASPACE_INDEXER_URL']
-      url = URI.parse(ENV['ASPACE_INDEXER_URL'] + "/run_index_round")
+      url = URI.parse(ENV['ASPACE_INDEXER_URL'] + '/run_index_round')
 
       request = Net::HTTP::Post.new(url.request_uri)
       request.content_length = 0
@@ -48,15 +43,15 @@ module BackendClientMethods
 
       begin
         response = do_http_request(url, request)
-        $stderr.puts("Indexer responded with status #{response.code}")
+        warn("Indexer responded with status #{response.code}")
         return response.code
       rescue Timeout::Error
         tries -= 1
-        $stderr.puts("#{Time.now}: Warning: Retrying index round - #{tries} tries remaining")
+        warn("#{Time.now}: Warning: Retrying index round - #{tries} tries remaining")
         retry if tries > 0
       end
 
-      $stderr.puts("#{Time.now}: Warning: Indexing round looks to have failed due to timeout")
+      warn("#{Time.now}: Warning: Indexing round looks to have failed due to timeout")
 
     else
       $last_sequence ||= 0
@@ -66,7 +61,7 @@ module BackendClientMethods
 
   def run_periodic_index
     if ENV['ASPACE_INDEXER_URL']
-      url = URI.parse(ENV['ASPACE_INDEXER_URL'] + "/run_periodic_index")
+      url = URI.parse(ENV['ASPACE_INDEXER_URL'] + '/run_periodic_index')
 
       request = Net::HTTP::Post.new(url.request_uri)
       request.content_length = 0
@@ -87,32 +82,28 @@ module BackendClientMethods
     end
   end
 
-
   def run_all_indexers
     run_index_round
     run_periodic_index
   end
 
   def admin_backend_request(req)
-    res = ASHTTP.post_form(URI("#{$backend}/users/admin/login"), :password => "admin")
-    admin_session = JSON(res.body)["session"]
+    res = ASHTTP.post_form(URI("#{$backend}/users/admin/login"), password: 'admin')
+    admin_session = JSON(res.body)['session']
 
-    req["X-ARCHIVESSPACE-SESSION"] = admin_session
-    req["X-ARCHIVESSPACE-PRIORITY"] = "high"
+    req['X-ARCHIVESSPACE-SESSION'] = admin_session
+    req['X-ARCHIVESSPACE-PRIORITY'] = 'high'
 
     uri = URI("#{$backend}")
 
     ASHTTP.start_uri(uri) do |http|
       res = http.request(req)
 
-      if res.code != "200"
-        raise "Bad response: #{res.body}"
-      end
+      raise "Bad response: #{res.body}" if res.code != '200'
 
       res
     end
   end
-
 
   def create_user(roles = {})
     user = "test user_#{SecureRandom.hex}"
@@ -131,12 +122,11 @@ module BackendClientMethods
       end
     end
 
-
     ASpaceUser.new(user, pass)
   end
 
   def create_subjects
-    %w[cultural_context function genre_form geographic occupation style_period technique temporal topical uniform_title].each do |term|
+    ['cultural_context', 'function', 'genre_form', 'geographic', 'occupation', 'style_period', 'technique', 'temporal', 'topical', 'uniform_title'].each do |term|
       params = { 'lock_version' => '1',
                  'title' => term,
                  'vocabulary' => '/vocabularies/1',
@@ -162,7 +152,7 @@ module BackendClientMethods
 
     groups = admin_backend_request(req)
 
-    uri = JSON.parse(groups.body).find {|group| group['group_code'] == group_code}['uri']
+    uri = JSON.parse(groups.body).find { |group| group['group_code'] == group_code }['uri']
 
     req = Net::HTTP::Get.new(uri)
     group = JSON.parse(admin_backend_request(req).body)

@@ -1,23 +1,22 @@
 class AssessmentSubreport < AbstractSubreport
+  BOOLEAN_FIELDS = [:accession_report, :appraisal, :container_list,
+                    :catalog_record, :control_file, :deed_of_gift, :finding_aid_ead,
+                    :finding_aid_online, :finding_aid_paper, :finding_aid_word,
+                    :finding_aid_spreadsheet, :related_eac_records, :review_required,
+                    :inactive, :sensitive_material].freeze
 
-	BOOLEAN_FIELDS = [:accession_report, :appraisal, :container_list,
-		:catalog_record, :control_file, :deed_of_gift, :finding_aid_ead,
-		:finding_aid_online, :finding_aid_paper, :finding_aid_word,
-		:finding_aid_spreadsheet, :related_eac_records, :review_required,
-		:inactive, :sensitive_material].freeze
+  register_subreport('assessment', ['accession', 'resource',
+                                    'archival_object', 'digital_object'])
 
-	register_subreport('assessment', ['accession', 'resource',
-		'archival_object', 'digital_object'])
+  def initialize(parent_custom_report, id)
+    super(parent_custom_report)
 
-	def initialize(parent_custom_report, id)
-		super(parent_custom_report)
+    @id_type = parent_custom_report.record_type
+    @id = id
+  end
 
-		@id_type = parent_custom_report.record_type
-		@id = id
-	end
-
-	def query_string
-		"select
+  def query_string
+    "select
 			assessment.id,
 			assessment.accession_report,
 			assessment.appraisal,
@@ -51,24 +50,28 @@ class AssessmentSubreport < AbstractSubreport
 		from assessment_rlshp, assessment
 		where assessment_rlshp.assessment_id = assessment.id
 			and assessment_rlshp.#{@id_type}_id = #{db.literal(@id)}"
-	end
+  end
 
-	def fix_row(row)
-		ReportUtils.fix_boolean_fields(row, BOOLEAN_FIELDS)
-		ReportUtils.fix_decimal_format(row, [:monetary_value])
-		row[:ratings] = AssessmentRatingSubreport.new(
-			self, row[:id]).get_content
-		row[:formats] = AssessmentMaterialTypesFormatsSubreport.new(
-			self, row[:id]).get_content
-		row[:conservation_issues] = AssessmentConservationIssuesSubreport
-			.new(self, row[:id]).get_content
-		row[:surveyed_by] = AssessmentSurveyedBySubreport.new(
-			self, row[:id]).get_content
-		row[:reviewer] = AssessmentReviewerSubreport.new(
-			self, row[:id]).get_content
-	end
+  def fix_row(row)
+    ReportUtils.fix_boolean_fields(row, BOOLEAN_FIELDS)
+    ReportUtils.fix_decimal_format(row, [:monetary_value])
+    row[:ratings] = AssessmentRatingSubreport.new(
+      self, row[:id]
+    ).get_content
+    row[:formats] = AssessmentMaterialTypesFormatsSubreport.new(
+      self, row[:id]
+    ).get_content
+    row[:conservation_issues] = AssessmentConservationIssuesSubreport
+                                .new(self, row[:id]).get_content
+    row[:surveyed_by] = AssessmentSurveyedBySubreport.new(
+      self, row[:id]
+    ).get_content
+    row[:reviewer] = AssessmentReviewerSubreport.new(
+      self, row[:id]
+    ).get_content
+  end
 
-	def self.field_name
-		'assessment'
-	end
+  def self.field_name
+    'assessment'
+  end
 end

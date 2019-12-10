@@ -31,12 +31,10 @@ class MARCModel < ASpaceExport::ExportModel
   attr_accessor :controlfield_string
 
   @@datafield = Class.new do
-
     attr_accessor :tag
     attr_accessor :ind1
     attr_accessor :ind2
     attr_accessor :subfields
-
 
     def initialize(*args)
       @tag, @ind1, @ind2 = *args
@@ -49,13 +47,11 @@ class MARCModel < ASpaceExport::ExportModel
         @subfields << subfield unless subfield.empty?
       end
 
-      return self
+      self
     end
-
   end
 
   @@subfield = Class.new do
-
     attr_accessor :code
     attr_accessor :text
 
@@ -78,22 +74,20 @@ class MARCModel < ASpaceExport::ExportModel
   end
 
   def datafields
-    @datafields.map {|k,v| v}
+    @datafields.map { |_k, v| v }
   end
 
   def include_unpublished?
     @include_unpublished
   end
 
-
-  def self.from_aspace_object(obj, opts = {})
-    self.new(opts[:include_unpublished])
+  def self.from_aspace_object(_obj, opts = {})
+    new(opts[:include_unpublished])
   end
 
   # 'archival object's in the abstract
   def self.from_archival_object(obj, opts = {})
-
-    marc = self.from_aspace_object(obj, opts)
+    marc = from_aspace_object(obj, opts)
     marc.apply_map(obj, @archival_object_map)
 
     marc
@@ -102,9 +96,9 @@ class MARCModel < ASpaceExport::ExportModel
   # subtypes of 'archival object':
 
   def self.from_resource(obj, opts = {})
-    marc = self.from_archival_object(obj, opts)
+    marc = from_archival_object(obj, opts)
     marc.apply_map(obj, @resource_map)
-    marc.leader_string = "00000np$aa2200000 u 4500"
+    marc.leader_string = '00000np$aa2200000 u 4500'
     marc.leader_string[7] = obj.level == 'item' ? 'm' : 'c'
 
     marc.controlfield_string = assemble_controlfield_string(obj)
@@ -112,43 +106,39 @@ class MARCModel < ASpaceExport::ExportModel
     marc
   end
 
-
   def self.assemble_controlfield_string(obj)
-
     date = obj.dates[0] || {}
     string = obj['system_mtime'].scan(/\d{2}/)[1..3].join('')
     string += obj.level == 'item' && date['date_type'] == 'single' ? 's' : 'i'
-    string += date['begin'] ? date['begin'][0..3] : "    "
-    string += date['end'] ? date['end'][0..3] : "    "
+    string += date['begin'] ? date['begin'][0..3] : '    '
+    string += date['end'] ? date['end'][0..3] : '    '
 
     repo = obj['repository']['_resolved']
 
-    if repo.has_key?('country') && !repo['country'].empty?
-      # US is a special case, because ASpace has no knowledge of states, the
-      # correct value is 'xxu'
-      if repo['country'] == "US"
-        string += "xxu"
-      else
-        string += repo['country'].downcase
-      end
-    else
-      string += "xx"
-    end
+    string += if repo.has_key?('country') && !repo['country'].empty?
+                # US is a special case, because ASpace has no knowledge of states, the
+                # correct value is 'xxu'
+                if repo['country'] == 'US'
+                  'xxu'
+                else
+                  repo['country'].downcase
+                          end
+              else
+                'xx'
+              end
 
     # If only one Language and Script subrecord its code value should be exported in the MARC 008 field position 35-37; If more than one Language and Script subrecord is recorded, a value of "mul" should be exported in the MARC 008 field position 35-37.
     lang_materials = obj.lang_materials
-    languages = lang_materials.map{|l| l['language_and_script']}.compact
+    languages = lang_materials.map { |l| l['language_and_script'] }.compact
     langcode = languages.count == 1 ? languages[0]['language'] : 'mul'
 
     # variable number of spaces needed since country code could have 2 or 3 chars
-    (35-(string.length)).times { string += ' ' }
+    (35 - string.length).times { string += ' ' }
     string += (langcode || '|||')
     string += ' d'
 
     string
-
   end
-
 
   def df!(*args)
     @sequence ||= 0
@@ -156,7 +146,6 @@ class MARCModel < ASpaceExport::ExportModel
     @datafields[@sequence] = @@datafield.new(*args)
     @datafields[@sequence]
   end
-
 
   def df(*args)
     if @datafields.has_key?(args.to_s)
@@ -167,90 +156,80 @@ class MARCModel < ASpaceExport::ExportModel
     end
   end
 
-
   def handle_id(*ids)
-    ids.reject!{|i| i.nil? || i.empty?}
+    ids.reject! { |i| i.nil? || i.empty? }
     df('099', ' ', ' ').with_sfs(['a', ids.join('.')])
   end
 
-
   def handle_title(title, linked_agents, dates)
-    creator = linked_agents.find{|a| a['role'] == 'creator'}
+    creator = linked_agents.find { |a| a['role'] == 'creator' }
     date_codes = []
 
     # process dates first, if defined.
     unless dates.empty?
-      dates = [["single", "inclusive", "range"], ["bulk"]].map {|types|
-        dates.find {|date| types.include? date['date_type'] }
+      dates = [['single', 'inclusive', 'range'], ['bulk']].map { |types|
+        dates.find { |date| types.include? date['date_type'] }
       }.compact
 
       dates.each do |date|
         code, val = nil
         code = date['date_type'] == 'bulk' ? 'g' : 'f'
-        if date['expression']
-          val = date['expression']
-        elsif date['end']
-          val = "#{date['begin']} - #{date['end']}"
-        else
-          val = "#{date['begin']}"
-        end
+        val = if date['expression']
+                date['expression']
+              elsif date['end']
+                "#{date['begin']} - #{date['end']}"
+              else
+                "#{date['begin']}"
+              end
         date_codes.push([code, val])
       end
     end
 
-    ind1 = creator.nil? ? "0" : "1"
-    if date_codes.length > 0
+    ind1 = creator.nil? ? '0' : '1'
+    if !date_codes.empty?
       # we want to pass in all our date codes as separate subfield tags
       # e.g., with_sfs(['a', title], [code1, val1], [code2, val2]... [coden, valn])
-      df('245', ind1, '0').with_sfs(['a', title + ","], *date_codes)
+      df('245', ind1, '0').with_sfs(['a', title + ','], *date_codes)
     else
       df('245', ind1, '0').with_sfs(['a', title])
     end
   end
 
-
   def handle_languages(lang_materials)
-
     # ANW-697: The Language subrecord code values should be exported in repeating subfield $a entries in the MARC 041 field.
 
-    languages = lang_materials.map{|l| l['language_and_script']}.compact
+    languages = lang_materials.map { |l| l['language_and_script'] }.compact
 
     languages.each do |language|
-
       df('041', ' ', ' ').with_sfs(['a', language['language']])
-
     end
 
     # ANW-697: Language Text subrecords should be exported in the MARC 546 subfield $a
 
-    language_notes = lang_materials.map {|l| l['notes']}.compact.reject {|e|  e == [] }
+    language_notes = lang_materials.map { |l| l['notes'] }.compact.reject { |e| e == [] }
 
-    if language_notes
-      language_notes.each do |note|
-        handle_notes(note)
-      end
+    language_notes&.each do |note|
+      handle_notes(note)
     end
-
   end
-
 
   def handle_dates(dates)
     return false if dates.empty?
 
-    dates = [["single", "inclusive", "range"], ["bulk"]].map {|types|
-      dates.find {|date| types.include? date['date_type'] }
+    dates = [['single', 'inclusive', 'range'], ['bulk']].map { |types|
+      dates.find { |date| types.include? date['date_type'] }
     }.compact
 
     dates.each do |date|
       code = date['date_type'] == 'bulk' ? 'g' : 'f'
       val = nil
-      if date['expression'] && date['date_type'] != 'bulk'
-        val = date['expression']
-      elsif date['date_type'] == 'single'
-        val = date['begin']
-      else
-        val = "#{date['begin']} - #{date['end']}"
-      end
+      val = if date['expression'] && date['date_type'] != 'bulk'
+              date['expression']
+            elsif date['date_type'] == 'single'
+              date['begin']
+            else
+              "#{date['begin']} - #{date['end']}"
+            end
 
       df('245', '1', '0').with_sfs([code, val])
     end
@@ -260,37 +239,37 @@ class MARCModel < ASpaceExport::ExportModel
     repo = repository['_resolved']
     return false unless repo
 
-    sfa = repo['org_code'] ? repo['org_code'] : "Repository: #{repo['repo_code']}"
+    sfa = repo['org_code'] || "Repository: #{repo['repo_code']}"
 
     # ANW-529: options for 852 datafield:
     # 1.) $a => org_code || repo_name
     # 2.) $a => $parent_institution_name && $b => repo_name
 
-    if repo['parent_institution_name']
-      subfields_852 = [
+    subfields_852 = if repo['parent_institution_name']
+                      [
                         ['a', repo['parent_institution_name']],
                         ['b', repo['name']]
                       ]
-    elsif repo['org_code']
-      subfields_852 = [
-                        ['a', repo['org_code']],
+                    elsif repo['org_code']
+                      [
+                        ['a', repo['org_code']]
                       ]
-    else
-      subfields_852 = [
+                    else
+                      [
                         ['a', repo['name']]
                       ]
-    end
+                    end
 
     df('852', ' ', ' ').with_sfs(*subfields_852)
-    df('040', ' ', ' ').with_sfs(['a', repo['org_code']], ['b', finding_aid_language[0]],['c', repo['org_code']])
+    df('040', ' ', ' ').with_sfs(['a', repo['org_code']], ['b', finding_aid_language[0]], ['c', repo['org_code']])
     df('049', ' ', ' ').with_sfs(['a', repo['org_code']])
 
     if repo.has_key?('country') && !repo['country'].empty?
 
       # US is a special case, because ASpace has no knowledge of states, the
       # correct value is 'xxu'
-      if repo['country'] == "US"
-        df('044', ' ', ' ').with_sfs(['a', "xxu"])
+      if repo['country'] == 'US'
+        df('044', ' ', ' ').with_sfs(['a', 'xxu'])
       else
         df('044', ' ', ' ').with_sfs(['a', repo['country'].downcase])
       end
@@ -327,29 +306,26 @@ class MARCModel < ASpaceExport::ExportModel
 
       terms.each do |t|
         tag = case t['term_type']
-              when 'uniform_title'; 't'
-              when 'genre_form', 'style_period'; 'v'
-              when 'topical', 'cultural_context'; 'x'
-              when 'temporal'; 'y'
-              when 'geographic'; 'z'
+              when 'uniform_title' then 't'
+              when 'genre_form', 'style_period' then 'v'
+              when 'topical', 'cultural_context' then 'x'
+              when 'temporal' then 'y'
+              when 'geographic' then 'z'
               end
         sfs << [tag, t['term']]
       end
 
-      if ind2 == '7'
-        sfs << ['2', subject['source']]
-      end
+      sfs << ['2', subject['source']] if ind2 == '7'
 
-      ind1 = code == '630' ? "0" : " "
+      ind1 = code == '630' ? '0' : ' '
       df!(code, ind1, ind2).with_sfs(*sfs)
     end
   end
 
-
   def handle_primary_creator(linked_agents)
-    link = linked_agents.find{|a| a['role'] == 'creator'}
+    link = linked_agents.find { |a| a['role'] == 'creator' }
     return nil unless link
-    return nil unless link["_resolved"]["publish"] || @include_unpublished
+    return nil unless link['_resolved']['publish'] || @include_unpublished
 
     creator = link['_resolved']
     name = creator['display_name']
@@ -371,7 +347,7 @@ class MARCModel < ASpaceExport::ExportModel
       sfs = gather_agent_corporate_subfield_mappings(name, role_info, creator)
 
     when 'agent_person'
-      ind1  = name['name_order'] == 'direct' ? '0' : '1'
+      ind1 = name['name_order'] == 'direct' ? '0' : '1'
       code = '100'
       sfs = gather_agent_person_subfield_mappings(name, role_info, creator)
 
@@ -388,24 +364,24 @@ class MARCModel < ASpaceExport::ExportModel
   # TODO: DRY this up
   # this method is very similair to handle_primary_creator and handle_agents
   def handle_other_creators(linked_agents)
-    creators = linked_agents.select{|a| a['role'] == 'creator'}[1..-1] || []
-    creators = creators + linked_agents.select{|a| a['role'] == 'source'}
+    creators = linked_agents.select { |a| a['role'] == 'creator' }[1..-1] || []
+    creators += linked_agents.select { |a| a['role'] == 'source' }
 
     creators.each_with_index do |link, i|
-      next unless link["_resolved"]["publish"] || @include_unpublished
+      next unless link['_resolved']['publish'] || @include_unpublished
 
       creator = link['_resolved']
       name = creator['display_name']
       terms = link['terms']
       role = link['role']
 
-      if link['relator']
-        relator_sf = ['4', link['relator']]
-      elsif role == 'source'
-        relator_sf =  ['e', 'former owner']
-      else
-        relator_sf = ['e', 'creator']
-      end
+      relator_sf = if link['relator']
+                     ['4', link['relator']]
+                   elsif role == 'source'
+                     ['e', 'former owner']
+                   else
+                     ['e', 'creator']
+                   end
 
       ind2 = ' '
 
@@ -417,7 +393,7 @@ class MARCModel < ASpaceExport::ExportModel
         sfs = gather_agent_corporate_subfield_mappings(name, relator_sf, creator)
 
       when 'agent_person'
-        ind1  = name['name_order'] == 'direct' ? '0' : '1'
+        ind1 = name['name_order'] == 'direct' ? '0' : '1'
         code = '700'
         sfs = gather_agent_person_subfield_mappings(name, relator_sf, creator)
 
@@ -432,16 +408,14 @@ class MARCModel < ASpaceExport::ExportModel
     end
   end
 
-
   def handle_agents(linked_agents)
-
     handle_primary_creator(linked_agents)
     handle_other_creators(linked_agents)
 
-    subjects = linked_agents.select{|a| a['role'] == 'subject'}
+    subjects = linked_agents.select { |a| a['role'] == 'subject' }
 
     subjects.each_with_index do |link, i|
-      next unless link["_resolved"]["publish"] || @include_unpublished
+      next unless link['_resolved']['publish'] || @include_unpublished
 
       subject = link['_resolved']
       name = subject['display_name']
@@ -461,7 +435,7 @@ class MARCModel < ASpaceExport::ExportModel
         sfs = gather_agent_corporate_subfield_mappings(name, relator_sf, subject)
 
       when 'agent_person'
-        ind1  = name['name_order'] == 'direct' ? '0' : '1'
+        ind1 = name['name_order'] == 'direct' ? '0' : '1'
         code = '600'
         sfs = gather_agent_person_subfield_mappings(name, relator_sf, subject)
 
@@ -473,38 +447,32 @@ class MARCModel < ASpaceExport::ExportModel
 
       terms.each do |t|
         tag = case t['term_type']
-          when 'uniform_title'; 't'
-          when 'genre_form', 'style_period'; 'v'
-          when 'topical', 'cultural_context'; 'x'
-          when 'temporal'; 'y'
-          when 'geographic'; 'z'
+              when 'uniform_title' then 't'
+              when 'genre_form', 'style_period' then 'v'
+              when 'topical', 'cultural_context' then 'x'
+              when 'temporal' then 'y'
+              when 'geographic' then 'z'
           end
-        sfs << [(tag), t['term']]
+        sfs << [tag, t['term']]
       end
 
-      if ind2 == '7'
-        sfs << ['2', subject['names'].first['source']]
-      end
+      sfs << ['2', subject['names'].first['source']] if ind2 == '7'
 
       df(code, ind1, ind2, i).with_sfs(*sfs)
     end
   end
 
-
   def handle_notes(notes)
-
     notes.each do |note|
-
       prefix =  case note['type']
-                when 'dimensions'; "Dimensions"
-                when 'physdesc'; "Physical Description note"
-                when 'materialspec'; "Material Specific Details"
-                when 'physloc'; "Location of resource"
-                when 'phystech'; "Physical Characteristics / Technical Requirements"
-                when 'physfacet'; "Physical Facet"
-                when 'processinfo'; "Processing Information"
-                when 'separatedmaterial'; "Materials Separated from the Resource"
-                else; nil
+                when 'dimensions' then 'Dimensions'
+                when 'physdesc' then 'Physical Description note'
+                when 'materialspec' then 'Material Specific Details'
+                when 'physloc' then 'Location of resource'
+                when 'phystech' then 'Physical Characteristics / Technical Requirements'
+                when 'physfacet' then 'Physical Facet'
+                when 'processinfo' then 'Processing Information'
+                when 'separatedmaterial' then 'Materials Separated from the Resource'
                 end
 
       marc_args = case note['type']
@@ -512,9 +480,9 @@ class MARCModel < ASpaceExport::ExportModel
                   when 'arrangement', 'fileplan'
                     ['351', 'a']
                   when 'odd', 'dimensions', 'physdesc', 'materialspec', 'physloc', 'phystech', 'physfacet', 'processinfo', 'separatedmaterial'
-                    ['500','a']
+                    ['500', 'a']
                   when 'accessrestrict'
-                    ['506','a']
+                    ['506', 'a']
                   when 'scopecontent'
                     ['520', '2', ' ', 'a']
                   when 'abstract'
@@ -525,9 +493,9 @@ class MARCModel < ASpaceExport::ExportModel
                     ind1 = note['publish'] ? '1' : '0'
                     ['541', ind1, ' ', 'a']
                   when 'relatedmaterial'
-                    ['544','d']
+                    ['544', 'd']
                   when 'bioghist'
-                    ['545','a']
+                    ['545', 'a']
                   when 'custodhist'
                     ind1 = note['publish'] ? '1' : '0'
                     ['561', ind1, ' ', 'a']
@@ -546,329 +514,349 @@ class MARCModel < ASpaceExport::ExportModel
                     ['546', 'a']
                   when 'otherfindaid'
                     ['555', '0', ' ', 'a']
-                  else
-                    nil
                   end
 
-      unless marc_args.nil?
-        text = prefix ? "#{prefix}: " : ""
-        text += ASpaceExport::Utils.extract_note_text(note, @include_unpublished, true)
+      next if marc_args.nil?
 
-        # only create a tag if there is text to show (e.g., marked published or exporting unpublished)
-        if text.length > 0
-          df!(*marc_args[0...-1]).with_sfs([marc_args.last, *Array(text)])
-        end
-      end
+      text = prefix ? "#{prefix}: " : ''
+      text += ASpaceExport::Utils.extract_note_text(note, @include_unpublished, true)
 
+      # only create a tag if there is text to show (e.g., marked published or exporting unpublished)
+      df!(*marc_args[0...-1]).with_sfs([marc_args.last, *Array(text)]) unless text.empty?
     end
   end
-
 
   def handle_extents(extents)
     extents.each do |ext|
       e = ext['number']
-      t =  "#{I18n.t('enumerations.extent_extent_type.'+ext['extent_type'], :default => ext['extent_type'])}"
+      t = "#{I18n.t('enumerations.extent_extent_type.' + ext['extent_type'], default: ext['extent_type'])}"
 
-      if ext['container_summary']
-        t << " (#{ext['container_summary']})"
-      end
+      t << " (#{ext['container_summary']})" if ext['container_summary']
 
       df!('300').with_sfs(['a', e], ['f', t])
     end
   end
 
-
   # 3/28/18: Updated: ANW-318
   def handle_ead_loc(ead_loc)
     # If there is EADlocation
-    #<datafield tag="856" ind1="4" ind2="2">
+    # <datafield tag="856" ind1="4" ind2="2">
     #  <subfield code="z">Finding aid online:</subfield>
     #  <subfield code="u">EADlocation</subfield>
-    #</datafield>
+    # </datafield>
     if ead_loc && !ead_loc.empty?
       df('856', '4', '2').with_sfs(
-                                    ['z', "Finding aid online:"],
-                                    ['u', ead_loc]
-                                  )
+        ['z', 'Finding aid online:'],
+        ['u', ead_loc]
+      )
     end
   end
 
-  def handle_ark(id, type='resource')
+  def handle_ark(id, type = 'resource')
     # If ARKs are enabled, add an 856
-    #<datafield tag="856" ind1="4" ind2="2">
+    # <datafield tag="856" ind1="4" ind2="2">
     #  <subfield code="z">Archival Resource Key:</subfield>
     #  <subfield code="u">ARK URL</subfield>
-    #</datafield>
+    # </datafield>
     if AppConfig[:arks_enabled]
-       ark_url = ArkName::get_ark_url(id, type.to_sym)
-       df('856', '4', '2').with_sfs(
-                                    ['z', "Archival Resource Key:"],
-                                    ['u', ark_url]
-                                  ) unless ark_url.nil? || ark_url.empty?
+      ark_url = ArkName.get_ark_url(id, type.to_sym)
+      unless ark_url.nil? || ark_url.empty?
+        df('856', '4', '2').with_sfs(
+          ['z', 'Archival Resource Key:'],
+          ['u', ark_url]
+        )
+      end
 
     end
   end
 
   private
 
-    # name fields looks something this:
-    # [["a", "Dick, Philp K."], ["b", nil], ["c", "see"], ["d", "10-1-1980"], ["g", nil], ["q", nil], ["4", "aut"]]
-    def handle_agent_person_punctuation(name_fields)
-      #The value of subfield q must be enclosed in parentheses.
-      q_index = name_fields.find_index{|a| a[0] == "q"}
-      unless !q_index
-        name_fields[q_index][1] = "(#{name_fields[q_index][1]})"
-      end
+  # name fields looks something this:
+  # [["a", "Dick, Philp K."], ["b", nil], ["c", "see"], ["d", "10-1-1980"], ["g", nil], ["q", nil], ["4", "aut"]]
+  def handle_agent_person_punctuation(name_fields)
+    # The value of subfield q must be enclosed in parentheses.
+    q_index = name_fields.find_index { |a| a[0] == 'q' }
+    name_fields[q_index][1] = "(#{name_fields[q_index][1]})" if q_index
 
-      #If subfield $c is present, the value of the preceding subfield must end in a comma.
-      #If subfield $d is present, the value of the preceding subfield must end in a comma.
-      #If subfield $e is present, the value of the preceding subfield must end in a comma.
-      ['c', 'd', 'e'].each do |subfield|
-        s_index = name_fields.find_index{|a| a[0] == subfield}
+    # If subfield $c is present, the value of the preceding subfield must end in a comma.
+    # If subfield $d is present, the value of the preceding subfield must end in a comma.
+    # If subfield $e is present, the value of the preceding subfield must end in a comma.
+    ['c', 'd', 'e'].each do |subfield|
+      s_index = name_fields.find_index { |a| a[0] == subfield }
 
-        # check if $subfield is present
+      # check if $subfield is present
 
-        unless !s_index || s_index == 0
-          preceding_index = s_index - 1
+      next if !s_index || s_index == 0
 
-          # find preceding field and append a comma if there isn't one there already
-          unless name_fields[preceding_index][1][-1] == ","
-            name_fields[preceding_index][1] << ","
-          end
-        end
-      end
+      preceding_index = s_index - 1
 
-
-
-      #The value of the final subfield must end in a period."
-      unless name_fields[-1][1][-1] == "."
-        name_fields[-1][1] << "."
-      end
-
-      return name_fields
+      # find preceding field and append a comma if there isn't one there already
+      name_fields[preceding_index][1] << ',' unless name_fields[preceding_index][1][-1] == ','
     end
 
-    # search the array of hashes for name for first key named 'authority_id'
-    # if found, return it. Otherwise, return nil.
-    def find_authority_id(names)
-      value_found = nil
+    # The value of the final subfield must end in a period."
+    name_fields[-1][1] << '.' unless name_fields[-1][1][-1] == '.'
 
-      names.each do |name|
-        if name['authority_id']
-          value_found = name['authority_id']
-          break;
-        end
+    name_fields
+  end
+
+  # search the array of hashes for name for first key named 'authority_id'
+  # if found, return it. Otherwise, return nil.
+  def find_authority_id(names)
+    value_found = nil
+
+    names.each do |name|
+      if name['authority_id']
+        value_found = name['authority_id']
+        break
       end
-
-      return value_found
     end
 
-    def gather_agent_person_subfield_mappings(name, role_info, agent)
-      joint = name['name_order'] == 'direct' ? ' ' : ', '
-      name_parts = [name['primary_name'], name['rest_of_name']].reject{|i| i.nil? || i.empty?}.join(joint)
+    value_found
+  end
 
-      if role_info.nil? || role_info.empty?
-        subfield_e = nil
-        subfield_4 = nil
-      else
-        subfield_e = role_info[0] == "e" ? role_info : nil
-        subfield_4 = role_info[0] == "4" ? role_info : nil
-      end
+  def gather_agent_person_subfield_mappings(name, role_info, agent)
+    joint = name['name_order'] == 'direct' ? ' ' : ', '
+    name_parts = [name['primary_name'], name['rest_of_name']].reject { |i| i.nil? || i.empty? }.join(joint)
 
-      number      = name['number'] rescue nil
-      extras      = %w(prefix title suffix).map {|prt| name[prt]}.compact.join(', ') rescue nil
-      dates       = name['dates'] rescue nil
-      qualifier   = name['qualifier'] rescue nil
-      fuller_form = name['fuller_form'] rescue nil
-
-      name_fields = [
-                     ["a", name_parts],
-                     ["b", number],
-                     ["q", fuller_form],
-                     ["c", extras],
-                     ["d", dates],
-                     subfield_e,
-                     ["g", qualifier],
-                    ].compact.reject {|a| a[1].nil? || a[1].empty?}
-
-      name_fields = handle_agent_person_punctuation(name_fields)
-      name_fields.push(subfield_4) unless subfield_4.nil?
-
-      authority_id = find_authority_id(agent['names'])
-      subfield_0 = authority_id ? [0, authority_id] : nil
-      name_fields.push(subfield_0) unless subfield_0.nil?
-
-      return name_fields
+    if role_info.nil? || role_info.empty?
+      subfield_e = nil
+      subfield_4 = nil
+    else
+      subfield_e = role_info[0] == 'e' ? role_info : nil
+      subfield_4 = role_info[0] == '4' ? role_info : nil
     end
 
-    #For family types
-    def handle_agent_family_punctuation(name_fields)
-      # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
-      #If subfield $d is present, the value of the preceding subfield must end in a colon.
-      #If subfield $c is present, the value of the preceding subfield must end in a colon.
-      #If subfield $e is present, the value of the preceding subfield must end in a comma.
-      ['d', 'c', 'e'].each do |subfield|
-        s_index = name_fields.find_index{|a| a[0] == subfield}
+    number      = begin
+                      name['number']
+                  rescue StandardError
+                    nil
+                    end
+    extras      = begin
+                    ['prefix', 'title', 'suffix'].map { |prt| name[prt] }.compact.join(', ')
+                  rescue StandardError
+                    nil
+                  end
+    dates       = begin
+                      name['dates']
+                  rescue StandardError
+                    nil
+                    end
+    qualifier   = begin
+                      name['qualifier']
+                  rescue StandardError
+                    nil
+                    end
+    fuller_form = begin
+                      name['fuller_form']
+                  rescue StandardError
+                    nil
+                    end
 
-        # check if $subfield is present
+    name_fields = [
+      ['a', name_parts],
+      ['b', number],
+      ['q', fuller_form],
+      ['c', extras],
+      ['d', dates],
+      subfield_e,
+      ['g', qualifier]
+    ].compact.reject { |a| a[1].nil? || a[1].empty? }
 
-        unless !s_index || s_index == 0
-          preceding_index = s_index - 1
+    name_fields = handle_agent_person_punctuation(name_fields)
+    name_fields.push(subfield_4) unless subfield_4.nil?
 
-          # find preceding field and append a comma if there isn't one there already
-          unless name_fields[preceding_index][1][-1] == ","
-            name_fields[preceding_index][1] << ","
-          end
-        end
-      end
+    authority_id = find_authority_id(agent['names'])
+    subfield_0 = authority_id ? [0, authority_id] : nil
+    name_fields.push(subfield_0) unless subfield_0.nil?
 
-      #The value of the final subfield must end in a period."
-      unless name_fields[-1][1][-1] == "."
-        name_fields[-1][1] << "."
-      end
+    name_fields
+  end
 
-      return name_fields
-    end
-
-
-    def gather_agent_family_subfield_mappings(name, role_info, agent)
-      if role_info.nil? || role_info.empty?
-        subfield_e = nil
-        subfield_4 = nil
-      else
-        subfield_e = role_info[0] == "e" ? role_info : nil
-        subfield_4 = role_info[0] == "4" ? role_info : nil
-      end
-
-      family_name = name['family_name'] rescue nil
-      qualifier   = name['qualifier'] rescue nil
-      dates       = name['dates'] rescue nil
-
-      name_fields = [
-                      ['a', family_name],
-                      ['d', dates],
-                      ['c', qualifier],
-                      subfield_e,
-                    ].compact.reject {|a| a[1].nil? || a[1].empty?}
-
-      name_fields = handle_agent_family_punctuation(name_fields)
-      name_fields.push(subfield_4) unless subfield_4.nil?
-
-      authority_id = find_authority_id(agent['names'])
-      subfield_0 = authority_id ? [0, authority_id] : nil
-      name_fields.push(subfield_0) unless subfield_0.nil?
-
-      return name_fields
-    end
-
-    #For corporation types
+  # For family types
+  def handle_agent_family_punctuation(name_fields)
     # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
-    def handle_agent_corporate_punctuation(name_fields)
-      name_fields.sort! {|a, b| a[0][0] <=> b[0][0]}
+    # If subfield $d is present, the value of the preceding subfield must end in a colon.
+    # If subfield $c is present, the value of the preceding subfield must end in a colon.
+    # If subfield $e is present, the value of the preceding subfield must end in a comma.
+    ['d', 'c', 'e'].each do |subfield|
+      s_index = name_fields.find_index { |a| a[0] == subfield }
 
-      # The value of subfield g must be enclosed in parentheses.
-      g_index = name_fields.find_index{|a| a[0] == "g"}
-      unless !g_index
-        name_fields[g_index][1] = "(#{name_fields[g_index][1]})"
-      end
+      # check if $subfield is present
 
-      # The value of subfield n must be enclosed in parentheses.
-      n_index = name_fields.find_index{|a| a[0] == "n"}
-      unless !n_index
-        name_fields[n_index][1] = "(#{name_fields[n_index][1]})"
-      end
+      next if !s_index || s_index == 0
 
-      #If subfield $e is present, the value of the preceding subfield must end in a comma.
-      #If subfield $n is present, the value of the preceding subfield must end in a comma.
-      #If subfield $g is present, the value of the preceding subfield must end in a comma.
-      ['e', 'n', 'g'].each do |subfield|
-        s_index = name_fields.find_index{|a| a[0] == subfield}
+      preceding_index = s_index - 1
 
-        # check if $subfield is present
-
-        unless !s_index || s_index == 0
-          preceding_index = s_index - 1
-
-          # find preceding field and append a comma if there isn't one there already
-          unless name_fields[preceding_index][1][-1] == ","
-            name_fields[preceding_index][1] << ","
-          end
-        end
-      end
-
-      # Each part of the name (the a and the b’s) ends in a period, until the name itself is complete, unless there's a subfield after it that takes a different mark of punctuation before it, like an e or it's got term subdivisons like $b LYRASIS $y 21th century.
-
-      ['a', 'b'].each do |subfield|
-        s_index = name_fields.find_index{|a| a[0] == subfield}
-
-        # check if $subfield is present
-
-        unless !s_index
-
-          # find field and append a period if there isn't one there already
-          unless name_fields[s_index][1][-1] == "." || name_fields[s_index][1][-1] == ","
-            name_fields[s_index][1] << "."
-          end
-        end
-      end
-
-      #The value of the final subfield must end in a period."
-      unless name_fields[-1][1][-1] == "."
-        name_fields[-1][1] << "."
-      end
-
-      return name_fields
+      # find preceding field and append a comma if there isn't one there already
+      name_fields[preceding_index][1] << ',' unless name_fields[preceding_index][1][-1] == ','
     end
 
-    def gather_agent_corporate_subfield_mappings(name, role_info, agent)
-      if role_info.nil? || role_info.empty?
-        subfield_e = nil
-        subfield_4 = nil
-      else
-        subfield_e = role_info[0] == "e" ? role_info : nil
-        subfield_4 = role_info[0] == "4" ? role_info : nil
-      end
+    # The value of the final subfield must end in a period."
+    name_fields[-1][1] << '.' unless name_fields[-1][1][-1] == '.'
 
-      primary_name = name['primary_name'] rescue nil
-      sub_name1    = name['subordinate_name_1'] rescue nil
-      sub_name2    = name['subordinate_name_2'] rescue nil
-      number       = name['number'] rescue nil
-      qualifier    = name['qualifier'] rescue nil
+    name_fields
+  end
 
-      # 610s subfield b is repeatable and SubordinateName1 and SubordinateName2 should be separate subfield b’s
-
-      # Not particularly elegant, but seems to catch all the possibilities
-      if sub_name1.nil? || (sub_name1.nil? && sub_name2.nil?)
-        subfield_b_1 = nil
-        subfield_b_2 = nil
-      elsif !sub_name1.nil? && sub_name2.nil?
-        subfield_b_1 = sub_name1
-        subfield_b_2 = nil
-      elsif sub_name1.nil? && !sub_name2.nil?
-        subfield_b_1 = sub_name2
-        subfield_b_2 = nil
-      else
-        subfield_b_1 = sub_name1
-        subfield_b_2 = sub_name2
-      end
-
-      name_fields = [
-                      ['a', primary_name],
-                      ['b', subfield_b_1],
-                      ['b', subfield_b_2],
-                      subfield_e,
-                      ['n', number],
-                      ['g', qualifier]
-                    ].compact.reject {|a| a[1].nil? || a[1].empty?}
-
-      name_fields = handle_agent_corporate_punctuation(name_fields)
-      name_fields.push(subfield_4) unless subfield_4.nil?
-
-      authority_id = find_authority_id(agent['names'])
-      subfield_0 = authority_id ? [0, authority_id] : nil
-      name_fields.push(subfield_0) unless subfield_0.nil?
-
-      return name_fields
+  def gather_agent_family_subfield_mappings(name, role_info, agent)
+    if role_info.nil? || role_info.empty?
+      subfield_e = nil
+      subfield_4 = nil
+    else
+      subfield_e = role_info[0] == 'e' ? role_info : nil
+      subfield_4 = role_info[0] == '4' ? role_info : nil
     end
 
+    family_name = begin
+                      name['family_name']
+                  rescue StandardError
+                    nil
+                    end
+    qualifier   = begin
+                      name['qualifier']
+                  rescue StandardError
+                    nil
+                    end
+    dates       = begin
+                      name['dates']
+                  rescue StandardError
+                    nil
+                    end
+
+    name_fields = [
+      ['a', family_name],
+      ['d', dates],
+      ['c', qualifier],
+      subfield_e
+    ].compact.reject { |a| a[1].nil? || a[1].empty? }
+
+    name_fields = handle_agent_family_punctuation(name_fields)
+    name_fields.push(subfield_4) unless subfield_4.nil?
+
+    authority_id = find_authority_id(agent['names'])
+    subfield_0 = authority_id ? [0, authority_id] : nil
+    name_fields.push(subfield_0) unless subfield_0.nil?
+
+    name_fields
+  end
+
+  # For corporation types
+  # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
+  def handle_agent_corporate_punctuation(name_fields)
+    name_fields.sort! { |a, b| a[0][0] <=> b[0][0] }
+
+    # The value of subfield g must be enclosed in parentheses.
+    g_index = name_fields.find_index { |a| a[0] == 'g' }
+    name_fields[g_index][1] = "(#{name_fields[g_index][1]})" if g_index
+
+    # The value of subfield n must be enclosed in parentheses.
+    n_index = name_fields.find_index { |a| a[0] == 'n' }
+    name_fields[n_index][1] = "(#{name_fields[n_index][1]})" if n_index
+
+    # If subfield $e is present, the value of the preceding subfield must end in a comma.
+    # If subfield $n is present, the value of the preceding subfield must end in a comma.
+    # If subfield $g is present, the value of the preceding subfield must end in a comma.
+    ['e', 'n', 'g'].each do |subfield|
+      s_index = name_fields.find_index { |a| a[0] == subfield }
+
+      # check if $subfield is present
+
+      next if !s_index || s_index == 0
+
+      preceding_index = s_index - 1
+
+      # find preceding field and append a comma if there isn't one there already
+      name_fields[preceding_index][1] << ',' unless name_fields[preceding_index][1][-1] == ','
+    end
+
+    # Each part of the name (the a and the b’s) ends in a period, until the name itself is complete, unless there's a subfield after it that takes a different mark of punctuation before it, like an e or it's got term subdivisons like $b LYRASIS $y 21th century.
+
+    ['a', 'b'].each do |subfield|
+      s_index = name_fields.find_index { |a| a[0] == subfield }
+
+      # check if $subfield is present
+
+      next unless s_index
+
+      # find field and append a period if there isn't one there already
+      name_fields[s_index][1] << '.' unless name_fields[s_index][1][-1] == '.' || name_fields[s_index][1][-1] == ','
+    end
+
+    # The value of the final subfield must end in a period."
+    name_fields[-1][1] << '.' unless name_fields[-1][1][-1] == '.'
+
+    name_fields
+  end
+
+  def gather_agent_corporate_subfield_mappings(name, role_info, agent)
+    if role_info.nil? || role_info.empty?
+      subfield_e = nil
+      subfield_4 = nil
+    else
+      subfield_e = role_info[0] == 'e' ? role_info : nil
+      subfield_4 = role_info[0] == '4' ? role_info : nil
+    end
+
+    primary_name = begin
+                       name['primary_name']
+                   rescue StandardError
+                     nil
+                     end
+    sub_name1    = begin
+                       name['subordinate_name_1']
+                   rescue StandardError
+                     nil
+                     end
+    sub_name2    = begin
+                       name['subordinate_name_2']
+                   rescue StandardError
+                     nil
+                     end
+    number       = begin
+                       name['number']
+                   rescue StandardError
+                     nil
+                     end
+    qualifier    = begin
+                       name['qualifier']
+                   rescue StandardError
+                     nil
+                     end
+
+    # 610s subfield b is repeatable and SubordinateName1 and SubordinateName2 should be separate subfield b’s
+
+    # Not particularly elegant, but seems to catch all the possibilities
+    if sub_name1.nil? || (sub_name1.nil? && sub_name2.nil?)
+      subfield_b_1 = nil
+      subfield_b_2 = nil
+    elsif !sub_name1.nil? && sub_name2.nil?
+      subfield_b_1 = sub_name1
+      subfield_b_2 = nil
+    elsif sub_name1.nil? && !sub_name2.nil?
+      subfield_b_1 = sub_name2
+      subfield_b_2 = nil
+    else
+      subfield_b_1 = sub_name1
+      subfield_b_2 = sub_name2
+    end
+
+    name_fields = [
+      ['a', primary_name],
+      ['b', subfield_b_1],
+      ['b', subfield_b_2],
+      subfield_e,
+      ['n', number],
+      ['g', qualifier]
+    ].compact.reject { |a| a[1].nil? || a[1].empty? }
+
+    name_fields = handle_agent_corporate_punctuation(name_fields)
+    name_fields.push(subfield_4) unless subfield_4.nil?
+
+    authority_id = find_authority_id(agent['names'])
+    subfield_0 = authority_id ? [0, authority_id] : nil
+    name_fields.push(subfield_0) unless subfield_0.nil?
+
+    name_fields
+  end
 end

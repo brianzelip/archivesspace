@@ -12,9 +12,7 @@ Sequel.typecast_timezone = :utc
 Sequel.extension :migration
 Sequel.extension :core_extensions
 
-
 module ColumnDefs
-
   def self.textField(name, opts = {})
     if $db_type == :derby
       [name, :clob, opts]
@@ -23,50 +21,44 @@ module ColumnDefs
     end
   end
 
-
   def self.longString(name, opts = {})
-    [name, String, opts.merge(:size => 17408)]
+    [name, String, opts.merge(size: 17_408)]
   end
 
   def self.halfLongString(name, opts = {})
-    [name, String, opts.merge(:size => 8704)]
+    [name, String, opts.merge(size: 8704)]
   end
-
 
   def self.textBlobField(name, opts = {})
     if $db_type == :derby
       [name, :clob, opts]
     else
-      self.blobField(name, opts)
+      blobField(name, opts)
     end
   end
-
 
   def self.blobField(name, opts = {})
     if $db_type == :postgres
       [name, :bytea, opts]
     elsif $db_type == :h2
-      [name, String, opts.merge(:size => 128000)]
+      [name, String, opts.merge(size: 128_000)]
     else
       [name, :blob, opts]
     end
   end
 
-
   def self.mediumBlobField(name, opts = {})
     if $db_type == :postgres
       [name, :bytea, opts]
     elsif $db_type == :h2
-      [name, String, opts.merge(:size => 128000)]
+      [name, String, opts.merge(size: 128_000)]
     elsif $db_type == :mysql
       [name, :mediumblob, opts]
     else
       [name, :blob, opts]
     end
   end
-
 end
-
 
 # Sequel uses a nice DSL for creating tables but not for altering tables.  The
 # definitions below try to provide a reasonable experience for both cases.
@@ -80,20 +72,17 @@ end
 #
 
 module SequelColumnTypes
-
   def create_column(*column_def)
-    if self.respond_to?(:column)
+    if respond_to?(:column)
       column(*column_def)
     else
       add_column(*column_def)
     end
   end
 
-
   def TextField(field, opts = {})
     create_column(*ColumnDefs.textField(field, opts))
   end
-
 
   def LongString(field, opts = {})
     create_column(*ColumnDefs.longString(field, opts))
@@ -103,56 +92,45 @@ module SequelColumnTypes
     create_column(*ColumnDefs.halfLongString(field, opts))
   end
 
-
   def TextBlobField(field, opts = {})
     create_column(*ColumnDefs.textBlobField(field, opts))
   end
-
 
   def BlobField(field, opts = {})
     create_column(*ColumnDefs.blobField(field, opts))
   end
 
-
   def MediumBlobField(field, opts = {})
     create_column(*ColumnDefs.mediumBlobField(field, opts))
   end
 
-
   def DynamicEnum(field, opts = {})
     Integer field, opts
-    foreign_key([field], :enumeration_value, :key => :id)
+    foreign_key([field], :enumeration_value, key: :id)
   end
-
 
   def apply_name_columns
-    String :authority_id, :null => true
-    String :dates, :null => true
-    TextField :qualifier, :null => true
-    DynamicEnum :source_id, :null => true
-    DynamicEnum :rules_id, :null => true
-    TextField :sort_name, :null => false
+    String :authority_id, null: true
+    String :dates, null: true
+    TextField :qualifier, null: true
+    DynamicEnum :source_id, null: true
+    DynamicEnum :rules_id, null: true
+    TextField :sort_name, null: false
     Integer :sort_name_auto_generate
   end
-
 
   def apply_mtime_columns(create_time = true)
     String :created_by
     String :last_modified_by
 
-    if create_time
-      DateTime :create_time, :null => false
-    end
+    DateTime :create_time, null: false if create_time
 
-    DateTime :system_mtime, :null => false, :index => true
-    DateTime :user_mtime, :null => false, :index => true
+    DateTime :system_mtime, null: false, index: true
+    DateTime :user_mtime, null: false, index: true
   end
-
 end
 
-
 module Sequel
-
   module Schema
     class CreateTableGenerator
       include SequelColumnTypes
@@ -162,17 +140,14 @@ module Sequel
       include SequelColumnTypes
     end
   end
-
 end
 
-
 class DBMigrator
-
-  MIGRATIONS_DIR = File.join(File.dirname(__FILE__), "migrations")
-  PLUGIN_MIGRATIONS = []
-  PLUGIN_MIGRATION_DIRS = {}
+  MIGRATIONS_DIR = File.join(File.dirname(__FILE__), 'migrations')
+  PLUGIN_MIGRATIONS = [].freeze
+  PLUGIN_MIGRATION_DIRS = {}.freeze
   AppConfig[:plugins].each do |plugin|
-    mig_dir = ASUtils.find_local_directories("migrations", plugin).shift
+    mig_dir = ASUtils.find_local_directories('migrations', plugin).shift
     if mig_dir && Dir.exist?(mig_dir)
       PLUGIN_MIGRATIONS << plugin
       PLUGIN_MIGRATION_DIRS[plugin] = mig_dir
@@ -180,18 +155,19 @@ class DBMigrator
   end
 
   def self.setup_database(db)
-    begin
-      $db_type = db.database_type
+    $db_type = db.database_type
 
-      fail_if_managed_container_migration_needed!(db)
+    fail_if_managed_container_migration_needed!(db)
 
-      Sequel::Migrator.run(db, MIGRATIONS_DIR)
-      PLUGIN_MIGRATIONS.each { |plugin| Sequel::Migrator.run(db, PLUGIN_MIGRATION_DIRS[plugin],
-                                                             :table => "#{plugin}_schema_info") }
-    rescue ContainerMigrationError
-      raise $!
-    rescue Exception => e
-     $stderr.puts <<EOF
+    Sequel::Migrator.run(db, MIGRATIONS_DIR)
+    PLUGIN_MIGRATIONS.each { |plugin|
+      Sequel::Migrator.run(db, PLUGIN_MIGRATION_DIRS[plugin],
+                           table: "#{plugin}_schema_info")
+    }
+  rescue ContainerMigrationError
+    raise $!
+  rescue Exception => e
+    warn <<EOF
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -213,10 +189,8 @@ class DBMigrator
 
 EOF
 
-     raise e
-    end
+    raise e
   end
-
 
   CONTAINER_MIGRATION_NUMBER = 60
 
@@ -226,75 +200,79 @@ EOF
   def self.fail_if_managed_container_migration_needed!(db)
     # If brand new install with empty database, need to check
     # for tables existence before determining the current version number
-    if db.tables.empty?
-      current_version = 0
-    else
-      current_version = db[:schema_info].first[:version]
-    end
+    current_version = if db.tables.empty?
+                        0
+                      else
+                        db[:schema_info].first[:version]
+                      end
 
     if current_version && current_version > 0 && current_version < CONTAINER_MIGRATION_NUMBER
-      $stderr.puts <<EOM
+      warn <<~EOM
 
-=======================================================================
-Important migration issue
-=======================================================================
+        =======================================================================
+        Important migration issue
+        =======================================================================
 
-Hello!
+        Hello!
 
-It appears that you are upgrading ArchivesSpace from version 1.4.2 or prior.  To
-complete this upgrade, there are some additional steps to follow.
+        It appears that you are upgrading ArchivesSpace from version 1.4.2 or prior.  To
+        complete this upgrade, there are some additional steps to follow.
 
-The 1.5 series of ArchivesSpace introduced a new data model for containers,
-along with a compatibility layer to provide a seamless transition between the
-old and new container models.  In ArchivesSpace version 2.1, this compatibility
-layer was removed in the interest of long-term maintainability and system
-performance.
+        The 1.5 series of ArchivesSpace introduced a new data model for containers,
+        along with a compatibility layer to provide a seamless transition between the
+        old and new container models.  In ArchivesSpace version 2.1, this compatibility
+        layer was removed in the interest of long-term maintainability and system
+        performance.
 
-To upgrade your ArchivesSpace installation, you will first need to upgrade to
-version 2.0.1.  This will upgrade your containers to the new model and clear the
-path for future upgrades.  Once you have done this, you can upgrade to the
-latest ArchivesSpace version as normal.
+        To upgrade your ArchivesSpace installation, you will first need to upgrade to
+        version 2.0.1.  This will upgrade your containers to the new model and clear the
+        path for future upgrades.  Once you have done this, you can upgrade to the
+        latest ArchivesSpace version as normal.
 
-For more information on upgrading to ArchivesSpace 2.0.1, please see the upgrade
-guide:
+        For more information on upgrading to ArchivesSpace 2.0.1, please see the upgrade
+        guide:
 
-  https://archivesspace.github.io/archivesspace/user/upgrading-to-a-new-release-of-archivesspace/
+          https://archivesspace.github.io/archivesspace/user/upgrading-to-a-new-release-of-archivesspace/
 
-The upgrade guide for version 1.5.0 also contains specific instructions for
-the container upgrade that you will be performing, and the steps in this guide
-apply equally to version 2.0.1.  You can find that guide here:
+        The upgrade guide for version 1.5.0 also contains specific instructions for
+        the container upgrade that you will be performing, and the steps in this guide
+        apply equally to version 2.0.1.  You can find that guide here:
 
-  https://github.com/archivesspace/archivesspace/blob/master/UPGRADING_1.5.0.md
+          https://github.com/archivesspace/archivesspace/blob/master/UPGRADING_1.5.0.md
 
-=======================================================================
+        =======================================================================
 
-EOM
+      EOM
 
-      raise ContainerMigrationError.new
+      raise ContainerMigrationError
     end
   end
 
-
   def self.nuke_database(db)
     $db_type = db.database_type
-    PLUGIN_MIGRATIONS.reverse.each { |plugin| Sequel::Migrator.run(db, PLUGIN_MIGRATION_DIRS[plugin],
-                                                                     :table => "#{plugin}_schema_info", :target => 0) }
-    Sequel::Migrator.run(db, MIGRATIONS_DIR, :target => 0)
+    PLUGIN_MIGRATIONS.reverse.each { |plugin|
+      Sequel::Migrator.run(db, PLUGIN_MIGRATION_DIRS[plugin],
+                           table: "#{plugin}_schema_info", target: 0)
+    }
+    Sequel::Migrator.run(db, MIGRATIONS_DIR, target: 0)
   end
 
   def self.needs_updating?(db)
     $db_type = db.database_type
     return true unless Sequel::Migrator.is_current?(db, MIGRATIONS_DIR)
-    PLUGIN_MIGRATIONS.each { |plugin| return true unless Sequel::Migrator.is_current?(db, PLUGIN_MIGRATIONS_DIR[plugin],
-                                                                                      :table => "#{plugin}_schema_info") }
-    return false
+
+    PLUGIN_MIGRATIONS.each { |plugin|
+      return true unless Sequel::Migrator.is_current?(db, PLUGIN_MIGRATIONS_DIR[plugin],
+                                                      table: "#{plugin}_schema_info")
+    }
+    false
   end
 
-  def self.latest_migration_number(db)
-    migration_numbers = Dir.entries(MIGRATIONS_DIR).map {|e|
+  def self.latest_migration_number(_db)
+    migration_numbers = Dir.entries(MIGRATIONS_DIR).map { |e|
       if e =~ Sequel::Migrator::MIGRATION_FILE_PATTERN
         # $1 is the migration number (e.g. '075')
-        Integer($1, 10)
+        Integer(Regexp.last_match(1), 10)
       end
     }.compact
 

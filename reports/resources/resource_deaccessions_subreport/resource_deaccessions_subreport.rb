@@ -1,5 +1,4 @@
 class ResourceDeaccessionsSubreport < AbstractSubreport
-
   attr_accessor :total_extent
 
   def initialize(parent_report, resource_id)
@@ -37,5 +36,4 @@ class ResourceDeaccessionsSubreport < AbstractSubreport
     ReportUtils.fix_extent_format(row)
     ReportUtils.fix_boolean_fields(row, [:notification_sent])
   end
-
 end

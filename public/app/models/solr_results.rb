@@ -20,7 +20,7 @@ class SolrResults
   private
 
   def parse_records(full)
-    Array(@raw['results']).map {|result| parse_record(result, full) }
+    Array(@raw['results']).map { |result| parse_record(result, full) }
   end
 
   def parse_record(result, full)

@@ -1,7 +1,6 @@
 require 'aspace-rails/compressor'
 require 'aspace-rails/asset_path_rewriter'
 
-
 ArchivesSpace::Application.configure do
   # Settings specified here will take precedence over those in config/application.rb
 
@@ -34,14 +33,13 @@ ArchivesSpace::Application.configure do
   config.assets.js_compressor = ASpaceCompressor.new(:js)
   config.assets.css_compressor = ASpaceCompressor.new(:css)
 
-
   # Don't fallback to assets pipeline if a precompiled asset is missed
   config.assets.compile = true
 
   # Generate digests for assets URLs
   config.assets.digest = true
 
-  #config.assets.manifest = File.join(Rails.public_path, "assets")
+  # config.assets.manifest = File.join(Rails.public_path, "assets")
 
   # Specifies the header that your server uses for sending files
   # config.action_dispatch.x_sendfile_header = "X-Sendfile" # for apache
@@ -80,8 +78,8 @@ ArchivesSpace::Application.configure do
   # config.active_record.auto_explain_threshold_in_seconds = 0.5
 
   # Precompile all fonts and top-level javascript files (included with `javascript_include_tag`)
-  config.assets.precompile << proc {|filename, path|
-    path =~ /app\/assets\/javascripts\/[^\/]+\z/
+  config.assets.precompile << proc { |_filename, path|
+    path =~ %r{app/assets/javascripts/[^/]+\z}
   }
 
   config.assets.precompile << /\.(?:svg|eot|woff|woff2|ttf)\z/
@@ -95,18 +93,15 @@ ArchivesSpace::Application.configure do
   config.assets.precompile << /jquery.tablesorter/
   config.assets.precompile << 'tablesorter/bootstrap'
   config.assets.precompile << '\.(gif|png|jpg)\z/'
-
 end
-
 
 # https://aaronblohowiak.telegr.am/blog_posts/precompiling-assets-under-jruby
 if defined?(ExecJS) && system('which node >/dev/null 2>/dev/null')
-  puts "Using Node ExecJS runtime"
+  puts 'Using Node ExecJS runtime'
   ExecJS.runtime = ExecJS::Runtimes::Node
 end
 
-
-if AppConfig[:frontend_proxy_prefix] != "/"
+if AppConfig[:frontend_proxy_prefix] != '/'
   require 'action_dispatch/middleware/static'
 
   # The default file handler doesn't know about asset prefixes and returns a 404.  Make it strip the prefix before looking for the path on disk.
@@ -115,15 +110,13 @@ if AppConfig[:frontend_proxy_prefix] != "/"
       alias :match_orig :match?
       def match?(path)
         prefix = AppConfig[:frontend_proxy_prefix]
-        modified_path = path.gsub(/^#{Regexp.quote(prefix)}/, "/")
+        modified_path = path.gsub(/^#{Regexp.quote(prefix)}/, '/')
         match_orig(modified_path)
       end
     end
   end
 end
 
-if AppConfig[:frontend_proxy_prefix] && AppConfig[:frontend_proxy_prefix].length > 1
-  AssetPathRewriter.new.rewrite(AppConfig[:frontend_proxy_prefix], File.dirname(__FILE__))
-end
+AssetPathRewriter.new.rewrite(AppConfig[:frontend_proxy_prefix], File.dirname(__FILE__)) if AppConfig[:frontend_proxy_prefix] && AppConfig[:frontend_proxy_prefix].length > 1
 
 ActiveSupport::Deprecation.silenced = true

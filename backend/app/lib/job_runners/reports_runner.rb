@@ -2,22 +2,18 @@ require_relative '../reports/report_generator'
 require 'json'
 
 class ReportRunner < JobRunner
-
   include JSONModel
 
   register_for_job_type('report_job')
-
 
   def self.reports
     ReportManager.registered_reports
   end
 
-
   def run
     @job.write_output('Generating report')
     file = ASUtils.tempfile('report_job_')
     begin
-
       job_data = @json.job
 
       # we need to massage the json sometimes..
@@ -43,7 +39,7 @@ class ReportRunner < JobRunner
 
       @job.add_file(file)
 
-      self.success!
+      success!
     rescue Exception => e
       @job.write_output(e.message)
       @job.write_output(e.backtrace)
@@ -52,8 +48,6 @@ class ReportRunner < JobRunner
       file.close
       file.unlink
       @job.write_output('Done.')
-
     end
   end
-
 end

@@ -1,29 +1,21 @@
 require_relative 'converter'
 
 class DigitalObjectConverter < Converter
-
   require_relative 'lib/csv_converter'
   include ASpaceImport::CSVConvert
 
-
-  def self.import_types(show_hidden = false)
+  def self.import_types(_show_hidden = false)
     [
-     {
-       :name => "digital_object_csv",
-       :description => "Import Digital Object records from a CSV file"
-     }
+      {
+        name: 'digital_object_csv',
+        description: 'Import Digital Object records from a CSV file'
+      }
     ]
   end
 
-
   def self.instance_for(type, input_file)
-    if type == "digital_object_csv"
-      self.new(input_file)
-    else
-      nil
-    end
+    new(input_file) if type == 'digital_object_csv'
   end
-
 
   def self.configure
     {
@@ -173,7 +165,7 @@ class DigitalObjectConverter < Converter
       'file_version_file_size_bytes' => 'file_version.file_size_bytes',
       'file_version_checksum' => 'file_version.checksum',
       'file_version_checksum_method' => 'file_version.checksum_method',
-      
+
       # 2. Define data handlers
       #    :record_type of the schema (if other than the handler key)
       #    :defaults - hash which maps property keys to default values if nothing shows up in the source date
@@ -191,218 +183,201 @@ class DigitalObjectConverter < Converter
 
       :processed_event_date => event_template('processed'),
 
-
       :agent => {
-        :record_type => Proc.new {|data|
-          @agent_type = data['agent_type']
-          },
-        :on_row_complete => Proc.new {|cache, agent|
-          digital_object = cache.find {|obj| obj.class.record_type == 'digital_object' }
+        record_type: proc { |data|
+                       @agent_type = data['agent_type']
+                     },
+        on_row_complete: proc { |cache, agent|
+                           digital_object = cache.find { |obj| obj.class.record_type == 'digital_object' }
 
-          if digital_object
-            digital_object.linked_agents[0]['ref'] = agent.uri
-          else
-            cache.reject! {|obj| obj.key == agent.key}
-          end
-          },
+                           if digital_object
+                             digital_object.linked_agents[0]['ref'] = agent.uri
+                           else
+                             cache.reject! { |obj| obj.key == agent.key }
+                           end
+                         }
 
       },
 
       :agent_contact => {
-        :on_row_complete => Proc.new {|cache, this|
-          agent = cache.find {|obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/}
+        on_row_complete: proc { |cache, this|
+          agent = cache.find { |obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/ }
           agent.agent_contacts << this
         }
       },
 
       :agent_name => {
-        :record_type => Proc.new {|data|
+        record_type: proc { |_data|
           @agent_type.sub(/agent_/, 'name_')
         },
-        :on_create => Proc.new {|data, obj|
-          if @agent_type =~ /family/
-            obj.family_name = data['primary_name']
-          end
+        on_create: proc { |data, obj|
+          obj.family_name = data['primary_name'] if @agent_type =~ /family/
         },
-        :on_row_complete => Proc.new {|cache, this|
-          agent = cache.find {|obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/}
+        on_row_complete: proc { |cache, this|
+          agent = cache.find { |obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/ }
           agent.names << this
         }
       },
 
       # this might be a Digital Object, or it might be a Digital Object Component
       :d => {
-        :record_type => Proc.new {|data|
+        record_type: proc { |data|
           data['is_component'] ? :digital_object_component : :digital_object
         },
-        :on_create => Proc.new {|data, obj|
+        on_create: proc { |data, obj|
           if obj.class.record_type == 'digital_object_component'
 
-            unless data['digital_object_id']
-              raise "Component entries must have a 'digital_object_id' to link them to a top-level record"
-            end
+            raise "Component entries must have a 'digital_object_id' to link them to a top-level record" unless data['digital_object_id']
 
             do_uri = uri_lookup[data['digital_object_id']]
 
-            unless do_uri
-              raise "Components must be preceded by their top-level digital object in the CSV"
-            end
+            raise 'Components must be preceded by their top-level digital object in the CSV' unless do_uri
 
-            obj.digital_object = {'ref' => do_uri}
+            obj.digital_object = { 'ref' => do_uri }
           else
 
-            if data['agent_role']
-              obj.linked_agents << {'role' => data['agent_role']}
-            end
+            obj.linked_agents << { 'role' => data['agent_role'] } if data['agent_role']
           end
-
         },
-        :on_row_complete => Proc.new { |cache, obj|
-          case
-          when obj.class.record_type == 'digital_object'
+        on_row_complete: proc { |cache, obj|
+          if obj.class.record_type == 'digital_object'
 
             uri_lookup[obj.digital_object_id] = obj.uri
 
-            if (cm = cache.find {|obj| obj.class.record_type == 'collection_management'})
+            if (cm = cache.find { |obj| obj.class.record_type == 'collection_management' })
               obj.collection_management = cm
             end
 
           else
             # ignore collection management data in a component context
-            cache.reject! {|obj| obj.class.record_type == 'collection_management'}
+            cache.reject! { |obj| obj.class.record_type == 'collection_management' }
           end
         }
       },
 
       :date_1 => {
-        :record_type => :date,
-        :defaults => date_defaults,
-        :on_row_complete => attach_date,
+        record_type: :date,
+        defaults: date_defaults,
+        on_row_complete: attach_date
       },
 
       :date_2 => {
-        :record_type => :date,
-        :defaults => date_defaults,
-        :on_row_complete => attach_date,
+        record_type: :date,
+        defaults: date_defaults,
+        on_row_complete: attach_date
       },
 
       :extent => {
-        :defaults => {:portion => 'whole'},
-        :on_row_complete => Proc.new {|cache, extent|
-          digital_object = cache.find {|obj| obj.class.record_type =~ /^digital_object/ }
+        defaults: { portion: 'whole' },
+        on_row_complete: proc { |cache, extent|
+          digital_object = cache.find { |obj| obj.class.record_type =~ /^digital_object/ }
           digital_object.extents << extent
         }
       },
 
       :lang_material => {
-        :on_create => Proc.new {|data, obj|
-          obj.language_and_script = {'jsonmodel_type' => 'language_and_script', 'language' => data['language'], 'script' => data['script']}
+        on_create: proc { |data, obj|
+          obj.language_and_script = { 'jsonmodel_type' => 'language_and_script', 'language' => data['language'], 'script' => data['script'] }
         },
-        :on_row_complete => Proc.new {|cache, this|
-          digital_object = cache.find {|obj| obj.class.record_type =~ /^digital_object/ }
+        on_row_complete: proc { |cache, this|
+          digital_object = cache.find { |obj| obj.class.record_type =~ /^digital_object/ }
           digital_object.lang_materials << this
         }
       },
 
       :note_bioghist => {
-        :on_create => Proc.new {|data, obj|
-          obj.subnotes = [{'jsonmodel_type' => 'note_text', 'content' => data['content']}]
+        on_create: proc { |data, obj|
+          obj.subnotes = [{ 'jsonmodel_type' => 'note_text', 'content' => data['content'] }]
         },
-        :on_row_complete => Proc.new {|cache, this|
-          agent = cache.find {|obj| obj.class.record_type =~ /^agent_(perso|fami|corpo)/}
+        on_row_complete: proc { |cache, this|
+          agent = cache.find { |obj| obj.class.record_type =~ /^agent_(perso|fami|corpo)/ }
           agent.notes << this
         }
       },
 
       :note_citation => {
-        :on_row_complete => Proc.new {|cache, this|
-          note_biogist = cache.find {|obj| obj.class.record_type == 'note_bioghist'}
+        on_row_complete: proc { |cache, this|
+          note_biogist = cache.find { |obj| obj.class.record_type == 'note_bioghist' }
           note_biogist.subnotes << this
         }
       },
 
       :subject => {
-        :on_create => Proc.new {|data, obj|
-          obj.terms = [{:term => data['term'], :term_type => data['term_type'], :vocabulary => '/vocabularies/1'}]
+        on_create: proc { |data, obj|
+          obj.terms = [{ term: data['term'], term_type: data['term_type'], vocabulary: '/vocabularies/1' }]
           obj.vocabulary = '/vocabularies/1'
         },
-        :on_row_complete => Proc.new {|cache, this|
-          digital_object = cache.find {|obj| obj.class.record_type == 'digital_object'}
-          digital_object.subjects << {'ref' => this.uri}
+        on_row_complete: proc { |cache, this|
+          digital_object = cache.find { |obj| obj.class.record_type == 'digital_object' }
+          digital_object.subjects << { 'ref' => this.uri }
         }
       },
 
       :user_defined => {
-        :on_row_complete => Proc.new {|cache, this|
-          digital_object = cache.find {|obj| obj.class.record_type == 'digital_object'}
+        on_row_complete: proc { |cache, this|
+          digital_object = cache.find { |obj| obj.class.record_type == 'digital_object' }
           digital_object.user_defined = this
         }
       },
-      
+
       :file_version => {
-        :on_row_complete => Proc.new {|cache, this|
-          digital_object = cache.find {|obj| obj.class.record_type =~ /^digital_object/ }
+        on_row_complete: proc { |cache, this|
+          digital_object = cache.find { |obj| obj.class.record_type =~ /^digital_object/ }
           digital_object.file_versions << this
         }
-      },
+      }
     }
   end
-
 
   private
 
   def self.event_template(event_type)
     {
-      :record_type => Proc.new {|data|
+      record_type: proc { |data|
         data['boolean'] ? :date : nil
       },
-      :defaults => date_defaults,
-      :on_create => Proc.new {|data, obj|
+      defaults: date_defaults,
+      on_create: proc { |data, obj|
         obj.expression = 'unknown' unless data['expression']
       },
-      :on_row_complete => Proc.new { |cache, date|
-        digital_object = cache.find {|obj| obj.class.record_type == 'digital_object'}
+      on_row_complete: proc { |cache, date|
+        digital_object = cache.find { |obj| obj.class.record_type == 'digital_object' }
         event = ASpaceImport::JSONModel(:event).new
         cache << event
         event.event_type = event_type
         # Not sure how best to handle this, assuming for now that the built-in ASpace agent exists:
-        event.linked_agents << {'role' => 'executing_program', 'ref' => '/agents/software/1'}
+        event.linked_agents << { 'role' => 'executing_program', 'ref' => '/agents/software/1' }
         event.date = date
-        event.linked_records << {'role' => 'source', 'ref' => digital_object.uri}
+        event.linked_records << { 'role' => 'source', 'ref' => digital_object.uri }
       }
     }
   end
 
-
   def self.date_defaults
     {
-      :label => 'other',
-      :date_type => 'single',
-      :begin => '1900'
+      label: 'other',
+      date_type: 'single',
+      begin: '1900'
     }
   end
 
-
   def self.attach_date
-    Proc.new { |cache, date|
-      digital_object = cache.find {|obj| obj.class.record_type =~ /^digital_object/ }
+    proc { |cache, date|
+      digital_object = cache.find { |obj| obj.class.record_type =~ /^digital_object/ }
       digital_object.dates << date
     }
   end
 
-
   def self.normalize_boolean
-    @normalize_boolean ||= Proc.new {|val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? true : false }
+    @normalize_boolean ||= proc { |val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? true : false }
     @normalize_boolean
   end
 
-
-  #need to track relationships across rows
+  # need to track relationships across rows
   def self.uri_lookup
     @uri_lookup ||= {}
     @uri_lookup
   end
-
 
   # need to resue the agent type
   def self.agent_type
@@ -410,28 +385,21 @@ class DigitalObjectConverter < Converter
     @agent_type
   end
 
-
   def self.date_flip
-    @date_flip ||= Proc.new {|val| val.sub(/^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/, '\2/\1/\3')}
+    @date_flip ||= proc { |val| val.sub(%r{^([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})$}, '\2/\1/\3') }
 
     @date_flip
   end
 
-
   def self.to_real
-    @to_real ||= Proc.new {|val| "%0.2f" % val.to_f}
+    @to_real ||= proc { |val| '%0.2f' % val.to_f }
 
     @to_real
   end
 
-
   def self.to_int
-    @to_int ||= Proc.new {|val| val.to_i.to_s}
+    @to_int ||= proc { |val| val.to_i.to_s }
 
     @to_int
   end
 end
-
-
-
-

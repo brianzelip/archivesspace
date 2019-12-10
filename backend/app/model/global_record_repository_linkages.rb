@@ -14,14 +14,11 @@
 require 'set'
 
 class GlobalRecordRepositoryLinkages
-
   def initialize(global_record_model, relationship)
     @global_record_model = global_record_model
     @relationship = @global_record_model.find_relationship(relationship)
 
-    if @global_record_model.model_scope != :global
-      raise "#{self} only works with global model types"
-    end
+    raise "#{self} only works with global model types" if @global_record_model.model_scope != :global
   end
 
   # Return a hash like:
@@ -37,7 +34,7 @@ class GlobalRecordRepositoryLinkages
     records.each do |record|
       result[record] = record_id_to_repo_ids
                        .fetch(record.id, [])
-                       .map {|repo_ids| repositories.fetch(repo_ids)}
+                       .map { |repo_ids| repositories.fetch(repo_ids) }
                        .flatten
     end
 

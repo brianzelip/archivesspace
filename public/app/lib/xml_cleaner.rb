@@ -1,8 +1,7 @@
 class XMLCleaner
-
   # To ensure we make progress, we'll attempt to fix up to this many errors
   # before giving up.
-  MAX_ITERATIONS = 10000
+  MAX_ITERATIONS = 10_000
 
   def initialize
     @log = Rails.logger
@@ -27,7 +26,7 @@ class XMLCleaner
         @log.info("Corrected error in XML markup.  Parsing again (attempt: #{attempt}).")
         retry
       end
-    rescue
+    rescue StandardError
       raise "Failed to clean XML: #{$!}"
     end
   end
@@ -35,7 +34,6 @@ class XMLCleaner
   # An error handler that rewrites the underlying XML to resolve missing
   # namespace errors.
   class NamespaceCorrectingErrorHandler
-
     # Thrown to signal we can try parsing again
     class RetryParse < StandardError; end
 
@@ -48,10 +46,10 @@ class XMLCleaner
          exception.line_number &&
          exception.column_number
         # Caused by an undefined namespace such as `ns2:href`.  We can correct these
-        element_to_fix = $2
+        element_to_fix = Regexp.last_match(2)
         remove_namespace_prefix!(element_to_fix, exception.line_number, exception.column_number)
 
-        raise RetryParse.new
+        raise RetryParse
       else
         raise exception
       end
@@ -64,22 +62,20 @@ class XMLCleaner
     private
 
     def remove_namespace_prefix!(element_to_fix, lineno, colno)
-      File.open(@file_path + ".tmp", "w") do |outfile|
+      File.open(@file_path + '.tmp', 'w') do |outfile|
         File.open(@file_path) do |infile|
           infile.each_with_index do |line, index|
-            if index == (lineno - 1)
-              line = fix_line(line, element_to_fix, colno)
-            end
+            line = fix_line(line, element_to_fix, colno) if index == (lineno - 1)
 
             outfile.puts(line)
           end
         end
       end
 
-      File.rename(@file_path + ".tmp", @file_path)
+      File.rename(@file_path + '.tmp', @file_path)
     end
 
-    def fix_line(line, element_to_fix, colno)
+    def fix_line(line, element_to_fix, _colno)
       # Annoyingly, `collno` seems to point past the place that the error
       # actually happened, so we can't pinpoint the exact position to fix.
       # We'll just hope that valid text doesn't actually look like a namespace
@@ -93,5 +89,4 @@ class XMLCleaner
       end
     end
   end
-
 end

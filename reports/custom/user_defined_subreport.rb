@@ -1,16 +1,15 @@
 class UserDefinedSubreport < AbstractSubreport
+  register_subreport('user_defined', ['accession', 'resource', 'digital_object'])
 
-	register_subreport('user_defined', ['accession', 'resource', 'digital_object'])
+  def initialize(parent_custom_report, id)
+    super(parent_custom_report)
 
-	def initialize(parent_custom_report, id)
-		super(parent_custom_report)
+    @id_type = parent_custom_report.record_type
+    @id = id
+  end
 
-		@id_type = parent_custom_report.record_type
-		@id = id
-	end
-
-	def query_string
-		"select
+  def query_string
+    "select
 			boolean_1,
 		    boolean_2,
 		    boolean_3,
@@ -34,14 +33,14 @@ class UserDefinedSubreport < AbstractSubreport
 		    date_3
 		from user_defined
 		where #{@id_type}_id = #{db.literal(@id)}"
-	end
+  end
 
-	def fix_row(row)
-		ReportUtils.fix_boolean_fields(row, [:boolean_1, :boolean_2, :boolean_3])
-		ReportUtils.fix_decimal_format(row, [:real_1, :real_2, :real_3])
-	end
+  def fix_row(row)
+    ReportUtils.fix_boolean_fields(row, [:boolean_1, :boolean_2, :boolean_3])
+    ReportUtils.fix_decimal_format(row, [:real_1, :real_2, :real_3])
+  end
 
-	def self.field_name
-		'user_defined'
-	end
+  def self.field_name
+    'user_defined'
+  end
 end

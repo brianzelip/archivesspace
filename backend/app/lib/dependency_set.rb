@@ -17,7 +17,6 @@
 #
 
 class DependencySet
-
   def initialize
     # Mappings from strings to their indexes and back again
     @key_to_index = {}
@@ -33,16 +32,14 @@ class DependencySet
 
   # The number of edges in our dependency graph
   def length
-    @dependencies.map {|elt| elt ? elt.length : 0}.reduce(0) {|sum, n| sum + n}
+    @dependencies.map { |elt| elt ? elt.length : 0 }.reduce(0) { |sum, n| sum + n }
   end
 
   # The record identifiers that have a dependency on something else.  That is,
   # the set of `froms` given to `add_dependency`.
   def keys
-    result = @dependencies.each_with_index.map {|depends_on, index|
-      if depends_on
-        @index_to_key.fetch(index)
-      end
+    result = @dependencies.each_with_index.map { |depends_on, index|
+      @index_to_key.fetch(index) if depends_on
     }
     result.compact!
 
@@ -62,7 +59,7 @@ class DependencySet
   def [](key)
     key_index = index_for(key)
 
-    Array(@dependencies[key_index]).map {|dependency_idx| @index_to_key.fetch(dependency_idx)}.freeze
+    Array(@dependencies[key_index]).map { |dependency_idx| @index_to_key.fetch(dependency_idx) }.freeze
   end
 
   private
@@ -78,5 +75,4 @@ class DependencySet
 
     @key_to_index.fetch(key)
   end
-
 end

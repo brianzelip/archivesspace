@@ -11,13 +11,13 @@ Warbler::Config.new do |config|
   config.features = []
 
   # Application directories to be included in the webapp.
-  config.dirs = %w(app .bundle)
+  config.dirs = ['app', '.bundle']
 
   # Additional files/directories to include, above those in config.dirs
-  config.includes = FileList["Gemfile", "Gemfile.lock"]
+  config.includes = FileList['Gemfile', 'Gemfile.lock']
 
   # Additional files/directories to exclude
-  config.excludes = FileList[".bundle/install.log"]
+  config.excludes = FileList['.bundle/install.log']
 
   # Additional Java .jar files to include.  Note that if .jar files are placed
   # in lib (and not otherwise excluded) then they need not be mentioned here.
@@ -25,7 +25,7 @@ Warbler::Config.new do |config|
   # own versions if you directly set the value
   # config.java_libs += FileList["lib/java/*.jar"]
 
-  config.java_libs.reject! {|jar| jar =~ /jruby-(complete|core|stdlib|rack)/}
+  config.java_libs.reject! { |jar| jar =~ /jruby-(complete|core|stdlib|rack)/ }
 
   # Loose Java classes and miscellaneous files to be included.
   # config.java_classes = FileList["target/classes/**.*"]
@@ -71,7 +71,7 @@ Warbler::Config.new do |config|
   config.gem_dependencies = false
 
   # Don't bundle the JRuby jars twice--Warbler will make sure we get it.
-  #config.gem_excludes = [/jruby-(core|stdlib).*jar/]
+  # config.gem_excludes = [/jruby-(core|stdlib).*jar/]
 
   # Pathmaps for controlling how application files are copied into the archive
   # config.pathmaps.application = ["WEB-INF/%p"]
@@ -116,7 +116,7 @@ Warbler::Config.new do |config|
   # config.webxml.booter = :rails
 
   # Set JRuby to run in 1.9 mode.
-  config.webxml.jruby.compat.version = "1.9"
+  config.webxml.jruby.compat.version = '1.9'
 
   # When using the :rack booter, "Rackup" script to use.
   # - For 'rackup.path', the value points to the location of the rackup

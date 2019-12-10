@@ -2,7 +2,7 @@ require 'rubygems'
 require 'stringio'
 
 # Set up gems listed in the Gemfile.
-ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../../Gemfile', __FILE__)
+ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', __dir__)
 
 require 'aspace_gems'
 ASpaceGems.setup

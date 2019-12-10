@@ -1,10 +1,9 @@
 class ArchivesSpaceService < Sinatra::Base
-
   Endpoint.post('/batch_delete')
-  .description("Carry out delete requests against a list of records")
-  .params(["record_uris", [String], "A list of record uris"])
-  .permissions([])
-  .returns([200, :deleted]) \
+          .description('Carry out delete requests against a list of records')
+          .params(['record_uris', [String], 'A list of record uris'])
+          .permissions([])
+          .returns([200, :deleted]) \
   do
     results = []
     errors = []
@@ -13,16 +12,16 @@ class ArchivesSpaceService < Sinatra::Base
       response = forward_delete_request(uri)
 
       if response[0] === 200
-        results << ASUtils.json_parse(response[2].first).merge({"uri" => uri})
+        results << ASUtils.json_parse(response[2].first).merge('uri' => uri)
       else
-        errors << {"response" => response[2], "uri" => uri}
+        errors << { 'response' => response[2], 'uri' => uri }
       end
     end
 
     if errors.empty?
-      json_response(:status => "OK", :results => results)
+      json_response(status: 'OK', results: results)
     else
-      raise BatchDeleteFailed.new(errors)
+      raise BatchDeleteFailed, errors
     end
   end
 
@@ -40,7 +39,6 @@ class ArchivesSpaceService < Sinatra::Base
   # type of record.
   def forward_delete_request(uri)
     ArchivesSpaceService.call(env.merge('PATH_INFO' => uri,
-                                        'REQUEST_METHOD' => "DELETE"))
+                                        'REQUEST_METHOD' => 'DELETE'))
   end
-
 end

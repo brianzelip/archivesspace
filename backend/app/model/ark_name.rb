@@ -13,41 +13,39 @@ class ArkName < Sequel::Model(:ark_name)
 
   def validate
     validate_resources_defined
-    validates_unique(:resource_id, :message => "ARK must point to a unique Resource")
-    validates_unique(:archival_object_id, :message => "ARK must point to a unique Archival Object")
+    validates_unique(:resource_id, message: 'ARK must point to a unique Resource')
+    validates_unique(:archival_object_id, message: 'ARK must point to a unique Archival Object')
     super
   end
 
   def validate_resources_defined
     resources_defined = 0
-    resources_defined += 1 unless self.resource_id.nil?
-    resources_defined += 1 unless self.archival_object_id.nil?
+    resources_defined += 1 unless resource_id.nil?
+    resources_defined += 1 unless archival_object_id.nil?
 
-    unless resources_defined == 1
-      errors.add(:base, 'Exactly one of [resource_id, archival_object_id] must be defined.')
-    end
+    errors.add(:base, 'Exactly one of [resource_id, archival_object_id] must be defined.') unless resources_defined == 1
   end
 
   def self.create_from_resource(resource)
-    self.insert(:archival_object_id => nil,
-                :resource_id        => resource.id,
-                :created_by         => 'admin',
-                :last_modified_by   => 'admin',
-                :create_time        => Time.now,
-                :system_mtime       => Time.now,
-                :user_mtime         => Time.now,
-                :lock_version       => 0)
+    insert(archival_object_id: nil,
+           resource_id: resource.id,
+           created_by: 'admin',
+           last_modified_by: 'admin',
+           create_time: Time.now,
+           system_mtime: Time.now,
+           user_mtime: Time.now,
+           lock_version: 0)
   end
 
   def self.create_from_archival_object(archival_object)
-    self.insert(:archival_object_id => archival_object.id,
-                :resource_id        => nil,
-                :created_by         => 'admin',
-                :last_modified_by   => 'admin',
-                :create_time        => Time.now,
-                :system_mtime       => Time.now,
-                :user_mtime         => Time.now,
-                :lock_version       => 0)
+    insert(archival_object_id: archival_object.id,
+           resource_id: nil,
+           created_by: 'admin',
+           last_modified_by: 'admin',
+           create_time: Time.now,
+           system_mtime: Time.now,
+           user_mtime: Time.now,
+           lock_version: 0)
   end
 
   def self.get_ark_url(id, type)
@@ -85,15 +83,15 @@ class ArkName < Sequel::Model(:ark_name)
     case type
     when :resource
       klass = Resource
-      table = "resource"
+      table = 'resource'
     when :archival_object
       klass = ArchivalObject
-      table = "archival_object"
+      table = 'archival_object'
     else
       return nil
     end
 
-    entity = klass.any_repo.filter(:id => id).first
+    entity = klass.any_repo.filter(id: id).first
     if entity.nil? || entity.external_ark_url.nil?
       return nil
     else
@@ -116,6 +114,5 @@ class ArkName < Sequel::Model(:ark_name)
     else
       return true
     end
-
   end
 end

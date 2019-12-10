@@ -1,30 +1,30 @@
-#require "memoryleak"
+# require "memoryleak"
 # require 'pp'
 module PublicNewDefaults
-#  pp "initializing resources"
-# FIXME do we need to do this in the intializer?
-#  Repository.set_repos(ArchivesSpaceClient.new.list_repositories)
+  #  pp "initializing resources"
+  # FIXME do we need to do this in the intializer?
+  #  Repository.set_repos(ArchivesSpaceClient.new.list_repositories)
 
-# determining the main menu
+  # determining the main menu
   $MAIN_MENU = []
   AppConfig[:pui_hide].keys.each do |k|
-    unless AppConfig[:pui_hide][k]
-      case k
-        when :repositories
-          $MAIN_MENU.push(['/repositories', 'repository._plural'])
-        when :resources
-          $MAIN_MENU.push(['/repositories/resources', 'resource._plural'])
-        when :digital_objects
-          $MAIN_MENU.push(['/objects?limit=digital_object', 'digital_object._plural' ])
-        when :accessions
-          $MAIN_MENU.push(['/accessions', 'unprocessed'])
-        when :subjects
-          $MAIN_MENU.push(['/subjects', 'subject._plural'])
-        when :agents
-          $MAIN_MENU.push(['/agents', 'pui_agent._plural'])
-        when :classifications
-          $MAIN_MENU.push(['/classifications', 'classification._plural'])
-      end
+    next if AppConfig[:pui_hide][k]
+
+    case k
+    when :repositories
+      $MAIN_MENU.push(['/repositories', 'repository._plural'])
+    when :resources
+      $MAIN_MENU.push(['/repositories/resources', 'resource._plural'])
+    when :digital_objects
+      $MAIN_MENU.push(['/objects?limit=digital_object', 'digital_object._plural'])
+    when :accessions
+      $MAIN_MENU.push(['/accessions', 'unprocessed'])
+    when :subjects
+      $MAIN_MENU.push(['/subjects', 'subject._plural'])
+    when :agents
+      $MAIN_MENU.push(['/agents', 'pui_agent._plural'])
+    when :classifications
+      $MAIN_MENU.push(['/classifications', 'classification._plural'])
     end
   end
 
@@ -35,9 +35,9 @@ module PublicNewDefaults
       $MAIN_MENU.insert(position, [path, label])
     end
   end
-#  Pry::ColorPrinter.pp $MAIN_MENU
-#  MemoryLeak::Resources.define(:repository, proc { ArchivesSpaceClient.new.list_repositories }, 60)
-#pp MemoryLeak::Resources.get(:repository)
+  #  Pry::ColorPrinter.pp $MAIN_MENU
+  #  MemoryLeak::Resources.define(:repository, proc { ArchivesSpaceClient.new.list_repositories }, 60)
+  # pp MemoryLeak::Resources.get(:repository)
 
   # Setup the Page Action menu items
   $RECORD_PAGE_ACTIONS = {}
@@ -58,7 +58,7 @@ module PublicNewDefaults
 
     ASUtils.wrap(record_types).each do |record_type|
       $RECORD_PAGE_ACTIONS[record_type] ||= []
-      if (position.nil?)
+      if position.nil?
         $RECORD_PAGE_ACTIONS[record_type] << action
       else
         $RECORD_PAGE_ACTIONS[record_type].insert(position, action)
@@ -82,7 +82,7 @@ module PublicNewDefaults
 
     ASUtils.wrap(record_types).each do |record_type|
       $RECORD_PAGE_ACTIONS[record_type] ||= []
-      if (position.nil?)
+      if position.nil?
         $RECORD_PAGE_ACTIONS[record_type] << action
       else
         $RECORD_PAGE_ACTIONS[record_type].insert(position, action)
@@ -90,18 +90,18 @@ module PublicNewDefaults
     end
   end
 
-# Add an action from an ERB for a particular jsonmodel record type
-# - record_types: the types to display for e.g, resource, archival_object etc
-# - erb_partial: the path the erb partial
-# - position: index to include the menu item
+  # Add an action from an ERB for a particular jsonmodel record type
+  # - record_types: the types to display for e.g, resource, archival_object etc
+  # - erb_partial: the path the erb partial
+  # - position: index to include the menu item
   def self.add_record_page_action_erb(record_types, erb_partial, position = nil)
     action = {
-      'erb_partial' => erb_partial,
+      'erb_partial' => erb_partial
     }
 
     ASUtils.wrap(record_types).each do |record_type|
       $RECORD_PAGE_ACTIONS[record_type] ||= []
-      if (position.nil?)
+      if position.nil?
         $RECORD_PAGE_ACTIONS[record_type] << action
       else
         $RECORD_PAGE_ACTIONS[record_type].insert(position, action)
@@ -128,13 +128,13 @@ module PublicNewDefaults
   # Request
   if AppConfig[:pui_page_actions_request]
     add_record_page_action_erb(['resource', 'archival_object', 'digital_object', 'digital_object_component', 'accession'],
-                                'shared/request_page_action')
+                               'shared/request_page_action')
   end
 
   ## Print
   if AppConfig[:pui_page_actions_print]
     add_record_page_action_erb(['resource'],
-                              'shared/print_page_action')
+                               'shared/print_page_action')
   end
 
   # Link to the Staff Interface
@@ -154,15 +154,14 @@ module PublicNewDefaults
       $RECORD_PAGE_ACTIONS[record_type] << action
     end
   end
-
 end
 
 # config public robots.txt
-if Rails.root.basename.to_s == 'WEB-INF'  # only need to do this when running out of unpacked .war
-  robtxt = ((Pathname.new AppConfig.find_user_config).dirname + 'robots.txt' )
+if Rails.root.basename.to_s == 'WEB-INF' # only need to do this when running out of unpacked .war
+  robtxt = ((Pathname.new AppConfig.find_user_config).dirname + 'robots.txt')
   dest = Rails.root.dirname
-  if robtxt.exist? && robtxt.file?  && dest.directory? && dest.writable?
+  if robtxt.exist? && robtxt.file? && dest.directory? && dest.writable?
     p "*********    #{robtxt} exists: copying to #{dest} ****** "
-    FileUtils.cp( robtxt, dest, :verbose => true  )
+    FileUtils.cp(robtxt, dest, verbose: true)
   end
 end

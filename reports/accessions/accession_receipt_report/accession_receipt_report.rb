@@ -25,12 +25,12 @@ class AccessionReceiptReport < AbstractReport
 
   def query_string
     date_condition = if @date_scope
-                      "accession_date > 
-                      #{db.literal(@from.split(' ')[0].gsub('-', ''))} 
-                      and accession_date < 
-                      #{db.literal(@to.split(' ')[0].gsub('-', ''))}"
-                    else
-                      '1=1'
+                       "accession_date >
+                       #{db.literal(@from.split(' ')[0].gsub('-', ''))}
+                       and accession_date <
+                       #{db.literal(@to.split(' ')[0].gsub('-', ''))}"
+                     else
+                       '1=1'
                     end
     "select
       id,
@@ -59,12 +59,12 @@ class AccessionReceiptReport < AbstractReport
     ReportUtils.fix_extent_format(row)
     row[:names] = AccessionNamesSubreport.new(self, row[:id]).get_content
     row[:rights_statements] = AccessionRightsStatementSubreport.new(
-      self, row[:id]).get_content
+      self, row[:id]
+    ).get_content
     row.delete(:id)
   end
 
   def identifier_field
     :accession_number
   end
-
 end

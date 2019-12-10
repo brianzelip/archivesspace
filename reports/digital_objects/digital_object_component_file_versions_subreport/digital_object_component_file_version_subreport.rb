@@ -1,5 +1,4 @@
 class DigitalObjectComponentFileVersionsSubreport < AbstractSubreport
-
   register_subreport('file_version', ['digital_object_component'])
 
   def initialize(parent_report, component_id)
@@ -22,5 +21,4 @@ class DigitalObjectComponentFileVersionsSubreport < AbstractSubreport
   def self.field_name
     'file_version'
   end
-
 end

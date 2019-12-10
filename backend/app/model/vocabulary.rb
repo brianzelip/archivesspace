@@ -7,7 +7,6 @@ class Vocabulary < Sequel::Model(:vocabulary)
   one_to_many :subject
 
   def self.set(params)
-    self.where(params)
+    where(params)
   end
-
 end

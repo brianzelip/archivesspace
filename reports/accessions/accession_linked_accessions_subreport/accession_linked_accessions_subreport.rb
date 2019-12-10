@@ -1,5 +1,4 @@
 class AccessionLinkedAccessionsSubreport < AbstractSubreport
-
   register_subreport('interrelated_accession', ['accession'])
 
   def initialize(parent_report, accession_id)

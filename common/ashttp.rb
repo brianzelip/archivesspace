@@ -2,10 +2,9 @@
 require 'net/http'
 
 class ASHTTP
-
   def self.start_uri(uri, opts = {})
-    use_ssl = (uri.scheme == "https")
-    opts = {:use_ssl => use_ssl}.merge(opts)
+    use_ssl = (uri.scheme == 'https')
+    opts = { use_ssl: use_ssl }.merge(opts)
 
     Net::HTTP.start(uri.host, uri.port, opts) do |http|
       yield http
@@ -23,5 +22,4 @@ class ASHTTP
   def self.post_form(*args)
     Net::HTTP.post_form(*args)
   end
-
 end

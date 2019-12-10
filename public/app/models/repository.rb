@@ -1,25 +1,20 @@
 class Repository < Struct.new(:code, :name, :uri, :display_name, :parent, :parent_url)
-
   @@AllRepos = {}
-  def Repository.get_repos
-    if @@AllRepos.blank?
-      @@AllRepos = ArchivesSpaceClient.new.list_repositories
-    end
+  def self.get_repos
+    @@AllRepos = ArchivesSpaceClient.new.list_repositories if @@AllRepos.blank?
     @@AllRepos
   end
 
-  def Repository.set_repos(repos)
+  def self.set_repos(repos)
     @@AllRepos = repos
   end
 
   # determine which badges to display
-  def Repository.badge_list(repo_code)
+  def self.badge_list(repo_code)
     list = []
-    %i(resource record digital_object accession subject agent classification).each do |sym|
+    [:resource, :record, :digital_object, :accession, :subject, :agent, :classification].each do |sym|
       badge = "#{sym}_badge".to_sym
-      unless AppConfig[:pui_repos].dig(repo_code, :hide, badge).nil? ? AppConfig[:pui_hide][badge] : AppConfig[:pui_repos][repo_code][:hide][badge]
-        list.push(sym.to_s)
-      end
+      list.push(sym.to_s) unless AppConfig[:pui_repos].dig(repo_code, :hide, badge).nil? ? AppConfig[:pui_hide][badge] : AppConfig[:pui_repos][repo_code][:hide][badge]
     end
     list
   end
@@ -36,5 +31,4 @@ class Repository < Struct.new(:code, :name, :uri, :display_name, :parent, :paren
   def self.from_json(json)
     new(json['repo_code'], json['name'], json['uri'], json['display_string'], json['parent_institution_name'], json['url'])
   end
-
 end

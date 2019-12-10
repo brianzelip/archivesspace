@@ -2,7 +2,7 @@ class ShelflistReport < AbstractReport
   register_report
 
   def query_string
-  	"select
+    "select
 	  id,
 	  title as record_title,
 	  temporary_id as temporary_location,
@@ -19,7 +19,7 @@ class ShelflistReport < AbstractReport
 	  coordinate_3_indicator,
 	  null as location_in_room,
 	  location_profile
-	  
+
 	from location
 	  natural left outer join
 	  (select
@@ -31,17 +31,16 @@ class ShelflistReport < AbstractReport
   end
 
   def fix_row(row)
-  	ReportUtils.get_location_coordinate(row)
-  	ReportUtils.get_enum_values(row, [:temporary_location])
-  	row[:resources] = LocationResourcesSubreport.new(self, row[:id], true)
-  												.get_content
-  	row[:accessions] = LocationAccessionsSubreport.new(self, row[:id], true)
-  												  .get_content
-  	row.delete(:id)
+    ReportUtils.get_location_coordinate(row)
+    ReportUtils.get_enum_values(row, [:temporary_location])
+    row[:resources] = LocationResourcesSubreport.new(self, row[:id], true)
+                                                .get_content
+    row[:accessions] = LocationAccessionsSubreport.new(self, row[:id], true)
+                                                  .get_content
+    row.delete(:id)
   end
 
   def identifier_field
-  	:record_title
+    :record_title
   end
-
 end

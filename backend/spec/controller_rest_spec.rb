@@ -4,46 +4,43 @@
 require 'spec_helper'
 
 describe 'REST interface' do
+  it 'requires view_repository access when performing GETs within a repo' do
+    create(:repo, repo_code: 'ARCHIVESSPACE')
 
-  it "requires view_repository access when performing GETs within a repo" do
-    create(:repo, :repo_code => 'ARCHIVESSPACE')
+    create(:user, username: 'spongebob')
+    create(:user, username: 'mrkrabs')
 
-    create(:user, :username => 'spongebob')
-    create(:user, :username => 'mrkrabs')
+    viewers = JSONModel(:group).all(group_code: 'repository-viewers').first
+    archivists = JSONModel(:group).all(group_code: 'repository-archivists').first
 
-    viewers = JSONModel(:group).all(:group_code => "repository-viewers").first
-    archivists = JSONModel(:group).all(:group_code => "repository-archivists").first
-
-    viewers.member_usernames = ["spongebob"]
-    archivists.member_usernames = ["mrkrabs"]
+    viewers.member_usernames = ['spongebob']
+    archivists.member_usernames = ['mrkrabs']
 
     viewers.save
     archivists.save
 
     expect {
-      as_test_user("spongebob") do
-        JSONModel(:accession).from_hash("id_0" => "1234",
-                                        "title" => "The accession title",
-                                        "content_description" => "The accession description",
-                                        "condition_description" => "The condition description",
-                                        "accession_date" => "2012-05-03").save
+      as_test_user('spongebob') do
+        JSONModel(:accession).from_hash('id_0' => '1234',
+                                        'title' => 'The accession title',
+                                        'content_description' => 'The accession description',
+                                        'condition_description' => 'The condition description',
+                                        'accession_date' => '2012-05-03').save
       end
     }.to raise_error(AccessDeniedException)
 
-
     expect {
-      as_test_user("mrkrabs") do
-        JSONModel(:accession).from_hash("id_0" => "1234",
-                                        "title" => "The accession title",
-                                        "content_description" => "The accession description",
-                                        "condition_description" => "The condition description",
-                                        "accession_date" => "2012-05-03").save
+      as_test_user('mrkrabs') do
+        JSONModel(:accession).from_hash('id_0' => '1234',
+                                        'title' => 'The accession title',
+                                        'content_description' => 'The accession description',
+                                        'condition_description' => 'The condition description',
+                                        'accession_date' => '2012-05-03').save
       end
     }.not_to raise_error
   end
 
-
-  it "handles bad pagination arguments" do
+  it 'handles bad pagination arguments' do
     create(:repo)
 
     nice_amount = 10
@@ -51,28 +48,27 @@ describe 'REST interface' do
     too_many = nice_amount + 1
 
     too_many.times {
-       create(:json_accession)
+      create(:json_accession)
     }
 
     expect {
-      JSONModel(:accession).all(:page => 1, :page_size => -1)
+      JSONModel(:accession).all(page: 1, page_size: -1)
     }.to raise_error(ArgumentError)
 
     expect {
-      JSONModel(:accession).all(:page => -1)
+      JSONModel(:accession).all(page: -1)
     }.to raise_error(ArgumentError)
 
     expect {
-      JSONModel(:accession).all(:modified_since => -1)
+      JSONModel(:accession).all(modified_since: -1)
     }.to raise_error(ArgumentError)
 
-    expect(JSONModel(:accession).all(:page => 1, :page_size => too_many)['results'].size).to eq(nice_amount)
+    expect(JSONModel(:accession).all(page: 1, page_size: too_many)['results'].size).to eq(nice_amount)
 
-    expect(JSONModel(:accession).all(:page => 10, :page_size => nice_amount)['results'].size).to eq(0)
+    expect(JSONModel(:accession).all(page: 10, page_size: nice_amount)['results'].size).to eq(0)
   end
 
-
-  it "reports an error if a bad value is given for a boolean argument" do
+  it 'reports an error if a bad value is given for a boolean argument' do
     create(:repo)
 
     id = create(:json_group).id
@@ -84,11 +80,9 @@ describe 'REST interface' do
     expect {
       JSONModel(:group).find(id, 'with_members' => nil)
     }.not_to raise_error
-
   end
 
-
-  it "reports an error if a bad value is given for an integer argument" do
+  it 'reports an error if a bad value is given for an integer argument' do
     create(:repo)
 
     id = create(:json_group).id
@@ -98,8 +92,7 @@ describe 'REST interface' do
     }.to raise_error(RuntimeError)
   end
 
-
-  it "returns a list of all Endpoints" do
+  it 'returns a list of all Endpoints' do
     expect {
       endpoint = RESTHelpers::Endpoint.all.first
       expect(endpoint[:uri].nil?).to be_falsey
@@ -108,12 +101,10 @@ describe 'REST interface' do
     }.not_to raise_error
   end
 
-
-  it "supports querying Endpoints" do
-    endpoint = RESTHelpers::Endpoint.get("/moo")
+  it 'supports querying Endpoints' do
+    endpoint = RESTHelpers::Endpoint.get('/moo')
 
     expect(endpoint['methods']).to eq([:get])
     expect(endpoint['uri']).to eq('/moo')
   end
-
 end

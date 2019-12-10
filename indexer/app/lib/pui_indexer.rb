@@ -6,17 +6,16 @@ require_relative 'large_tree_doc_indexer'
 require 'set'
 
 class PUIIndexer < PeriodicIndexer
-
   PUI_RESOLVES = [
     'ancestors',
     'ancestors::linked_agents',
     'ancestors::subjects',
     'ancestors::instances::sub_container::top_container'
-  ]
+  ].freeze
 
   def initialize(backend = nil, state = nil, name)
     state_class = AppConfig[:index_state_class].constantize
-    index_state = state || state_class.new("indexer_pui_state")
+    index_state = state || state_class.new('indexer_pui_state')
 
     super(backend, index_state, name)
 
@@ -31,16 +30,16 @@ class PUIIndexer < PeriodicIndexer
   end
 
   def fetch_records(type, ids, resolve)
-    records = JSONModel(type).all(:id_set => ids.join(","), 'resolve[]' => resolve)
+    records = JSONModel(type).all(:id_set => ids.join(','), 'resolve[]' => resolve)
     if RecordInheritance.has_type?(type)
-      RecordInheritance.merge(records, :direct_only => true)
+      RecordInheritance.merge(records, direct_only: true)
     else
       records
     end
   end
 
-  def self.get_indexer(state = nil, name = "PUI Indexer")
-    indexer = self.new(state, name)
+  def self.get_indexer(state = nil, name = 'PUI Indexer')
+    indexer = new(state, name)
   end
 
   def resolved_attributes
@@ -50,7 +49,7 @@ class PUIIndexer < PeriodicIndexer
   def record_types
     # We only want to index the record types we're going to make separate
     # PUI-specific versions of...
-    (super.select {|type| RecordInheritance.has_type?(type)} + [:archival_object]).uniq
+    (super.select { |type| RecordInheritance.has_type?(type) } + [:archival_object]).uniq
   end
 
   def configure_doc_rules
@@ -63,9 +62,7 @@ class PUIIndexer < PeriodicIndexer
     record_has_children('classification')
     record_has_children('classification_term')
 
-
-    add_document_prepare_hook {|doc, record|
-
+    add_document_prepare_hook { |doc, _record|
       if RecordInheritance.has_type?(doc['primary_type'])
         parent_id = doc['id']
         doc['id'] = "#{parent_id}#pui"
@@ -79,14 +76,14 @@ class PUIIndexer < PeriodicIndexer
     }
 
     # this runs after the hooks in indexer_common, so we can overwrite with confidence
-    add_document_prepare_hook {|doc, record|
+    add_document_prepare_hook { |doc, record|
       if RecordInheritance.has_type?(doc['primary_type'])
         # special handling for json because we need to include indirectly inherited
         # fields too - the json sent to indexer_common only has directly inherited
         # fields because only they should be indexed.
         # so we remerge without the :direct_only flag, and we remove the ancestors
         doc['json'] = ASUtils.to_json(RecordInheritance.merge(record['record'],
-                                                              :remove_ancestors => true))
+                                                              remove_ancestors: true))
 
         # special handling for title because it is populated from display_string
         # in indexer_common and display_string is not changed in the merge process
@@ -107,8 +104,8 @@ class PUIIndexer < PeriodicIndexer
       batch << {
         'id' => "#{resource_uri}/ordered_records",
         'pui_parent_id' => resource_uri,
-        'publish' => "true",
-        'primary_type' => "resource_ordered_records",
+        'publish' => 'true',
+        'primary_type' => 'resource_ordered_records',
         'json' => ASUtils.to_json(json)
       }
     end
@@ -121,7 +118,6 @@ class PUIIndexer < PeriodicIndexer
 
     !published
   end
-
 
   def skip_index_doc?(doc)
     published = doc['publish']
@@ -152,51 +148,50 @@ class PUIIndexer < PeriodicIndexer
       last_root_node_mtime = [@state.get_last_mtime(repository.id, root_type) - @window_seconds, 0].max
       last_node_mtime = [@state.get_last_mtime(repository.id, node_type) - @window_seconds, 0].max
 
-      root_node_ids = Set.new(JSONModel::HTTP.get_json(JSONModel(root_type).uri_for, :all_ids => true, :modified_since => last_root_node_mtime))
-      node_ids = JSONModel::HTTP.get_json(JSONModel(node_type).uri_for, :all_ids => true, :modified_since => last_node_mtime)
+      root_node_ids = Set.new(JSONModel::HTTP.get_json(JSONModel(root_type).uri_for, all_ids: true, modified_since: last_root_node_mtime))
+      node_ids = JSONModel::HTTP.get_json(JSONModel(node_type).uri_for, all_ids: true, modified_since: last_node_mtime)
 
       node_ids.each_slice(@records_per_thread) do |ids|
-        node_records = JSONModel(node_type).all(:id_set => ids.join(","), 'resolve[]' => [])
+        node_records = JSONModel(node_type).all(:id_set => ids.join(','), 'resolve[]' => [])
 
         node_records.each do |record|
           root_node_ids << JSONModel.parse_reference(record[root_type.to_s]['ref']).fetch(:id)
         end
       end
 
-      tree_uris.concat(root_node_ids.map {|id| JSONModel(root_type).uri_for(id) })
+      tree_uris.concat(root_node_ids.map { |id| JSONModel(root_type).uri_for(id) })
     end
 
     batch = IndexBatch.new
 
-    add_infscroll_docs(tree_uris.select {|uri| JSONModel.parse_reference(uri).fetch(:type) == 'resource'},
+    add_infscroll_docs(tree_uris.select { |uri| JSONModel.parse_reference(uri).fetch(:type) == 'resource' },
                        batch)
 
     tree_indexer = LargeTreeDocIndexer.new(batch)
     tree_indexer.add_largetree_docs(tree_uris)
 
-    if batch.length > 0
+    unless batch.empty?
       log "Indexed #{batch.length} additional PUI records in repository #{repository.repo_code}"
 
-      index_batch(batch, nil, :parent_id_field => 'pui_parent_id')
+      index_batch(batch, nil, parent_id_field: 'pui_parent_id')
       send_commit
     end
 
-    if tree_indexer.deletes.length > 0
+    unless tree_indexer.deletes.empty?
       tree_indexer.deletes.each_slice(100) do |deletes|
-        delete_records(deletes, :parent_id_field => 'pui_parent_id')
+        delete_records(deletes, parent_id_field: 'pui_parent_id')
       end
     end
 
-    handle_deletes(:parent_id_field => 'pui_parent_id')
+    handle_deletes(parent_id_field: 'pui_parent_id')
 
     # Delete any unpublished records and decendents
-    delete_records(@unpublished_records, :parent_id_field => 'pui_parent_id')
-    @unpublished_records.clear()
+    delete_records(@unpublished_records, parent_id_field: 'pui_parent_id')
+    @unpublished_records.clear
 
     checkpoints.each do |repository, type, start|
       @state.set_last_mtime(repository.id, type, start)
     end
-
   end
 
   def stage_unpublished_for_deletion(doc_id)

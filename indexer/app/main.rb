@@ -7,7 +7,7 @@ require_relative 'lib/realtime_indexer'
 require_relative 'lib/pui_indexer'
 
 require 'archivesspace_thread_dump'
-ArchivesSpaceThreadDump.init(File.join(ASUtils.find_base_directory, "thread_dump_indexer.txt"))
+ArchivesSpaceThreadDump.init(File.join(ASUtils.find_base_directory, 'thread_dump_indexer.txt'))
 require 'active_support/inflector'
 
 require 'log'
@@ -17,33 +17,31 @@ else
   Log.logger($stderr)
 end
 
-
 class ArchivesSpaceIndexer < Sinatra::Base
-
   def self.main
     periodic_indexer = PeriodicIndexer.get_indexer
     pui_indexer = PUIIndexer.get_indexer
 
     threads = []
 
-    Log.info("Starting periodic indexer")
+    Log.info('Starting periodic indexer')
     threads << Thread.new do
       begin
         periodic_indexer.run
-      rescue
+      rescue StandardError
         Log.error("Unexpected failure in periodic indexer: #{$!}")
       end
     end
 
     if AppConfig[:pui_indexer_enabled]
-      Log.info "Starting PUI indexer"
+      Log.info 'Starting PUI indexer'
       threads << Thread.new do
         # Stagger them to encourage them to run at different times
         sleep AppConfig[:solr_indexing_frequency_seconds]
 
         begin
           pui_indexer.run
-        rescue
+        rescue StandardError
           Log.error "Unexpected failure in PUI indexer: #{$!}"
         end
       end
@@ -56,62 +54,57 @@ class ArchivesSpaceIndexer < Sinatra::Base
     threads << Thread.new do
       realtime_indexers = {}
 
-      while true
+      loop do
         begin
           # Once a minute, check to see whether any new backend instances have
           # turned up
-          backend_urls.update {|old_urls| AppConfig[:backend_instance_urls]}
+          backend_urls.update { |_old_urls| AppConfig[:backend_instance_urls] }
 
           # Start up threads for any backends that don't have one yet
           backend_urls.value.each do |url|
-            if !realtime_indexers[url] || !realtime_indexers[url].alive?
+            next unless !realtime_indexers[url] || !realtime_indexers[url].alive?
 
-              Log.info "Starting realtime indexer for: #{url}"
+            Log.info "Starting realtime indexer for: #{url}"
 
-              realtime_indexers[url] = Thread.new do
-                begin
-                  indexer = RealtimeIndexer.new(url, proc { backend_urls.value.include?(url) })
-                  indexer.run
-                rescue
-                  Log.error "Realtime indexing error (#{backend_url}): #{$!}"
-                  sleep 5
-                end
+            realtime_indexers[url] = Thread.new do
+              begin
+                indexer = RealtimeIndexer.new(url, proc { backend_urls.value.include?(url) })
+                indexer.run
+              rescue StandardError
+                Log.error "Realtime indexing error (#{backend_url}): #{$!}"
+                sleep 5
               end
             end
           end
 
           sleep 60
-        rescue
+        rescue StandardError
           sleep 5
         end
       end
     end
 
-
-    threads.each {|t| t.join} if java.lang.System.get_property("aspace.devserver")
+    threads.each { |t| t.join } if java.lang.System.get_property('aspace.devserver')
   end
-
 
   configure do
     begin
       # Load plugin init.rb files (if present)
       ASUtils.find_local_directories('indexer').each do |dir|
-        init_file = File.join(dir, "plugin_init.rb")
-        if File.exists?(init_file)
-          load init_file
-        end
+        init_file = File.join(dir, 'plugin_init.rb')
+        load init_file if File.exist?(init_file)
       end
-    rescue
+    rescue StandardError
       ASUtils.dump_diagnostics($!)
     end
 
-    set :logging, false 
+    set :logging, false
     Log.noisiness "Logger::#{AppConfig[:backend_log_level].upcase}".constantize
 
     main
   end
 
-  get "/" do
+  get '/' do
     if IndexerCommon.paused?
       "Indexers paused until #{IndexerCommon.class_variable_get(:@@paused_until)}"
     else
@@ -121,12 +114,9 @@ class ArchivesSpaceIndexer < Sinatra::Base
 
   # this pauses the indexer so that bulk update and migrations can happen
   # without bogging down the server
-  put "/" do
+  put '/' do
     duration = params[:duration].nil? ? 900 : params[:duration].to_i
-    IndexerCommon.pause duration  
+    IndexerCommon.pause duration
     "#{IndexerCommon.class_variable_get(:@@paused_until)}"
   end
-
-
 end
-

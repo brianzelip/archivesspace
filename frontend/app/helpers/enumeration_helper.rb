@@ -1,7 +1,6 @@
 require 'advanced_query_builder'
 
 module EnumerationHelper
-
   def enumeration_advanced_query(relationships, value)
     query = AdvancedQueryBuilder.new
 
@@ -11,6 +10,4 @@ module EnumerationHelper
 
     query.build.to_json
   end
-
 end
-

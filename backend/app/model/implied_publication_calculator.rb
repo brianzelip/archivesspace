@@ -20,12 +20,11 @@
 # to unpublished/suppressed records).
 
 class ImpliedPublicationCalculator
-
   # A top container is published if it's linked (via an instance ->
   # sub_container) to at least one published record
   def for_top_containers(top_containers)
-    top_containers_by_id = Hash[top_containers.map {|top_container| [top_container.id, top_container]}]
-    result = Hash[top_containers.map {|top_container| [top_container, false]}]
+    top_containers_by_id = Hash[top_containers.map { |top_container| [top_container.id, top_container] }]
+    result = Hash[top_containers.map { |top_container| [top_container, false] }]
 
     Instance.enclosing_associations.each do |association|
       model = association[:model]
@@ -36,11 +35,11 @@ class ImpliedPublicationCalculator
       # Join our (e.g.) Accession to an Instance, then Instance to SubContainer,
       # then SubContainer to TopContainer.
       joined_ds = model
-                    .join(:instance, association[:key] => Sequel.qualify(model_table, :id))
-                    .join(:sub_container, :instance_id => Sequel.qualify(:instance, :id))
-                    .join(top_container_link.table_name, :sub_container_id => Sequel.qualify(:sub_container, :id))
-                    .join(:top_container, Sequel.qualify(:top_container, :id) => Sequel.qualify(top_container_link.table_name, :top_container_id))
-                    .filter(Sequel.qualify(:top_container, :id) => top_containers_by_id.keys)
+                  .join(:instance, association[:key] => Sequel.qualify(model_table, :id))
+                  .join(:sub_container, instance_id: Sequel.qualify(:instance, :id))
+                  .join(top_container_link.table_name, sub_container_id: Sequel.qualify(:sub_container, :id))
+                  .join(:top_container, Sequel.qualify(:top_container, :id) => Sequel.qualify(top_container_link.table_name, :top_container_id))
+                  .filter(Sequel.qualify(:top_container, :id) => top_containers_by_id.keys)
 
       linked_records = if model.included_modules.include?(TreeNodes)
                          for_tree_nodes(joined_ds
@@ -67,9 +66,7 @@ class ImpliedPublicationCalculator
                        end
 
       linked_records.each do |linked_record, published|
-        if published
-          result[top_containers_by_id.fetch(linked_record[:top_container_id])] = published
-        end
+        result[top_containers_by_id.fetch(linked_record[:top_container_id])] = published if published
       end
     end
 
@@ -80,14 +77,14 @@ class ImpliedPublicationCalculator
   # published.
   def for_agents(agents)
     return {} if agents.empty?
+
     assert_same_type!(agents)
 
     agent_model = agents[0].class
-    result = Hash[agents.map {|node| [node, false]}]
-    agents_by_id = Hash[agents.map {|agent| [agent.id, agent]}]
+    result = Hash[agents.map { |node| [node, false] }]
+    agents_by_id = Hash[agents.map { |agent| [agent.id, agent] }]
 
     agent_model.relationship_dependencies[:linked_agents].each do |model|
-
       # Things like events aren't publishable and shouldn't count for these calculations
       next unless model.included_modules.include?(Publishable)
 
@@ -99,19 +96,19 @@ class ImpliedPublicationCalculator
       link_relationship.reference_columns_for(model).each do |model_link_column|
         link_relationship.reference_columns_for(agent_model).each do |agent_link_column|
           linked_records = model
-                             .join(link_table,
-                                   Sequel.qualify(link_table, model_link_column) => Sequel.qualify(model.table_name, :id))
-                             .filter(Sequel.qualify(link_table, agent_link_column) => agents_by_id.keys)
-                             .select(Sequel.qualify(model.table_name, :id),
-                                     Sequel.qualify(model.table_name, :publish),
-                                     Sequel.qualify(model.table_name, :suppressed),
-                                     Sequel.as(Sequel.qualify(link_table, agent_link_column),
-                                               :agent_id))
+                           .join(link_table,
+                                 Sequel.qualify(link_table, model_link_column) => Sequel.qualify(model.table_name, :id))
+                           .filter(Sequel.qualify(link_table, agent_link_column) => agents_by_id.keys)
+                           .select(Sequel.qualify(model.table_name, :id),
+                                   Sequel.qualify(model.table_name, :publish),
+                                   Sequel.qualify(model.table_name, :suppressed),
+                                   Sequel.as(Sequel.qualify(link_table, agent_link_column),
+                                             :agent_id))
 
           if model.columns.include?(:repo_id)
             linked_records = linked_records
-                               .select_append(Sequel.as(Sequel.qualify(model.table_name, :repo_id),
-                                                        :repository_id))
+                             .select_append(Sequel.as(Sequel.qualify(model.table_name, :repo_id),
+                                                      :repository_id))
           end
 
           published_status = if model.included_modules.include?(TreeNodes)
@@ -124,9 +121,7 @@ class ImpliedPublicationCalculator
                              end
 
           published_status.each do |linked_record, published|
-            if published
-              result[agents_by_id.fetch(linked_record[:agent_id])] = true
-            end
+            result[agents_by_id.fetch(linked_record[:agent_id])] = true if published
           end
         end
       end
@@ -138,8 +133,8 @@ class ImpliedPublicationCalculator
   # An subject is published if it's linked to at least one archival record that's
   # published.
   def for_subjects(subjects)
-    result = Hash[subjects.map {|node| [node, false]}]
-    subjects_by_id = Hash[subjects.map {|subject| [subject.id, subject]}]
+    result = Hash[subjects.map { |node| [node, false] }]
+    subjects_by_id = Hash[subjects.map { |subject| [subject.id, subject] }]
 
     Subject.relationship_dependencies[:subject].each do |model|
       link_relationship = model.find_relationship(:subject)
@@ -151,19 +146,19 @@ class ImpliedPublicationCalculator
         link_relationship.reference_columns_for(Subject).each do |subject_link_column|
           # Join subject_rlshp to (e.g.) accession
           linked_records = model
-                             .join(link_table,
-                                   Sequel.qualify(link_table, model_link_column) => Sequel.qualify(model.table_name, :id))
-                             .filter(Sequel.qualify(link_table, subject_link_column) => subjects_by_id.keys)
-                             .select(Sequel.qualify(model.table_name, :id),
-                                     Sequel.qualify(model.table_name, :publish),
-                                     Sequel.qualify(model.table_name, :suppressed),
-                                     Sequel.as(Sequel.qualify(link_table, subject_link_column),
-                                               :subject_id))
+                           .join(link_table,
+                                 Sequel.qualify(link_table, model_link_column) => Sequel.qualify(model.table_name, :id))
+                           .filter(Sequel.qualify(link_table, subject_link_column) => subjects_by_id.keys)
+                           .select(Sequel.qualify(model.table_name, :id),
+                                   Sequel.qualify(model.table_name, :publish),
+                                   Sequel.qualify(model.table_name, :suppressed),
+                                   Sequel.as(Sequel.qualify(link_table, subject_link_column),
+                                             :subject_id))
 
           if model.columns.include?(:repo_id)
             linked_records = linked_records
-                               .select_append(Sequel.as(Sequel.qualify(model.table_name, :repo_id),
-                                                        :repository_id))
+                             .select_append(Sequel.as(Sequel.qualify(model.table_name, :repo_id),
+                                                      :repository_id))
           end
 
           published_status = if model.included_modules.include?(TreeNodes)
@@ -176,9 +171,7 @@ class ImpliedPublicationCalculator
                              end
 
           published_status.each do |linked_record, published|
-            if published
-              result[subjects_by_id.fetch(linked_record[:subject_id])] = true
-            end
+            result[subjects_by_id.fetch(linked_record[:subject_id])] = true if published
           end
         end
       end
@@ -194,6 +187,7 @@ class ImpliedPublicationCalculator
   # record).
   def for_tree_nodes(tree_nodes, check_root_record = true)
     return {} if tree_nodes.empty?
+
     assert_same_type!(tree_nodes)
 
     # E.g. ArchivalObject
@@ -203,7 +197,7 @@ class ImpliedPublicationCalculator
     root_model = tree_nodes[0].class.root_model
 
     # Initialize our result map to true -- assuming "published" by default.
-    result = Hash[tree_nodes.map {|node| [node, true]}]
+    result = Hash[tree_nodes.map { |node| [node, true] }]
 
     if check_root_record
       # If we're the top-level call, we'll check the repository and root
@@ -222,9 +216,9 @@ class ImpliedPublicationCalculator
       return result if root_record_id_to_child.empty?
 
       root_model
-        .filter(:id => root_record_id_to_child.keys)
-        .filter(Sequel.|({:publish => 0},
-                         {:suppressed => 1}))
+        .filter(id: root_record_id_to_child.keys)
+        .filter(Sequel.|({ publish: 0 },
+                         { suppressed: 1 }))
         .select(:id)
         .each do |root_record|
         root_record_id_to_child.fetch(root_record.id).each do |node|
@@ -249,7 +243,7 @@ class ImpliedPublicationCalculator
 
     unless parent_id_to_child.empty?
       parent_ids = parent_id_to_child.keys
-      parent_publication_status = for_tree_nodes(node_model.filter(:id => parent_ids)
+      parent_publication_status = for_tree_nodes(node_model.filter(id: parent_ids)
                                                    .select(:id, :parent_id, :root_record_id, :publish, :suppressed)
                                                    .all,
                                                  false)
@@ -278,9 +272,7 @@ class ImpliedPublicationCalculator
   end
 
   def assert_same_type!(records)
-    unless records.map(&:class).uniq.length == 1
-      raise "All records must be of the same type!"
-    end
+    raise 'All records must be of the same type!' unless records.map(&:class).uniq.length == 1
   end
 
   def repository_published?(repo_id)

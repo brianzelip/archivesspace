@@ -1,30 +1,28 @@
 require 'spec_helper'
 
 describe 'Tree positioning' do
-
   before(:each) do
     @resource = create(:json_resource)
 
     @parent = create(:json_archival_object,
-                     :resource => {'ref' => @resource.uri},
-                     :title => "Parent")
+                     resource: { 'ref' => @resource.uri },
+                     title: 'Parent')
 
     @child1 = create(:json_archival_object,
-                     :resource => {'ref' => @resource.uri},
-                     :parent => {'ref' => @parent.uri},
-                     :title => "Child 1")
+                     resource: { 'ref' => @resource.uri },
+                     parent: { 'ref' => @parent.uri },
+                     title: 'Child 1')
 
     @child2 = create(:json_archival_object,
-                     :resource => {'ref' => @resource.uri},
-                     :parent => {'ref' => @parent.uri},
-                     :title => "Child 2")
+                     resource: { 'ref' => @resource.uri },
+                     parent: { 'ref' => @parent.uri },
+                     title: 'Child 2')
 
     @child3 = create(:json_archival_object,
-                     :resource => {'ref' => @resource.uri},
-                     :parent => {'ref' => @parent.uri},
-                     :title => "Child 3")
+                     resource: { 'ref' => @resource.uri },
+                     parent: { 'ref' => @parent.uri },
+                     title: 'Child 3')
   end
-
 
   def refresh!
     [:@parent, :@child1, :@child2, :@child3].each do |var|
@@ -33,16 +31,13 @@ describe 'Tree positioning' do
     end
   end
 
-
-  it "gives a sensible initial ordering" do
+  it 'gives a sensible initial ordering' do
     expect(@parent.position).to eq(0)
 
-    expect([@child1, @child2, @child3].map {|record| record.position}).to eq([0, 1, 2])
+    expect([@child1, @child2, @child3].map { |record| record.position }).to eq([0, 1, 2])
   end
 
-
-
-  it "updates an object without affecting its position" do
+  it 'updates an object without affecting its position' do
     ArchivalObject[@child1.id].update_from_json(@child1)
 
     refresh!
@@ -50,8 +45,7 @@ describe 'Tree positioning' do
     expect([@child1, @child2, @child3].sort_by(&:position)).to eq([@child1, @child2, @child3])
   end
 
-
-  it "can change the position of an object by updating it" do
+  it 'can change the position of an object by updating it' do
     @child1.position = 2
 
     ArchivalObject[@child1.id].update_from_json(@child1)
@@ -61,8 +55,7 @@ describe 'Tree positioning' do
     expect([@child1, @child2, @child3].sort_by(&:position)).to eq([@child2, @child3, @child1])
   end
 
-
-  it "leaves us where we started if we repeatedly move the first to the last" do
+  it 'leaves us where we started if we repeatedly move the first to the last' do
     @child1.position = 2; ArchivalObject[@child1.id].update_from_json(@child1)
     @child2.position = 2; ArchivalObject[@child2.id].update_from_json(@child2)
     @child3.position = 2; ArchivalObject[@child3.id].update_from_json(@child3)
@@ -70,11 +63,9 @@ describe 'Tree positioning' do
     refresh!
 
     expect([@child1, @child2, @child3].sort_by(&:position)).to eq([@child1, @child2, @child3])
-
   end
 
-
-  it "can swap two elements after some shuffling around" do
+  it 'can swap two elements after some shuffling around' do
     # I think this is where things are currently going wrong...
 
     @child1.position = 2; ArchivalObject[@child1.id].update_from_json(@child1)
@@ -108,7 +99,6 @@ describe 'Tree positioning' do
     # So in short, it's a confusion between two different numbering systems.  Or
     # if you like Dr Seuss, it's the Goose drinking Moose Juice and vice versa.
 
-
     tmp = @child1.position
     @child1.position = @child3.position
     @child3.position = tmp
@@ -120,7 +110,4 @@ describe 'Tree positioning' do
 
     expect([@child1, @child2, @child3].sort_by(&:position)).to eq([@child3, @child2, @child1])
   end
-
-
-
 end

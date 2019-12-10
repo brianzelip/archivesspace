@@ -1,5 +1,5 @@
-class PugsController <  ApplicationController
+class PugsController < ApplicationController
   def index
-    @pug_name = "Barry"
+    @pug_name = 'Barry'
   end
 end

@@ -1,25 +1,24 @@
-require_relative "slug_helpers_generate"
-require_relative "slug_helpers_generate_by_name"
-require_relative "slug_helpers_generate_by_id"
-require_relative "slug_helpers_eligibility"
+require_relative 'slug_helpers_generate'
+require_relative 'slug_helpers_generate_by_name'
+require_relative 'slug_helpers_generate_by_id'
+require_relative 'slug_helpers_eligibility'
 
 module SlugHelpers
-
   # Find the record given the slug, return id, repo_id, and table name.
   # This is a gnarly descision tree because the query we'll run depends on which
   # controller is asking, and whether we're scoping by repo slug or not.
 
   def self.get_id_from_slug(slug, controller, action)
-    if controller == "repositories"
-      rec = Repository.where(:slug => slug).first
-      table = "repository"
-    elsif controller == "agents"
-      rec, table = self.find_slug_in_agent_tables(slug)
-    elsif controller == "subjects"
-      rec = Subject.where(:slug => slug).first
-      table = "subject"
-    elsif controller == "objects"
-      rec, table = self.find_slug_in_object_tables_any_repo(slug)
+    if controller == 'repositories'
+      rec = Repository.where(slug: slug).first
+      table = 'repository'
+    elsif controller == 'agents'
+      rec, table = find_slug_in_agent_tables(slug)
+    elsif controller == 'subjects'
+      rec = Subject.where(slug: slug).first
+      table = 'subject'
+    elsif controller == 'objects'
+      rec, table = find_slug_in_object_tables_any_repo(slug)
     else
       rec, table = find_any_repo(slug, controller, action)
     end
@@ -32,13 +31,12 @@ module SlugHelpers
     end
   end
 
-
   # Generates URLs for display in hirearchial tree links in public interface for Archival Objects and Digital object components
   def self.get_slugged_url_for_largetree(jsonmodel_type, repo_id, slug)
     if slug && AppConfig[:use_human_readable_urls]
       if AppConfig[:repo_name_in_slugs]
-        repo = Repository.first(:id => repo_id)
-        repo_slug = repo && repo.slug ? repo.slug : ""
+        repo = Repository.first(id: repo_id)
+        repo_slug = repo&.slug ? repo.slug : ''
 
         if repo_slug.empty?
           return "#{AppConfig[:public_proxy_url]}/#{jsonmodel_type.underscore}s/#{slug}"
@@ -46,10 +44,10 @@ module SlugHelpers
           return "#{AppConfig[:public_proxy_url]}/repositories/#{repo_slug}/#{jsonmodel_type.underscore}s/#{slug}"
         end
       else
-        return "#{AppConfig[:public_proxy_url]}/#{jsonmodel_type.underscore}s/#{slug}"
+        "#{AppConfig[:public_proxy_url]}/#{jsonmodel_type.underscore}s/#{slug}"
       end
     else
-      return ""
+      ''
     end
   end
 
@@ -57,16 +55,16 @@ module SlugHelpers
 
   # based on the controller/action, query the right table for the slug in any repo
   def self.find_any_repo(slug, controller, action)
-    return case controller
-    when "resources"
-      [Resource.any_repo.where(:slug => slug).first, "resource"]
-    when "accessions"
-      [Accession.any_repo.where(:slug => slug).first, "accession"]
-    when "classifications"
-      if action == "term"
-        [ClassificationTerm.any_repo.where(:slug => slug).first, "classification_term"]
+    case controller
+    when 'resources'
+      [Resource.any_repo.where(slug: slug).first, 'resource']
+    when 'accessions'
+      [Accession.any_repo.where(slug: slug).first, 'accession']
+    when 'classifications'
+      if action == 'term'
+        [ClassificationTerm.any_repo.where(slug: slug).first, 'classification_term']
       else
-        [Classification.any_repo.where(:slug => slug).first, "classification"]
+        [Classification.any_repo.where(slug: slug).first, 'classification']
       end
     end
   end
@@ -76,53 +74,48 @@ module SlugHelpers
   def self.find_slug_in_agent_tables(slug)
     found_in = nil
 
-    agent = AgentPerson.where(:slug => slug).first
-    found_in = "agent_person" if agent
+    agent = AgentPerson.where(slug: slug).first
+    found_in = 'agent_person' if agent
 
     unless found_in
-      agent = AgentFamily.where(:slug => slug).first
-      found_in = "agent_family" if agent
+      agent = AgentFamily.where(slug: slug).first
+      found_in = 'agent_family' if agent
     end
 
     unless found_in
-      agent = AgentCorporateEntity.where(:slug => slug).first
-      found_in = "agent_corporate_entity" if agent
+      agent = AgentCorporateEntity.where(slug: slug).first
+      found_in = 'agent_corporate_entity' if agent
     end
 
     unless found_in
-      agent = AgentSoftware.where(:slug => slug).first
-      found_in = "agent_software" if agent
+      agent = AgentSoftware.where(slug: slug).first
+      found_in = 'agent_software' if agent
     end
 
-    unless found_in
-      agent = nil
-    end
+    agent = nil unless found_in
 
-    return [agent, found_in]
+    [agent, found_in]
   end
-
 
   # find slug in one of the object tables in any repo.
   def self.find_slug_in_object_tables_any_repo(slug)
     found_in = nil
 
-    obj = ArchivalObject.any_repo.where(:slug => slug).first
-    found_in = "archival_object" if obj
+    obj = ArchivalObject.any_repo.where(slug: slug).first
+    found_in = 'archival_object' if obj
 
     unless found_in
-      obj = DigitalObject.any_repo.where(:slug => slug).first
-      found_in = "digital_object" if obj
+      obj = DigitalObject.any_repo.where(slug: slug).first
+      found_in = 'digital_object' if obj
     end
 
     unless found_in
-      obj = DigitalObjectComponent.any_repo.where(:slug => slug).first
-      found_in = "digital_object_component" if obj
+      obj = DigitalObjectComponent.any_repo.where(slug: slug).first
+      found_in = 'digital_object_component' if obj
     end
 
-    unless found_in
-      obj = nil
-    end
+    obj = nil unless found_in
 
-    return [obj, found_in]
+    [obj, found_in]
   end
 end

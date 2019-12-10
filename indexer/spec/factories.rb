@@ -2,24 +2,23 @@ require 'factory_bot'
 require 'spec/lib/factory_bot_helpers'
 
 FactoryBot.define do
-
   def JSONModel(key)
     JSONModel::JSONModel(key)
   end
 
-  to_create{|instance| instance.save}
+  to_create { |instance| instance.save }
 
-  sequence(:generic_title) { |n| "Title: #{n}"}
-  sequence(:html_title) { |n| "Title: <emph render='italic'>#{n}</emph>"}
-  sequence(:container_type) {|n| 'box'}
+  sequence(:generic_title) { |n| "Title: #{n}" }
+  sequence(:html_title) { |n| "Title: <emph render='italic'>#{n}</emph>" }
+  sequence(:container_type) { |_n| 'box' }
   sequence(:yyyy_mm_dd) { Time.at(rand * Time.now.to_i).to_s.sub(/\s.*/, '') }
-  sequence(:level) { %w(series subseries item)[rand(3)] }
+  sequence(:level) { ['series', 'subseries', 'item'][rand(3)] }
 
   factory :json_archival_object, class: JSONModel(:archival_object) do
     ref_id { generate(:alphanumstr) }
     level { generate(:level) }
     title { "Archival Object #{generate(:generic_title)}" }
-    resource { {'ref' => create(:json_resource).uri} }
+    resource { { 'ref' => create(:json_resource).uri } }
   end
 
   factory :json_top_container, class: JSONModel(:top_container) do
@@ -32,7 +31,7 @@ FactoryBot.define do
   end
 
   factory :json_sub_container, class: JSONModel(:sub_container) do
-    top_container { {:ref => create(:json_top_container).uri} }
+    top_container { { ref: create(:json_top_container).uri } }
     type_2 { sample(JSONModel(:sub_container).schema['properties']['type_2']) }
     indicator_2 { generate(:alphanumstr) }
     type_3 { sample(JSONModel(:sub_container).schema['properties']['type_3']) }
@@ -44,9 +43,9 @@ FactoryBot.define do
     label { 'creation' }
     self.begin { generate(:yyyy_mm_dd) }
     self.end { self.begin }
-    self.certainty { 'inferred' }
-    self.era { 'ce' }
-    self.calendar { 'gregorian' }
+    certainty { 'inferred' }
+    era { 'ce' }
+    calendar { 'gregorian' }
     expression { generate(:alphanumstr) }
   end
 
@@ -54,9 +53,9 @@ FactoryBot.define do
     date_type { 'single' }
     label { 'creation' }
     self.begin { generate(:yyyy_mm_dd) }
-    self.certainty { 'inferred' }
-    self.era { 'ce' }
-    self.calendar { 'gregorian' }
+    certainty { 'inferred' }
+    era { 'ce' }
+    calendar { 'gregorian' }
     expression { generate(:alphanumstr) }
   end
 
@@ -98,13 +97,13 @@ FactoryBot.define do
     ead_id { nil_or_whatever }
     finding_aid_date { generate(:alphanumstr) }
     finding_aid_series_statement { generate(:alphanumstr) }
-    finding_aid_language {  [generate(:finding_aid_language)].sample  }
-    finding_aid_script {  [generate(:finding_aid_script)].sample  }
+    finding_aid_language { [generate(:finding_aid_language)].sample }
+    finding_aid_script { [generate(:finding_aid_script)].sample }
     finding_aid_language_note { nil_or_whatever }
     finding_aid_note { generate(:alphanumstr) }
     ead_location { generate(:alphanumstr) }
-    instances { [ build(:json_instance) ] }
-    revision_statements {  [build(:json_revision_statement)]  }
+    instances { [build(:json_instance)] }
+    revision_statements { [build(:json_revision_statement)] }
   end
 
   factory :json_revision_statement, class: JSONModel(:revision_statement) do

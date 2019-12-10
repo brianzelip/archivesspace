@@ -32,14 +32,13 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
   def self.delete_lookups
     {
       Resource => Tombstone.where { Sequel.like(:uri, '%/resources/%') },
-      ArchivalObject => Tombstone.where { Sequel.like(:uri, '%/archival_objects/%') },
+      ArchivalObject => Tombstone.where { Sequel.like(:uri, '%/archival_objects/%') }
     }
   end
 
   DELETES_PER_PAGE = 100
 
-  RESOLVE = ['repository', 'subjects', 'linked_agents', 'digital_object', 'top_container', 'ancestors', 'linked_agents', 'resource', 'top_container::container_profile']
-
+  RESOLVE = ['repository', 'subjects', 'linked_agents', 'digital_object', 'top_container', 'ancestors', 'linked_agents', 'resource', 'top_container::container_profile'].freeze
 
   def earliest
     Time.at(0).utc
@@ -50,89 +49,91 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
   end
 
   def sets
-    available_levels = BackendEnumSource.values_for("archival_record_level")
+    available_levels = BackendEnumSource.values_for('archival_record_level')
     get_oai_config_values
 
-    # ANW-674: 
+    # ANW-674:
     # Get set values from OAIConfig table instead of config file
     config_sets = []
 
     if @repo_set_codes.any? && !available_levels.include?(@repo_set_name)
-      repo_oai_set = OAI::Set.new({:name => @repo_set_name,
-                                   :spec => @repo_set_name,
-                                   :description => build_set_description(@repo_description)})
+      repo_oai_set = OAI::Set.new(name: @repo_set_name,
+                                  spec: @repo_set_name,
+                                  description: build_set_description(@repo_description))
 
       config_sets.push(repo_oai_set)
     end
 
     if @sponsor_set_names.any? && !available_levels.include?(@sponsor_set_name)
-      repo_sponsor_set = OAI::Set.new({:name => @sponsor_set_name,
-                                       :spec => @sponsor_set_name,
-                                       :description => build_set_description(@sponsor_description)})
+      repo_sponsor_set = OAI::Set.new(name: @sponsor_set_name,
+                                      spec: @sponsor_set_name,
+                                      description: build_set_description(@sponsor_description))
 
       config_sets.push(repo_sponsor_set)
     end
 
-    level_sets = available_levels.map {|level|
-      OAI::Set.new(:name => level, :spec => level)
+    level_sets = available_levels.map { |level|
+      OAI::Set.new(name: level, spec: level)
     }
 
-    config_sets + level_sets.select {|s| set_enabled?(s) }
+    config_sets + level_sets.select { |s| set_enabled?(s) }
   end
 
   # returns true if set is enabled in at least one repository
   def set_enabled?(set)
-    sets_in_repos = Repository.exclude(:publish => 0)
-                              .exclude(:oai_is_disabled => 1)
+    sets_in_repos = Repository.exclude(publish: 0)
+                              .exclude(oai_is_disabled: 1)
                               .select(:oai_sets_available)
-                              .map {|r| JSON::parse(r[:oai_sets_available]) rescue [] }
+                              .map { |r|
+      begin
+                           JSON.parse(r[:oai_sets_available])
+      rescue StandardError
+        []
+                         end
+    }
 
     # if oai_sets_available array is blank, then all sets are enabled for that repository.
     # if a repository is restricted to certain sets, then those set_ids will be in the oai_sets_available array.
     # So, we're looking to see if there is at least one repository with an empty set OR this set_id in the oai_sets_available array.
-    set_id = BackendEnumSource.id_for_value("archival_record_level", set.name).to_s
+    set_id = BackendEnumSource.id_for_value('archival_record_level', set.name).to_s
 
-    repos_enabling_set = sets_in_repos.select {|r| r.length == 0 || r.include?(set_id)}
+    repos_enabling_set = sets_in_repos.select { |r| r.empty? || r.include?(set_id) }
 
-    return repos_enabling_set.length > 0
+    !repos_enabling_set.empty?
   end
 
   def fetch_single_record(uri, options = {})
-    tombstone = Tombstone.filter(:uri => uri).first
+    tombstone = Tombstone.filter(uri: uri).first
 
-    unless tombstone.nil?
-      return OAIDeletion.new(tombstone)
-    end
+    return OAIDeletion.new(tombstone) unless tombstone.nil?
 
     metadata_prefix = options.fetch(:metadata_prefix)
 
     format_options = options_for_type(metadata_prefix)
     parsed_ref = JSONModel.parse_reference(uri)
 
-    raise OAI::IdException.new if parsed_ref.nil?
+    raise OAI::IdException if parsed_ref.nil?
 
-    model = format_options.record_types.find {|model| model.my_jsonmodel.record_type == parsed_ref.fetch(:type)}
+    model = format_options.record_types.find { |model| model.my_jsonmodel.record_type == parsed_ref.fetch(:type) }
 
-    raise OAI::IdException.new unless model
+    raise OAI::IdException unless model
 
-    repo_uri = parsed_ref.fetch(:repository) { raise OAI::IdException.new }
-    raise OAI::IdException.new if repo_uri.nil?
+    repo_uri = parsed_ref.fetch(:repository) { raise OAI::IdException }
+    raise OAI::IdException if repo_uri.nil?
 
-    repo_id = JSONModel.parse_reference(repo_uri).fetch(:id) { raise OAI::IdException.new }
+    repo_id = JSONModel.parse_reference(repo_uri).fetch(:id) { raise OAI::IdException }
 
-    RequestContext.open(:repo_id => repo_id) do
-      obj = add_visibility_restrictions(model.filter(:id => parsed_ref[:id])).first
+    RequestContext.open(repo_id: repo_id) do
+      obj = add_visibility_restrictions(model.filter(id: parsed_ref[:id])).first
 
-      raise OAI::IdException.new unless obj
+      raise OAI::IdException unless obj
 
       ArchivesSpaceOAIRecord.new(obj, fetch_jsonmodels(model, [obj])[0])
     end
   end
 
   def find(selector, options = {})
-    if selector.is_a?(String)
-      return fetch_single_record(selector, options)
-    end
+    return fetch_single_record(selector, options) if selector.is_a?(String)
 
     resumption_token = if options.has_key?(:resumption_token)
                          ArchivesSpaceResumptionToken.parse(options.fetch(:resumption_token), ArchivesSpaceOAIRepository.available_record_types)
@@ -152,34 +153,37 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     elsif resumption_token.state == ArchivesSpaceResumptionToken::PRODUCING_DELETES_STATE
       produce_next_delete_set(resumption_token, options)
     else
-      raise OAI::ResumptionTokenException.new
+      raise OAI::ResumptionTokenException
     end
   end
-
 
   private
 
   def add_visibility_restrictions(dataset)
     # ANW-242: restrict excluded sets if enabled per repostiory
     # select repos that
-      # -are published 
-      # -have OAI enabled
+    # -are published
+    # -have OAI enabled
     # gather these repo ids and available set ids in a data structure like:
     # [ [1, [889, 886]], [2, []], ...]
-    visible_repos= Repository.exclude(:publish => 0).exclude(:oai_is_disabled => 1)
-                             .select(:id, :oai_sets_available)
-                             .map {|row| [row[:id], row[:oai_sets_available]]}
+    visible_repos = Repository.exclude(publish: 0).exclude(oai_is_disabled: 1)
+                              .select(:id, :oai_sets_available)
+                              .map { |row| [row[:id], row[:oai_sets_available]] }
 
-    visible_repos.map! do |vr| 
-      osa_parsed = JSON::parse(vr[1]) rescue [] 
-      [vr[0], osa_parsed.map {|s| s.to_i}]
+    visible_repos.map! do |vr|
+      osa_parsed = begin
+                     JSON.parse(vr[1])
+                   rescue StandardError
+                     []
+                   end
+      [vr[0], osa_parsed.map { |s| s.to_i }]
     end
 
     # create a query WHERE subclause string for each visible repo
     # add a check for set restrictions if defined for that repo
     query_strings = visible_repos.map do |vr|
       # no set restrictions: add all the repos objects to our query
-      if vr[1].length == 0
+      if vr[1].empty?
         "(repo_id = #{vr[0]})"
 
       # set restrictions defined: add only objects in repo that meet set restrictions
@@ -188,12 +192,12 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
       end
     end
 
-    dataset.filter(query_strings.join(" OR ")).filter(:publish => 1, :suppressed => 0)
+    dataset.filter(query_strings.join(' OR ')).filter(publish: 1, suppressed: 0)
   end
 
   # Don't show deletes for repositories that aren't published.
   def restrict_tombstones_to_published_repositories(dataset)
-    unpublished_repos = Repository.exclude(:publish => 1).select(:id).map {|row| row[:id]}
+    unpublished_repos = Repository.exclude(publish: 1).select(:id).map { |row| row[:id] }
 
     result = dataset
 
@@ -205,7 +209,7 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
   end
 
   def options_for_type(metadata_prefix)
-    ArchivesSpaceOAIRepository.available_record_types.fetch(metadata_prefix) { raise OAI::FormatException.new }
+    ArchivesSpaceOAIRepository.available_record_types.fetch(metadata_prefix) { raise OAI::FormatException }
   end
 
   def build_set_description(text)
@@ -215,13 +219,12 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
                          'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
                          'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
                          'xsi:schemaLocation' => 'http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd') do
-
           xml['oai_dc'].description(text)
         end
       end
     end
 
-    result.to_xml(:save_with => Nokogiri::XML::Node::SaveOptions::NO_DECLARATION)
+    result.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::NO_DECLARATION)
   end
 
   def produce_next_record_set(resumption_token, options)
@@ -234,15 +237,15 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     format_options = options_for_type(metadata_prefix)
 
     resumption_token.remaining_types.each do |record_type_name, last_id|
-      record_type = format_options.record_types.find {|type| type.to_s == record_type_name} or next
+      (record_type = format_options.record_types.find { |type| type.to_s == record_type_name }) || next
       limit = format_options.page_size - matched_records.length
 
       # Request one extra record (limit + 1) to determine whether we've hit
       # the end of the stream or not
       matches = add_visibility_restrictions(record_type.any_repo)
-                  .where { id > last_id }
-                  .order(:id)
-                  .limit(limit + 1)
+                .where { id > last_id }
+                .order(:id)
+                .limit(limit + 1)
 
       from_timestamp = resumption_token.from || options.fetch(:from, nil)
       until_timestamp = resumption_token.until || options.fetch(:until, nil)
@@ -296,12 +299,10 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
 
     # Get a dataset that will pull back all tombstones for the record types that
     # this metadata type supports.
-    matching_tombstones = format_options.record_types.map {|record_type|
+    matching_tombstones = format_options.record_types.map { |record_type|
       tombstone_ds = ArchivesSpaceOAIRepository.delete_lookups[record_type]
-      if tombstone_ds
-        restrict_tombstones_to_published_repositories(tombstone_ds)
-      end
-    }.compact.reduce {|deletes, tombstone_ds|
+      restrict_tombstones_to_published_repositories(tombstone_ds) if tombstone_ds
+    }.compact.reduce { |deletes, tombstone_ds|
       deletes.union(tombstone_ds)
     }
 
@@ -322,13 +323,13 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     # Request one extra record (limit + 1) to determine whether we've hit
     # the end of the stream or not
     matches = matching_tombstones
-                .where { id > last_id }
-                .order(:id)
-                .limit(limit + 1)
+              .where { id > last_id }
+              .order(:id)
+              .limit(limit + 1)
 
     finished = (matches.count <= limit)
 
-    matched_records = matches.take(limit).map {|tombstone| OAIDeletion.new(tombstone)}
+    matched_records = matches.take(limit).map { |tombstone| OAIDeletion.new(tombstone) }
 
     if finished
       matched_records
@@ -339,18 +340,13 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     end
   end
 
-
   def apply_time_restrictions(dataset, from_timestamp, until_timestamp, time_column = :system_mtime)
     from_time = parse_time(from_timestamp)
     until_time = parse_time(until_timestamp)
 
-    if from_time
-      dataset = dataset.filter("#{time_column} >= ?", from_time)
-    end
+    dataset = dataset.filter("#{time_column} >= ?", from_time) if from_time
 
-    if until_time
-      dataset = dataset.filter("#{time_column} <= ?", until_time)
-    end
+    dataset = dataset.filter("#{time_column} <= ?", until_time) if until_time
 
     dataset
   end
@@ -359,7 +355,7 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     if s_or_time.nil?
       nil
     elsif s_or_time.is_a?(Time)
-      return s_or_time
+      s_or_time
     else
       parsed = Time.parse(s_or_time)
 
@@ -383,12 +379,12 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     set = set.to_s
 
     # If the set name corresponds to a known record level, use that as our limit
-    available_levels = BackendEnumSource.values_for("archival_record_level")
+    available_levels = BackendEnumSource.values_for('archival_record_level')
 
     if available_levels.include?(set)
-      level_id = BackendEnumSource.id_for_value("archival_record_level", set)
+      level_id = BackendEnumSource.id_for_value('archival_record_level', set)
 
-      return dataset.filter(:level_id => level_id)
+      return dataset.filter(level_id: level_id)
     end
 
     # ANW-674
@@ -396,20 +392,20 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     get_oai_config_values
 
     if @repo_set_codes.any? && set == @repo_set_name
-      dataset = dataset.filter(:repo_id => Repository.filter(:repo_code => @repo_set_codes).select(:id))
+      dataset = dataset.filter(repo_id: Repository.filter(repo_code: @repo_set_codes).select(:id))
 
     # We work off the SHA1 of the sponsor here because Derby doesn't make it
     # easy to compare CLOBs with strings without DB-specific stuff.  And since
     # we don't know how long people's sponsor text might be in the wild, it
     # seemed risky to change the column type.
     elsif @sponsor_set_names.any? && set == @sponsor_set_name
-      sponsor_hashes = @sponsor_set_names.map {|sponsor| Digest::SHA1.hexdigest(sponsor)}
+      sponsor_hashes = @sponsor_set_names.map { |sponsor| Digest::SHA1.hexdigest(sponsor) }
 
-      if model == Resource
-        dataset = dataset.filter(:finding_aid_sponsor_sha1 => sponsor_hashes)
-      else
-        dataset = dataset.filter(:root_record_id => Resource.filter(:finding_aid_sponsor_sha1 => sponsor_hashes).select(:id))
-      end     
+      dataset = if model == Resource
+                  dataset.filter(finding_aid_sponsor_sha1: sponsor_hashes)
+                else
+                  dataset.filter(root_record_id: Resource.filter(finding_aid_sponsor_sha1: sponsor_hashes).select(:id))
+                end
     end
 
     dataset
@@ -419,7 +415,7 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
     result = []
 
     objs.group_by(&:repo_id).each do |repo_id, subset|
-      RequestContext.open(:repo_id => repo_id) do
+      RequestContext.open(repo_id: repo_id) do
         jsons = record_type.sequel_to_jsonmodel(subset)
 
         # Resolve ancestors since the RecordInheritance code expects them to be there
@@ -429,7 +425,7 @@ class ArchivesSpaceOAIRepository < OAI::Provider::Model
         jsons = RecordInheritance.merge(jsons)
         resolved = URIResolver.resolve_references(jsons, RESOLVE)
 
-        result.concat(resolved.map {|json| JSONModel::JSONModel(json.fetch('jsonmodel_type').intern).from_hash(json, true, :trusted)})
+        result.concat(resolved.map { |json| JSONModel::JSONModel(json.fetch('jsonmodel_type').intern).from_hash(json, true, :trusted) })
       end
     end
 

@@ -1,5 +1,4 @@
 class OAIResponseChecker
-
   # If any of our unpublished notes turn up in our output, something's gone bad.
   #
   # Disabling this for now because some MARC/EAD record exports are currently
@@ -8,15 +7,13 @@ class OAIResponseChecker
   FORBIDDEN_TEXT = nil
 
   # These elements will change in normal operation, and that's OK.
-  SKIPPED_ELEMENT_NAMES = ['responseDate', 'datestamp', 'resumptionToken', 'date', 'identifier', 'id', 'url']
+  SKIPPED_ELEMENT_NAMES = ['responseDate', 'datestamp', 'resumptionToken', 'date', 'identifier', 'id', 'url'].freeze
 
   # Compare two XML-string OAI responses to see if they differ in any meaningful way.
   #
   # Raises MismatchError if they do.
   def self.compare(correct_response, test_result_response)
-    if FORBIDDEN_TEXT && test_result_response =~ FORBIDDEN_TEXT
-      raise MismatchError.new("Response should never contain text '#{FORBIDDEN_TEXT}'", "", "", [])
-    end
+    raise MismatchError.new("Response should never contain text '#{FORBIDDEN_TEXT}'", '', '', []) if FORBIDDEN_TEXT && test_result_response =~ FORBIDDEN_TEXT
 
     correct = Nokogiri::XML(correct_response) do |config|
       config.options = Nokogiri::XML::ParseOptions::NOBLANKS
@@ -34,27 +31,21 @@ class OAIResponseChecker
 
   # Recursive comparison helper for comparing Nokogiri elements.
   def compare_or_fail(ours, theirs, path = [])
-    if ours.class != theirs.class
-      raise MismatchError.new("Element type mismatch", ours.class, theirs.class, path)
-    end
+    raise MismatchError.new('Element type mismatch', ours.class, theirs.class, path) if ours.class != theirs.class
 
     if ours.is_a?(Nokogiri::XML::Element)
-      unless ours.name == theirs.name
-        raise MismatchError.new("Tag name mismatch", ours.name, theirs.name, path)
-      end
+      raise MismatchError.new('Tag name mismatch', ours.name, theirs.name, path) unless ours.name == theirs.name
 
-      new_path = path + [ours.name + '[' + ours.attributes.map(&:to_s).join(" ") + ']']
+      new_path = path + [ours.name + '[' + ours.attributes.map(&:to_s).join(' ') + ']']
 
-      unless attributes_equal?(ours.attributes, theirs.attributes)
-        raise MismatchError.new("Attributes mismatch", ours.attributes, theirs.attributes, new_path)
-      end
+      raise MismatchError.new('Attributes mismatch', ours.attributes, theirs.attributes, new_path) unless attributes_equal?(ours.attributes, theirs.attributes)
 
       unless ours.children.length == theirs.children.length
         our_xml = ours.to_xml
         their_xml = theirs.to_xml
 
-        raise MismatchError.new("Child count mismatch", ours.children.length, theirs.children.length, new_path,
-                               "Ours: #{our_xml}\n\nTheirs: #{their_xml}")
+        raise MismatchError.new('Child count mismatch', ours.children.length, theirs.children.length, new_path,
+                                "Ours: #{our_xml}\n\nTheirs: #{their_xml}")
       end
 
       # Compare all children
@@ -65,9 +56,7 @@ class OAIResponseChecker
       end
 
     elsif ours.is_a?(Nokogiri::XML::Text)
-      unless ours.text.strip == theirs.text.strip
-        raise MismatchError.new("String mismatch", ours, theirs, path)
-      end
+      raise MismatchError.new('String mismatch', ours, theirs, path) unless ours.text.strip == theirs.text.strip
 
     else
       raise "Unexpected type: #{ours.class}"
@@ -85,9 +74,7 @@ class OAIResponseChecker
         next
       end
 
-      if our_value.text != their_value.text
-        return false
-      end
+      return false if our_value.text != their_value.text
     end
 
     true
@@ -119,7 +106,7 @@ class OAIResponseChecker
         msg += additional_information
       end
 
-      $stderr.puts(msg)
+      warn(msg)
       super(msg)
     end
   end

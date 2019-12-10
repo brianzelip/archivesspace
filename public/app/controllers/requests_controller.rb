@@ -1,14 +1,11 @@
 class RequestsController < ApplicationController
-
-include PrefixHelper
+  include PrefixHelper
 
   # send a request
   def make_request
     @request = RequestItem.new(params)
     errs = @request.validate
-    if params["comment"].present?
-      errs << I18n.t('request.failed')
-    end
+    errs << I18n.t('request.failed') if params['comment'].present?
     if errs.blank?
       flash[:notice] = I18n.t('request.submitted')
 
@@ -18,7 +15,7 @@ include PrefixHelper
       redirect_to params.fetch('base_url', app_prefix(request[:request_uri]))
     else
       flash[:error] = errs
-      redirect_back(fallback_location: app_prefix(request[:request_uri])) and return
+      redirect_back(fallback_location: app_prefix(request[:request_uri])) && return
     end
   end
 end

@@ -6,7 +6,7 @@ require 'English'
 
 # A set of utils to start/stop the various servers that make up Aspace.
 # Used for running tests.
-# rubocop:disable Lint/HandleExceptions, Lint/RescueWithoutErrorClass
+# rubocop:disable Lint/HandleExceptions
 module TestUtils
   def self.kill(pid)
     if RbConfig::CONFIG['host_os'] =~ /mswin|mingw|cygwin/
@@ -15,13 +15,11 @@ module TestUtils
       begin
         Process.kill(15, pid)
         Process.waitpid(pid)
-      rescue
+      rescue StandardError
         # Already dead.
       end
     end
   end
-
-  # rubocop:disable Metrics/MethodLength
   def self.wait_for_url(url)
     100.times do
       begin
@@ -31,7 +29,7 @@ module TestUtils
           http.request(req)
         end
         break
-      rescue
+      rescue StandardError
         # Keep trying
         puts "Waiting for #{url} (#{$ERROR_INFO.inspect})"
         sleep(5)
@@ -49,6 +47,7 @@ module TestUtils
     # Pass through any system properties from the parent JVM too
     java.lang.System.getProperties.each do |property, value|
       next unless property =~ /aspace.config.(.*)/
+
       key = Regexp.last_match(1)
       java_opts += " -Daspace.config.#{key}=#{value}" unless config.key?(key)
     end

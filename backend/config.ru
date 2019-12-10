@@ -1,4 +1,4 @@
-require "aspace_gems"
+require 'aspace_gems'
 ASpaceGems.setup
 
 require './app/main'
@@ -7,6 +7,6 @@ def app
   ArchivesSpaceService
 end
 
-map "/" do
+map '/' do
   run ArchivesSpaceService
 end

@@ -2,7 +2,6 @@ require 'spec_helper'
 require 'assessment_spec_helper'
 
 describe 'Assessment controller' do
-
   before(:all) do
     AssessmentSpecHelper.setup_global_attributes
   end
@@ -13,8 +12,8 @@ describe 'Assessment controller' do
   def create_assessment(additional_properties = {})
     create(:json_assessment,
            {
-             'records' => [{'ref' => resource.uri}],
-             'surveyed_by' => [{'ref' => surveyor.uri}]
+             'records' => [{ 'ref' => resource.uri }],
+             'surveyed_by' => [{ 'ref' => surveyor.uri }]
            }.merge(additional_properties))
   end
 
@@ -44,7 +43,7 @@ describe 'Assessment controller' do
       create_assessment
     end
 
-    expect(JSONModel(:assessment).all(:page => 1, :page_size => 10)['results'].count).to eq(5)
+    expect(JSONModel(:assessment).all(page: 1, page_size: 10)['results'].count).to eq(5)
   end
 
   it 'deletes an assessment record' do

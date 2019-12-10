@@ -2,35 +2,27 @@ module ASModel
   # Code that keeps the records of different repositories isolated and hiding suppressed records.
 
   def self.update_suppressed_flag(dataset, val)
-    dataset.update(:suppressed => (val ? 1 : 0),
-                   :system_mtime => Time.now)
+    dataset.update(suppressed: (val ? 1 : 0),
+                   system_mtime: Time.now)
   end
-
 
   def self.update_publish_flag(dataset, val)
-    dataset.update(:publish => (val ? 1 : 0),
-                   :system_mtime => Time.now)
+    dataset.update(publish: (val ? 1 : 0),
+                   system_mtime: Time.now)
   end
 
-
-
   module ModelScoping
-
     def self.included(base)
       base.extend(ClassMethods)
     end
 
-
     def uri
       # Bleh!
-      self.class.uri_for(self.class.my_jsonmodel.record_type, self.id)
+      self.class.uri_for(self.class.my_jsonmodel.record_type, id)
     end
 
-
     def set_suppressed(val)
-      unless self.class.suppressible?
-        raise "Suppression not supported for this class: #{self.class.inspect}"
-      end
+      raise "Suppression not supported for this class: #{self.class.inspect}" unless self.class.suppressible?
 
       object_graph = self.object_graph
 
@@ -38,17 +30,14 @@ module ASModel
         model.handle_suppressed(ids_to_change, val)
       end
 
-      RequestContext.open(:enforce_suppression => false) do
-        self.class.fire_update(self.class.to_jsonmodel(self.id), self)
+      RequestContext.open(enforce_suppression: false) do
+        self.class.fire_update(self.class.to_jsonmodel(id), self)
       end
 
-      if model == Resource || model == Accession
-        reindex_top_containers
-      end
+      reindex_top_containers if model == Resource || model == Accession
 
       val
     end
-
 
     # Mixins will hook in here to add their own publish actions.
     def publish!(setting = true)
@@ -60,72 +49,54 @@ module ASModel
         model.handle_publish_flag(ids, setting)
       end
 
-      if model == Resource || model == Accession
-        reindex_top_containers
-      end
-
+      reindex_top_containers if model == Resource || model == Accession
     end
-
 
     def unpublish!
       publish!(false)
     end
 
-
     module ClassMethods
-
       def enable_suppression
         @suppressible = true
       end
 
-
       def enforce_suppression?
         RequestContext.get(:enforce_suppression)
       end
-
 
       def suppressible?
         @suppressible
       end
 
       def handle_suppressed(ids, val)
-        if suppressible?
-          ASModel.update_suppressed_flag(self.filter(:id => ids), val)
-        end
+        ASModel.update_suppressed_flag(filter(id: ids), val) if suppressible?
       end
-
 
       def publishable?
-        self.columns.include?(:publish)
+        columns.include?(:publish)
       end
-
 
       def handle_publish_flag(ids, val)
-        ASModel.update_publish_flag(self.filter(:id => ids), val)
+        ASModel.update_publish_flag(filter(id: ids), val)
       end
 
-
       def set_model_scope(value)
-        if ![:repository, :global].include?(value)
-          raise "Failure for #{self}: Model scope must be set as :repository or :global"
-        end
+        raise "Failure for #{self}: Model scope must be set as :repository or :global" unless [:repository, :global].include?(value)
 
         if value == :repository
           model = self
-          orig_ds = self.dataset.clone
+          orig_ds = dataset.clone
 
           # Provide a new '.this_repo' method on this model class that only
           # returns records that belong to the current repository.
           def_dataset_method(:this_repo) do
-            filter = model.columns.include?(:repo_id) ? {:repo_id => model.active_repository} : {}
+            filter = model.columns.include?(:repo_id) ? { repo_id: model.active_repository } : {}
 
-            if model.suppressible? && model.enforce_suppression?
-              filter[Sequel.qualify(model.table_name, :suppressed)] = 0
-            end
+            filter[Sequel.qualify(model.table_name, :suppressed)] = 0 if model.suppressible? && model.enforce_suppression?
 
             orig_ds.filter(filter)
           end
-
 
           # And another that will return records from any repository
           def_dataset_method(:any_repo) do
@@ -136,11 +107,10 @@ module ASModel
             end
           end
 
-
           # Replace the default row_proc with one that fetches the request row,
           # but blows up if that row isn't from the currently active repository.
-          orig_row_proc = self.dataset.row_proc
-          self.dataset.row_proc = proc do |row|
+          orig_row_proc = dataset.row_proc
+          dataset.row_proc = proc do |row|
             if row.has_key?(:repo_id) && row[:repo_id] != model.active_repository
               raise ("ASSERTION FAILED: #{row.inspect} has a repo_id of " +
                      "#{row[:repo_id]} but the active repository is #{model.active_repository}")
@@ -168,9 +138,8 @@ module ASModel
         @model_scope = value
       end
 
-
       def model_scope(noerror = false)
-        @model_scope or
+        @model_scope ||
           if noerror
             nil
           else
@@ -178,39 +147,31 @@ module ASModel
           end
       end
 
-
       # Like JSONModel.parse_reference, but enforce repository restrictions
       def parse_reference(uri, opts)
         ref = JSONModel.parse_reference(uri, opts)
 
-        return nil if !ref
+        return nil unless ref
 
         # If the current model is repository scoped, and the reference is a
         # repository-scoped URI, make sure they're talking about the same
         # repository.
-        if self.model_scope == :repository && ref[:repository] && ref[:repository] != JSONModel(:repository).uri_for(active_repository)
-          raise ReferenceError.new("Invalid URI reference for this (#{active_repository}) repo: '#{uri}'")
-        end
+        raise ReferenceError, "Invalid URI reference for this (#{active_repository}) repo: '#{uri}'" if model_scope == :repository && ref[:repository] && ref[:repository] != JSONModel(:repository).uri_for(active_repository)
 
         ref
       end
 
-
       def active_repository
         repo = RequestContext.get(:repo_id)
 
-        if model_scope == :repository and repo.nil?
-          raise "Missing repo_id for request!"
-        end
+        raise 'Missing repo_id for request!' if (model_scope == :repository) && repo.nil?
 
         repo
       end
 
-
       def uri_for(jsonmodel, id, opts = {})
-        JSONModel(jsonmodel).uri_for(id, opts.merge(:repo_id => self.active_repository))
+        JSONModel(jsonmodel).uri_for(id, opts.merge(repo_id: active_repository))
       end
-
     end
   end
 end

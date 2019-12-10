@@ -31,7 +31,6 @@ class MODSModel < ASpaceExport::ExportModel
   @digital_object_map = {
   }
 
-
   @name_type_map = {
     'agent_person' => 'personal',
     'agent_family' => 'family',
@@ -47,7 +46,6 @@ class MODSModel < ASpaceExport::ExportModel
     'prefix' => 'termsOfAddress'
   }
 
-
   def initialize(tree)
     @children = tree['children']
 
@@ -62,26 +60,19 @@ class MODSModel < ASpaceExport::ExportModel
     @lang_notes = []
   end
 
-
   # meaning, 'archival object' in the abstract
   def self.from_archival_object(obj, tree)
-
-    mods = self.new(tree)
+    mods = new(tree)
     mods.apply_map(obj, @archival_object_map)
 
     mods
   end
 
-
   def self.from_digital_object(obj, tree, opts = {})
-    mods = self.from_archival_object(obj, tree)
+    mods = from_archival_object(obj, tree)
 
     if obj.respond_to? :digital_object_type
-      unless obj.digital_object_type.nil? || obj.digital_object_type.empty?
-        mods.type_of_resource = I18n.t("enumerations.digital_object_digital_object_type." + obj.digital_object_type)
-      else
-        mods.type_of_resource = nil
-      end
+      mods.type_of_resource = (I18n.t('enumerations.digital_object_digital_object_type.' + obj.digital_object_type) unless obj.digital_object_type.nil? || obj.digital_object_type.empty?)
     end
 
     mods.apply_map(obj, @digital_object_map, opts)
@@ -91,20 +82,18 @@ class MODSModel < ASpaceExport::ExportModel
     mods
   end
 
-
   def self.from_digital_object_component(obj, tree)
-    mods = self.from_archival_object(obj, tree)
+    mods = from_archival_object(obj, tree)
 
     mods
   end
 
-
-  def self.name_type_map
-    @name_type_map
+  class << self
+    attr_reader :name_type_map
   end
 
-  def self.name_part_type_map
-    @name_part_type_map
+  class << self
+    attr_reader :name_part_type_map
   end
 
   @@mods_note = Struct.new(:tag, :type, :label, :content, :wrapping_tag)
@@ -112,42 +101,39 @@ class MODSModel < ASpaceExport::ExportModel
     @@mods_note.new(*a)
   end
 
-
   def self.build_repo_note(repo_record)
     agent = repo_record['agent_representation']['_resolved']
     contacts = agent['agent_contacts']
 
     contents = [repo_record['name']]
-    if contacts.length > 0
-      contents += %w(address_1 address_2 address_3 city region post_code country).map {|part|
-        contacts[0][part] }.compact
+    unless contacts.empty?
+      contents += ['address_1', 'address_2', 'address_3', 'city', 'region', 'post_code', 'country'].map { |part|
+        contacts[0][part]
+      } .compact
     end
 
     contents = contents.join(', ')
-    if repo_record['url']
-      contents << " (#{repo_record['url']})"
-    end
+    contents << " (#{repo_record['url']})" if repo_record['url']
 
-    new_mods_note('note', nil, "Digital object made available by", contents)
+    new_mods_note('note', nil, 'Digital object made available by', contents)
   end
-
 
   def new_mods_note(*a)
     self.class.new_mods_note(*a)
   end
 
-
   def handle_notes(notes)
     notes.each do |note|
       # physdesc and dimensions are treated separately from other notes
       next if note['type'] == 'physdesc' || note['type'] == 'dimensions'
+
       content = ASpaceExport::Utils.extract_note_text(note)
       mods_note = case note['type']
                   when 'accessrestrict'
                     new_mods_note('accessCondition',
-                                   'restrictionOnAccess',
-                                   note['label'],
-                                   content)
+                                  'restrictionOnAccess',
+                                  note['label'],
+                                  content)
                   when 'userestrict'
                     new_mods_note('accessCondition',
                                   'useAndReproduction',
@@ -164,29 +150,25 @@ class MODSModel < ASpaceExport::ExportModel
                                   note['label'],
                                   content)
                   end
-     self.notes << mods_note
+      self.notes << mods_note
     end
   end
 
-
   def handle_langmaterials(lang_materials)
+    self.lang_materials = lang_materials.map { |l| l['language_and_script'] }.compact
 
-    self.lang_materials = lang_materials.map{|l| l['language_and_script']}.compact
-
-    language_notes = lang_materials.map {|l| l['notes']}.compact.reject {|e|  e == [] }.flatten
-    if !language_notes.empty?
+    language_notes = lang_materials.map { |l| l['notes'] }.compact.reject { |e| e == [] }.flatten
+    unless language_notes.empty?
       language_notes.each do |note|
         content = ASpaceExport::Utils.extract_note_text(note)
         mods_note = new_mods_note('note',
                                   'language',
                                   note['label'],
                                   content)
-        self.lang_notes << mods_note
+        lang_notes << mods_note
       end
     end
-
   end
-
 
   # notes relating to extents are treated differently than other notes
   # when the model is serialized.
@@ -200,18 +182,17 @@ class MODSModel < ASpaceExport::ExportModel
                   when 'physdesc'
                     new_mods_note('note',
                                   'physical_description',
-                                  "Physical Details",
+                                  'Physical Details',
                                   content)
                   when 'dimensions'
                     new_mods_note('note',
                                   'dimensions',
-                                  "Dimensions",
+                                  'Dimensions',
                                   content)
                   end
-      self.extent_notes << mods_note
+      extent_notes << mods_note
     end
   end
-
 
   def handle_extents(extents, notes)
     extents.each do |ext|
@@ -222,30 +203,24 @@ class MODSModel < ASpaceExport::ExportModel
 
       # the extents hash may have data under keys 'physical_details' and 'dimensions'.
       # If found, we'll treat them as if they were notes of that type.
-      if ext.has_key?('physical_details') && !ext['physical_details'].nil?
-        extent_notes << new_mods_note('note', 'physical_description', "Physical Details", ext['physical_details'])
-      end
-        
-      if ext.has_key?('dimensions') && !ext['dimensions'].nil?
-        extent_notes << new_mods_note('note', 'dimensions', "Dimensions", ext['dimensions'])
-      end
+      extent_notes << new_mods_note('note', 'physical_description', 'Physical Details', ext['physical_details']) if ext.has_key?('physical_details') && !ext['physical_details'].nil?
+
+      extent_notes << new_mods_note('note', 'dimensions', 'Dimensions', ext['dimensions']) if ext.has_key?('dimensions') && !ext['dimensions'].nil?
     end
 
     # process any physical_description and dimension notes that may be in the note list.
     handle_extents_notes(notes)
   end
 
-
   def handle_subjects(subjects)
-    subjects.map {|s| s['_resolved'] }.each do |subject|
+    subjects.map { |s| s['_resolved'] }.each do |subject|
       self.subjects << {
-        'term' => subject['terms'].map {|t| t['term']},
+        'term' => subject['terms'].map { |t| t['term'] },
         'source' => subject['source'],
-        'term_type' => subject['terms'].map {|t| t['term_type']}
+        'term_type' => subject['terms'].map { |t| t['term_type'] }
       }
     end
   end
-
 
   def handle_agents(linked_agents)
     linked_agents.each do |link|
@@ -254,7 +229,7 @@ class MODSModel < ASpaceExport::ExportModel
       name_type = self.class.name_type_map[agent['jsonmodel_type']]
       # shift in granularity - role repeats for each name
       agent['names'].each do |name|
-        self.names << {
+        names << {
           'type' => name_type,
           'role' => role,
           'source' => name['source'],
@@ -270,24 +245,22 @@ class MODSModel < ASpaceExport::ExportModel
     self.identifier = digital_object_id
   end
 
-
   def handle_dates(dates)
     dates.each do |date|
       self.dates.push date
     end
   end
 
-
   def name_parts(name, type)
     fields = case type
              when 'agent_person'
-               ["primary_name", "title", "prefix", "rest_of_name", "suffix", "fuller_form", "number"]
+               ['primary_name', 'title', 'prefix', 'rest_of_name', 'suffix', 'fuller_form', 'number']
              when 'agent_family'
-               ["family_name", "prefix"]
+               ['family_name', 'prefix']
              when 'agent_software'
-               ["software_name", "version", "manufacturer"]
+               ['software_name', 'version', 'manufacturer']
              when 'agent_corporate_entity'
-               ["primary_name", "subordinate_name_1", "subordinate_name_2", "number"]
+               ['primary_name', 'subordinate_name_1', 'subordinate_name_2', 'number']
              end
     parts = []
     fields.each do |field|
@@ -302,19 +275,20 @@ class MODSModel < ASpaceExport::ExportModel
 
   def each_related_item(children = nil, maxDepth = 20)
     return if maxDepth == 0
-    maxDepth = maxDepth - 1
+
+    maxDepth -= 1
     children ||= @children
 
     return unless children
+
     children.each do |child|
       json = JSONModel(:digital_object_component).new(child)
       yield self.class.from_digital_object_component(json, child)
-      if child['children']
-        each_related_item(child['children'], maxDepth) do |item|
-          yield item
-        end
+      next unless child['children']
+
+      each_related_item(child['children'], maxDepth) do |item|
+        yield item
       end
     end
   end
-
 end

@@ -47,11 +47,11 @@ class Driver
     profile['browser.helperApps.neverAsk.saveToDisk'] = 'application/msword, application/csv, application/pdf, application/xml,  application/ris, text/csv, image/png, application/pdf, text/html, text/plain, application/zip, application/x-zip, application/x-zip-compressed'
     profile['pdfjs.disabled'] = true
 
-    if java.lang.System.getProperty('os.name').downcase == 'linux'
-      ENV['PATH'] = "#{File.join(ASUtils.find_base_directory, '../../common', 'selenium', 'bin', 'geckodriver', 'linux')}:#{ENV['PATH']}"
-    else # osx
-      ENV['PATH'] = "#{File.join(ASUtils.find_base_directory, '../../common', 'selenium', 'bin', 'geckodriver', 'osx')}:#{ENV['PATH']}"
-    end
+    ENV['PATH'] = if java.lang.System.getProperty('os.name').downcase == 'linux'
+                    "#{File.join(ASUtils.find_base_directory, '../../common', 'selenium', 'bin', 'geckodriver', 'linux')}:#{ENV['PATH']}"
+                  else # osx
+                    "#{File.join(ASUtils.find_base_directory, '../../common', 'selenium', 'bin', 'geckodriver', 'osx')}:#{ENV['PATH']}"
+                  end
 
     options = Selenium::WebDriver::Firefox::Options.new
     options.profile = profile
@@ -65,7 +65,7 @@ class Driver
                            directory_upgrade: true,
                            extensions_to_open: '',
                            prompt_for_download: false } },
-      args: %w[headless disable-gpu window-size=1200x800]
+      args: ['headless', 'disable-gpu', 'window-size=1200x800']
     )
     Selenium::WebDriver.for :chrome, options: opts
   end

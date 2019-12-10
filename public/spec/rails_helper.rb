@@ -4,7 +4,7 @@ require 'launchy'
 # Headless chrome
 Capybara.register_driver(:selenium_chrome) do |app|
   capabilities = Selenium::WebDriver::Remote::Capabilities.chrome(
-    chromeOptions: { args: %w[headless disable-gpu] }
+    chromeOptions: { args: ['headless', 'disable-gpu'] }
   )
 
   Capybara::Selenium::Driver.new(
@@ -26,7 +26,7 @@ elsif ENV['SELENIUM_HEADY_CHROME']
   Capybara.javascript_driver = :chrome
 elsif java.lang.System.getProperty('os.name').downcase == 'linux'
   ENV['PATH'] = "#{File.join(ASUtils.find_base_directory, 'common', 'selenium', 'bin', 'geckodriver', 'linux')}:#{ENV['PATH']}"
-else #osx
+else # osx
   ENV['PATH'] = "#{File.join(ASUtils.find_base_directory, 'common', 'selenium', 'bin', 'geckodriver', 'osx')}:#{ENV['PATH']}"
 end
 
@@ -48,7 +48,7 @@ Capybara.server = :mizuno
 
 def finished_all_ajax_requests?
   request_count = page.evaluate_script('$.active').to_i
-  request_count && request_count.zero?
+  request_count&.zero?
 rescue Timeout::Error
   puts 'timeout..'
 end

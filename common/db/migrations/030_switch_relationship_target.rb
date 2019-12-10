@@ -8,17 +8,13 @@
 require_relative 'utils'
 
 Sequel.migration do
-
   up do
-
     record_type_to_id_map = {}
     # Convert each existing row to the new format
     self[:related_agents_rlshp].each_by_page do |row|
-      matches = row[:relationship_target].scan(Regexp.new("/agents/(.*?)/([0-9]+)"))
+      matches = row[:relationship_target].scan(Regexp.new('/agents/(.*?)/([0-9]+)'))
 
-      if matches.empty?
-        raise "Unrecognized value for relationship_target: #{row.inspect}"
-      end
+      raise "Unrecognized value for relationship_target: #{row.inspect}" if matches.empty?
 
       (record_type, id) = matches.first
 
@@ -26,24 +22,21 @@ Sequel.migration do
       record_type_to_id_map[record_type] << id.to_i
     end
 
-
     # Add the new columns
     alter_table(:related_agents_rlshp) do
-      add_column(:relationship_target_record_type, String, :null => true)
-      add_column(:relationship_target_id, Integer, :null => true)
+      add_column(:relationship_target_record_type, String, null: true)
+      add_column(:relationship_target_id, Integer, null: true)
     end
-
 
     # Convert the existing entries into the new column format
     record_type_to_id_map.each do |record_type, ids|
       ids.each do |id|
         uri = "/agents/#{record_type}/#{id}"
-        self[:related_agents_rlshp].filter(:relationship_target => uri).
-                                   update(:relationship_target_record_type => record_type,
-                                          :relationship_target_id => id)
+        self[:related_agents_rlshp].filter(relationship_target: uri)
+                                   .update(relationship_target_record_type: record_type,
+                                           relationship_target_id: id)
       end
     end
-
 
     # Remove the original column
     alter_table(:related_agents_rlshp) do
@@ -51,7 +44,5 @@ Sequel.migration do
       set_column_not_null(:relationship_target_record_type)
       set_column_not_null(:relationship_target_id)
     end
-
   end
-
 end

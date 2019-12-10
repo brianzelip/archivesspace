@@ -1,28 +1,28 @@
 module SlugHelpers
   # TODO: get lists dynamically
   AGENT_RECORD_TYPES = [
-    "AgentPerson",
-    "AgentFamily",
-    "AgentCorporateEntity",
-    "AgentSoftware",
+    'AgentPerson',
+    'AgentFamily',
+    'AgentCorporateEntity',
+    'AgentSoftware'
   ].freeze
 
   BASE_RECORD_TYPES = [
-    "Resource",
-    "Subject",
-    "DigitalObject",
-    "Accession",
-    "Classification",
-    "ClassificationTerm",
-    "ArchivalObject",
-    "DigitalObjectComponent",
+    'Resource',
+    'Subject',
+    'DigitalObject',
+    'Accession',
+    'Classification',
+    'ClassificationTerm',
+    'ArchivalObject',
+    'DigitalObjectComponent'
   ].freeze
 
   NAME_RECORD_TYPES = [
-    "NamePerson",
-    "NameCorporateEntity",
-    "NameFamily",
-    "NameSoftware",
+    'NamePerson',
+    'NameCorporateEntity',
+    'NameFamily',
+    'NameSoftware'
   ].freeze
 
   def self.slug_record_types
@@ -33,7 +33,6 @@ module SlugHelpers
   # Generally, we'll always want to return true here and run the slug code if the record is brand new (hasn't been persisted)
   # slug will be updated iff this method returns true
   def self.slug_data_updated?(obj)
-
     id_field_changed   = false
     name_field_changed = false
     persisted          = obj.exists?
@@ -44,50 +43,50 @@ module SlugHelpers
     updated = false
 
     case obj.class.to_s
-    when "Resource"
-      if AppConfig[:generate_resource_slugs_with_eadid]
-        id_field_changed = obj.column_changed?(:ead_id)     || !persisted
-      else
-        id_field_changed = obj.column_changed?(:identifier) || !persisted
-      end
+    when 'Resource'
+      id_field_changed = if AppConfig[:generate_resource_slugs_with_eadid]
+                           obj.column_changed?(:ead_id) || !persisted
+                         else
+                           obj.column_changed?(:identifier) || !persisted
+                         end
 
       name_field_changed = obj.column_changed?(:title) || !persisted
 
-    when "Accession"
+    when 'Accession'
       id_field_changed = obj.column_changed?(:identifier) || !persisted
       name_field_changed = obj.column_changed?(:title)    || !persisted
 
-    when "DigitalObject"
+    when 'DigitalObject'
       id_field_changed = obj.column_changed?(:digital_object_id) || !persisted
       name_field_changed = obj.column_changed?(:title)           || !persisted
 
-    when "DigitalObjectComponent"
+    when 'DigitalObjectComponent'
       id_field_changed = obj.column_changed?(:component_id) || !persisted
       name_field_changed = obj.column_changed?(:title)      || !persisted
 
-    when "Classification"
+    when 'Classification'
       id_field_changed = obj.column_changed?(:identifier) || !persisted
       name_field_changed = obj.column_changed?(:title)    || !persisted
 
-    when "ClassificationTerm"
+    when 'ClassificationTerm'
       id_field_changed = obj.column_changed?(:identifier) || !persisted
       name_field_changed = obj.column_changed?(:title)    || !persisted
 
-    when "Repository"
+    when 'Repository'
       id_field_changed = obj.column_changed?(:repo_code) || !persisted
       name_field_changed = obj.column_changed?(:name)    || !persisted
 
-    when "ArchivalObject"
-      if AppConfig[:generate_archival_object_slugs_with_cuid] = true
-        id_field_changed = obj.column_changed?(:component_id) || !persisted
-      else
-        id_field_changed = obj.column_changed?(:ref_id) || !persisted
-      end
+    when 'ArchivalObject'
+      id_field_changed = if AppConfig[:generate_archival_object_slugs_with_cuid] = true
+                           obj.column_changed?(:component_id) || !persisted
+                         else
+                           obj.column_changed?(:ref_id) || !persisted
+                         end
 
       name_field_changed = obj.column_changed?(:title) || !persisted
 
-    when "Subject"
-      id_field_changed = obj.column_changed?(:authority_id)   || !persisted
+    when 'Subject'
+      id_field_changed = obj.column_changed?(:authority_id) || !persisted
       name_field_changed = obj.column_changed?(:title) || !persisted
     end
 
@@ -107,29 +106,28 @@ module SlugHelpers
       name_field_changed = obj[:is_display_name] == 1
     end
 
-
     # auto-gen slugs has been switched from OFF to ON
-    if slug_auto_field_changed && obj[:is_slug_auto] == 1
-      updated = true
+    updated = if slug_auto_field_changed && obj[:is_slug_auto] == 1
+                true
 
-    # auto-gen slugs is OFF, and slug field updated
-    elsif obj[:is_slug_auto] == 0 && slug_field_changed
-      updated = true
+              # auto-gen slugs is OFF, and slug field updated
+              elsif obj[:is_slug_auto] == 0 && slug_field_changed
+                true
 
-    # auto-gen slugs is ON based on name, and name has changed
-    elsif !AppConfig[:auto_generate_slugs_with_id] && name_field_changed
-      updated = true
+              # auto-gen slugs is ON based on name, and name has changed
+              elsif !AppConfig[:auto_generate_slugs_with_id] && name_field_changed
+                true
 
-    # auto-gen slugs is ON based on id, and id has changed
-    elsif AppConfig[:auto_generate_slugs_with_id] && id_field_changed
-      updated = true
+              # auto-gen slugs is ON based on id, and id has changed
+              elsif AppConfig[:auto_generate_slugs_with_id] && id_field_changed
+                true
 
-    # any other case, we can skip slug processing
-    else
-      updated = false
-    end
+              # any other case, we can skip slug processing
+              else
+                false
+              end
 
-    return updated
+    updated
   end
 
   # returns true if is_slug_auto is enabled for entity, or if we should treat it like it is
@@ -144,7 +142,7 @@ module SlugHelpers
       enabled = true
     end
 
-    return enabled
+    enabled
   end
 
   def self.is_agent_name_type?(klass)

@@ -4,7 +4,6 @@ require 'csv'
 require_relative '../app/converters/assessment_converter'
 
 describe 'Assessment converter' do
-
   def my_converter
     AssessmentConverter
   end
@@ -13,7 +12,7 @@ describe 'Assessment converter' do
   let (:test_user) { 'admin' }
 
   def with_sample_csv_file
-    rows = CSV.parse(File.read(File.join(File.dirname(__FILE__), "../app/exporters/examples/assessment/aspace_assessment_import_template.csv")))
+    rows = CSV.parse(File.read(File.join(File.dirname(__FILE__), '../app/exporters/examples/assessment/aspace_assessment_import_template.csv')))
 
     headers = rows[1]
     data = rows[2..-1]
@@ -36,7 +35,7 @@ describe 'Assessment converter' do
     end
 
     Tempfile.open('assessment_csv') do |tempfile|
-      tempfile.write(CSV.generate {|csv|
+      tempfile.write(CSV.generate { |csv|
                        rows.each do |row|
                          csv << row
                        end
@@ -47,17 +46,17 @@ describe 'Assessment converter' do
     end
   end
 
-  it "loads the sample CSV successfully" do
+  it 'loads the sample CSV successfully' do
     with_sample_csv_file do |_headers, data, csv_path|
-      records = convert( csv_path)
+      records = convert(csv_path)
 
       # One record per CSV data row
       expect(records.length).to eq(data.length)
     end
   end
 
-  it "copes with interesting Excel dates" do
-    with_sample_csv_file do |_headers, data, csv_path|
+  it 'copes with interesting Excel dates' do
+    with_sample_csv_file do |_headers, _data, csv_path|
       records = convert(csv_path)
       records.each do |record|
         expect(['2005-12-31', '2000-01-01']).to include(record['survey_end'])

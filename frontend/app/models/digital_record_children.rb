@@ -1,12 +1,11 @@
-require_relative "mixins/record_children"
+require_relative 'mixins/record_children'
 
 class DigitalRecordChildren < JSONModel(:digital_record_children)
-
   include RecordChildren
 
   attr_accessor :uri
 
-  def self.uri_for(*args)
+  def self.uri_for(*_args)
     nil
   end
 
@@ -16,11 +15,8 @@ class DigitalRecordChildren < JSONModel(:digital_record_children)
   end
 
   def self.clean_file_versions(child)
-    return unless child["file_versions"]
+    return unless child['file_versions']
 
-    if child["file_versions"][0].reject{|k,v| (k == "publish" && v == true) || v.blank?}.empty?
-      child.delete("file_versions")
-    end
+    child.delete('file_versions') if child['file_versions'][0].reject { |k, v| (k == 'publish' && v == true) || v.blank? }.empty?
   end
-
 end

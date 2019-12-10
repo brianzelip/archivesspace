@@ -1,7 +1,5 @@
 class TestsController < ApplicationController
-
-  set_access_control  :public => [:shutdown]
-
+  set_access_control  public: [:shutdown]
 
   def shutdown
     # Used to cleanly shutdown the devserver when running the coverage tests
@@ -10,6 +8,6 @@ class TestsController < ApplicationController
       exit!(0)
     end
 
-    render :text => "No way"
+    render text: 'No way'
   end
 end

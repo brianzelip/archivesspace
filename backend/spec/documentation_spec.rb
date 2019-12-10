@@ -1,19 +1,18 @@
 require 'spec_helper'
 
-describe "Generate REST Documentation" do
-
-  it "gets all the endpoints and makes something can write documentation for" do
-    endpoints = ArchivesSpaceService::Endpoint.all.sort{|a,b| a[:uri] <=> b[:uri]}
+describe 'Generate REST Documentation' do
+  it 'gets all the endpoints and makes something can write documentation for' do
+    endpoints = ArchivesSpaceService::Endpoint.all.sort { |a, b| a[:uri] <=> b[:uri] }
     output = {}
     problems = []
 
     models = {}
     JSONModel.models.each_pair do |type, klass|
       begin
-        models[type] = JSON.parse( build("json_#{type}".to_sym).to_json )
-      rescue => err
+        models[type] = JSON.parse(build("json_#{type}".to_sym).to_json)
+      rescue StandardError => e
         # if you want a verbose output of the issues, you can set an ENV
-        $stderr.puts "Model problem with #{klass} : #{err.message}" if ENV["BUILD_DOCUMENTATION"]
+        warn "Model problem with #{klass} : #{e.message}" if ENV['BUILD_DOCUMENTATION']
       end
     end
 
@@ -22,23 +21,23 @@ describe "Generate REST Documentation" do
       output[e[:uri]][e[:method]] = {}
       e[:params].each do |p|
         begin
-          if p.is_a? String
-            klass = p.to_sym
-          else
-            klass = p[1]
-          end
+          klass = if p.is_a? String
+                    p.to_sym
+                  else
+                    p[1]
+                  end
 
           klass = klass.first if klass.is_a?(Array)
 
           if klass.is_a?(Symbol)
             record = klass.to_s
           elsif klass.respond_to?(:record_type)
-            r = models[klass.record_type] || [ "Example Missing" ]
+            r = models[klass.record_type] || ['Example Missing']
             record = r
-          elsif klass.to_s.include?("RESTHelpers")
-            record = klass.to_s.split("::").last
+          elsif klass.to_s.include?('RESTHelpers')
+            record = klass.to_s.split('::').last
           elsif klass == Integer
-            record = "1"
+            record = '1'
           else
             record = generate(klass.name.downcase.to_sym)
           end
@@ -47,18 +46,17 @@ describe "Generate REST Documentation" do
           else
             output[e[:uri]][e[:method]][p[0]] = record
           end
-        rescue => err
-          problems << { :class => klass, :backtrace => err.backtrace,  :message => err.message }
+        rescue StandardError => e
+          problems << { class: klass, backtrace: e.backtrace, message: e.message }
           next
         end
       end
-
     end
 
-    file = File.join(File.dirname(__FILE__), '../../', "endpoint_examples.json")
-    file_problems = File.join(File.dirname(__FILE__), '../../', "endpoint_examples_problems.json")
-    File.open(file, "w") {  |f| f << output.to_json }
-    File.open(file_problems, "w") {  |f| f << JSON.pretty_generate(problems) }
-    $stderr.puts "example file put at #{file}. Problems logged in #{file_problems}"
+    file = File.join(File.dirname(__FILE__), '../../', 'endpoint_examples.json')
+    file_problems = File.join(File.dirname(__FILE__), '../../', 'endpoint_examples_problems.json')
+    File.open(file, 'w') { |f| f << output.to_json }
+    File.open(file_problems, 'w') { |f| f << JSON.pretty_generate(problems) }
+    warn "example file put at #{file}. Problems logged in #{file_problems}"
   end
 end

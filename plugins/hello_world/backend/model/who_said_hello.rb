@@ -3,5 +3,4 @@ class WhoSaidHello < Sequel::Model(:whosaidhello)
 
   set_model_scope :global
   corresponds_to JSONModel(:hello_world)
-
 end

@@ -75,7 +75,7 @@ describe 'User management' do
   it "doesn't allow another user to edit the global admin or a system account" do
     @driver.login(@test_user)
 
-    %w[1 2].each do |user_id|
+    ['1', '2'].each do |user_id|
       assert (5) do
         @driver.navigate.to("#{$frontend}/users/#{user_id}/edit")
         @driver.find_element_with_text('//div[contains(@class, "alert-danger")]', /Access denied/)

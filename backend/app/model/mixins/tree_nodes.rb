@@ -2,7 +2,6 @@
 # objects, digital object components)
 
 module TreeNodes
-
   # We'll space out our positions by this amount.  This means we can insert
   # log2(POSITION_STEP) nodes before any given node before needing to rebalance.
   #
@@ -26,12 +25,12 @@ module TreeNodes
   def set_root(new_root)
     self.root_record_id = new_root.id
 
-    if self.parent_id.nil?
+    if parent_id.nil?
       # This top-level node has been moved to a new tree.  Append it to the end of the list.
-      root_uri = self.class.uri_for(self.class.root_record_type.intern, self.root_record_id)
+      root_uri = self.class.uri_for(self.class.root_record_type.intern, root_record_id)
       self.parent_name = "root@#{root_uri}"
 
-      self.position = self.class.next_position_for_parent(self.root_record_id, self.parent_id)
+      self.position = self.class.next_position_for_parent(root_record_id, parent_id)
     end
 
     save
@@ -42,13 +41,11 @@ module TreeNodes
     end
   end
 
-
   def set_position_in_list(target_logical_position)
     self.class.retry_db_update do
       attempt_set_position_in_list(target_logical_position)
     end
   end
-
 
   # A note on terminology: a logical position refers to the position of a node
   # as observed by the user (0...RECORD_COUNT).  A physical position is the
@@ -56,13 +53,13 @@ module TreeNodes
   def attempt_set_position_in_list(target_logical_position)
     DB.open do |db|
       ordered_siblings = db[self.class.node_model.table_name].filter(
-        :root_record_id => self.root_record_id, :parent_id => self.parent_id
+        root_record_id: root_record_id, parent_id: parent_id
       ).order(:position)
       siblings_count = ordered_siblings.count
 
       target_logical_position = [target_logical_position, siblings_count - 1].min
 
-      current_physical_position = self.position
+      current_physical_position = position
       current_logical_position = ordered_siblings.where { position < current_physical_position }.count
 
       # We'll determine which node will fall to the left of our moved node, and
@@ -120,43 +117,41 @@ module TreeNodes
         end
 
       self.class.dataset.db[self.class.table_name]
-        .filter(:id => self.id)
-        .update(:position => new_position,
-                :system_mtime => Time.now)
+          .filter(id: id)
+          .update(position: new_position,
+                  system_mtime: Time.now)
     end
   end
 
   def ensure_gap(start_physical_position)
     siblings = self.class.dataset
-               .filter(:root_record_id => self.root_record_id)
-               .filter(:parent_id => self.parent_id)
-               .filter { position >= start_physical_position }
+                   .filter(root_record_id: root_record_id)
+                   .filter(parent_id: parent_id)
+                   .filter { position >= start_physical_position }
 
     # Sigh.  Work around:
     # http://stackoverflow.com/questions/5403437/atomic-multi-row-update-with-a-unique-constraint
-    siblings.update(:parent_name => Sequel.lit(DB.concat('CAST(id as CHAR(10))', "'_temp'")))
+    siblings.update(parent_name: Sequel.lit(DB.concat('CAST(id as CHAR(10))', "'_temp'")))
 
     # Do the real update
-    siblings.update(:position => Sequel.lit('position + ' + TreeNodes::POSITION_STEP.to_s),
-                    :system_mtime => Time.now)
+    siblings.update(position: Sequel.lit('position + ' + TreeNodes::POSITION_STEP.to_s),
+                    system_mtime: Time.now)
 
     # Puts it back again
-    siblings.update(:parent_name => self.parent_name)
+    siblings.update(parent_name: parent_name)
 
     start_physical_position + TreeNodes::POSITION_STEP
   end
 
-
   def logical_position
-    relative_position = self.position
+    relative_position = position
     self.class.dataset.filter(
-      :root_record_id => self.root_record_id, :parent_id => self.parent_id
+      root_record_id: root_record_id, parent_id: parent_id
     ).where { position < relative_position }.count
   end
 
-
   def update_from_json(json, extra_values = {}, apply_nested_records = true)
-    root_uri = self.class.uri_for(self.class.root_record_type, self.root_record_id)
+    root_uri = self.class.uri_for(self.class.root_record_type, root_record_id)
 
     do_position_override = json[self.class.root_record_type]['ref'] != root_uri || extra_values[:force_reposition]
 
@@ -167,9 +162,9 @@ module TreeNodes
       # change the root record on the fly.  I guess we'll allow this...
       extra_values = extra_values.merge(self.class.determine_tree_position_for_new_node(json))
     else
-      if !json.position
+      unless json.position
         # The incoming JSON had no position set.  Just keep what we already had.
-        extra_values['position'] = self.position
+        extra_values['position'] = position
       end
     end
 
@@ -187,12 +182,10 @@ module TreeNodes
     obj
   end
 
-
   def trigger_index_of_child_nodes
-    self.children.update(:system_mtime => Time.now)
-    self.children.each(&:trigger_index_of_child_nodes)
+    children.update(system_mtime: Time.now)
+    children.each(&:trigger_index_of_child_nodes)
   end
-
 
   def set_parent_and_position(parent_id, position)
     self.class.retry_db_update do
@@ -200,13 +193,10 @@ module TreeNodes
     end
   end
 
-
   def attempt_set_parent_and_position(parent_id, position)
     root_uri = self.class.uri_for(self.class.root_record_type.intern, self[:root_record_id])
 
-    if self.id == parent_id
-      raise "Can't make a record into its own parent"
-    end
+    raise "Can't make a record into its own parent" if id == parent_id
 
     parent_name = if parent_id
                     "#{parent_id}@#{self.class.node_record_type}"
@@ -215,62 +205,54 @@ module TreeNodes
                   end
 
     new_values = {
-      :parent_id => parent_id,
-      :parent_name => parent_name,
-      :system_mtime => Time.now
+      parent_id: parent_id,
+      parent_name: parent_name,
+      system_mtime: Time.now
     }
 
-    if parent_name == self.parent_name
-      # Position is unchanged initially
-      new_values[:position] = self.position
-    else
-      # Append this node to the new parent initially
-      new_values[:position] = self.class.next_position_for_parent(root_record_id, parent_id)
-    end
+    new_values[:position] = if parent_name == self.parent_name
+                              # Position is unchanged initially
+                              self.position
+                            else
+                              # Append this node to the new parent initially
+                              self.class.next_position_for_parent(root_record_id, parent_id)
+                            end
 
     # Run through the standard validation without actually saving
-    self.set(new_values)
-    self.validate
+    set(new_values)
+    validate
 
-    if self.errors && !self.errors.empty?
-      raise Sequel::ValidationFailed.new(self.errors)
-    end
+    raise Sequel::ValidationFailed, errors if errors && !errors.empty?
 
-    self.class.dataset.filter(:id => self.id).update(new_values)
-    self.refresh
+    self.class.dataset.filter(id: id).update(new_values)
+    refresh
 
-    self.set_position_in_list(position)
+    set_position_in_list(position)
   end
-
 
   def children
-    self.class.filter(:parent_id => self.id).order(:position)
+    self.class.filter(parent_id: id).order(:position)
   end
-
 
   def has_children?
-    self.class.filter(:parent_id => self.id).count > 0
+    self.class.filter(parent_id: id).count > 0
   end
-
 
   def previous_node
-    pos = self.position
-    node = self.class.filter(:parent_id => self.parent_id)
-                     .filter(:root_record_id => self.root_record_id)
-                     .where { position < pos }
-                     .reverse(:position).limit(1).first
+    pos = position
+    node = self.class.filter(parent_id: parent_id)
+               .filter(root_record_id: root_record_id)
+               .where { position < pos }
+               .reverse(:position).limit(1).first
 
-    if !node && !self.parent_id
-      raise NotFoundException.new("No previous node")
-    end
+    raise NotFoundException, 'No previous node' if !node && !parent_id
 
-    node || self.class[self.parent_id]
+    node || self.class[parent_id]
   end
-
 
   def transfer_to_repository(repository, transfer_group = [])
     # All records under this one will be transferred too
-    children.each_with_index do |child, i|
+    children.each_with_index do |child, _i|
       child.transfer_to_repository(repository, transfer_group + [self])
     end
 
@@ -278,9 +260,7 @@ module TreeNodes
     super
   end
 
-
   module ClassMethods
-
     def retry_db_update(&block)
       finished = false
       last_error = nil
@@ -291,7 +271,7 @@ module TreeNodes
         DB.attempt {
           block.call
           return
-        }.and_if_constraint_fails {|err|
+        }.and_if_constraint_fails { |err|
           last_error = err
         }
       end
@@ -312,11 +292,9 @@ module TreeNodes
       @node_record_type
     end
 
-
     def root_model
       Kernel.const_get(root_record_type.camelize)
     end
-
 
     def node_model
       Kernel.const_get(node_record_type.camelize)
@@ -324,9 +302,9 @@ module TreeNodes
 
     def ensure_consistent_tree(obj)
       if obj.parent_id
-        parent_root_record_id = node_model.filter(:id => obj.parent_id).get(:root_record_id)
+        parent_root_record_id = node_model.filter(id: obj.parent_id).get(:root_record_id)
         unless obj.root_record_id == parent_root_record_id
-          raise "Consistency check failed: " \
+          raise 'Consistency check failed: ' \
                 "#{node_model} #{obj.id} is in #{root_model} #{obj.root_record_id}," \
                 " but its parent is in #{root_model} #{parent_root_record_id}."
         end
@@ -349,21 +327,18 @@ module TreeNodes
       end
 
       migration = extra_values[:migration] ? extra_values[:migration].value : false
-      if json.position && !migration
-        obj.set_position_in_list(json.position)
-      end
+      obj.set_position_in_list(json.position) if json.position && !migration
 
       ensure_consistent_tree(obj)
 
       obj
     end
 
-
     def determine_tree_position_for_new_node(json)
       result = {}
 
       root_record_uri = json[root_record_type]['ref']
-      result["root_record_id"] = JSONModel.parse_reference(root_record_uri).fetch(:id)
+      result['root_record_id'] = JSONModel.parse_reference(root_record_uri).fetch(:id)
 
       # 'parent_name' is a bit funny.  We need this column because the combination
       # of (parent, position) needs to be unique, to ensure that two siblings
@@ -378,18 +353,18 @@ module TreeNodes
       if json.parent
         parent_id = JSONModel.parse_reference(json.parent['ref']).fetch(:id)
 
-        result["parent_id"] = parent_id
-        result["parent_name"] = "#{parent_id}@#{self.node_record_type}"
+        result['parent_id'] = parent_id
+        result['parent_name'] = "#{parent_id}@#{node_record_type}"
       else
-        result["parent_id"] = nil
-        result["parent_name"] = "root@#{root_record_uri}"
+        result['parent_id'] = nil
+        result['parent_name'] = "root@#{root_record_uri}"
       end
 
       # We'll add this new node to the end of the list.  To do that, find the
       # maximum position assigned so far and go TreeNodes::POSITION_STEP places
       # after that.  If another create_from_json gets in first, we'll have to
       # retry, but that's fine.
-      result["position"] = next_position_for_parent(result['root_record_id'], result['parent_id'])
+      result['position'] = next_position_for_parent(result['root_record_id'], result['parent_id'])
 
       result
     end
@@ -397,7 +372,7 @@ module TreeNodes
     def next_position_for_parent(root_record_id, parent_id)
       max_position = DB.open do |db|
         db[node_model.table_name]
-          .filter(:root_record_id => root_record_id, :parent_id => parent_id)
+          .filter(root_record_id: root_record_id, parent_id: parent_id)
           .select(:position)
           .max(:position)
       end
@@ -411,11 +386,9 @@ module TreeNodes
 
       jsons.zip(objs).each do |json, obj|
         if obj.root_record_id
-          json[root_record_type] = {'ref' => uri_for(root_record_type, obj.root_record_id)}
+          json[root_record_type] = { 'ref' => uri_for(root_record_type, obj.root_record_id) }
 
-          if obj.parent_id
-            json.parent = {'ref' => uri_for(node_record_type, obj.parent_id)}
-          end
+          json.parent = { 'ref' => uri_for(node_record_type, obj.parent_id) } if obj.parent_id
 
           if obj.parent_name
             # Calculate the logical (gapless) position of this node.  This
@@ -429,14 +402,11 @@ module TreeNodes
 
         end
 
-        if node_model.publishable?
-          json['has_unpublished_ancestor'] = calculate_has_unpublished_ancestor(obj)
-        end
+        json['has_unpublished_ancestor'] = calculate_has_unpublished_ancestor(obj) if node_model.publishable?
       end
 
       jsons
     end
-
 
     def calculate_has_unpublished_ancestor(obj, check_root_record = true)
       if check_root_record && obj.root_record_id
@@ -456,13 +426,12 @@ module TreeNodes
       false
     end
 
-
     def calculate_object_graph(object_graph, opts = {})
       object_graph.each do |model, id_list|
         next if self != model
 
-        ids = self.any_repo.filter(:parent_id => id_list).
-                   select(:id).map {|row|
+        ids = any_repo.filter(parent_id: id_list)
+                      .select(:id).map { |row|
           row[:id]
         }
 
@@ -472,25 +441,23 @@ module TreeNodes
       super
     end
 
-
     def handle_delete(ids_to_delete)
-      ids = self.filter(:id => ids_to_delete )
+      ids = filter(id: ids_to_delete)
 
       # Update the root record's mtime so that any tree-related records are reindexed
-      root_model.filter(:id => ids.select(:root_record_id)).update(:system_mtime => Time.now)
+      root_model.filter(id: ids.select(:root_record_id)).update(system_mtime: Time.now)
 
       # lets get a group of records that have unique parents or root_records
       parents = ids.select_group(:parent_id, :root_record_id).all
       # we then nil out the parent id so deletes can do its thing
-      ids.update(:parent_id => nil)
+      ids.update(parent_id: nil)
       # trigger the deletes...
       super
     end
 
     # Default: to be overriden by implementing models
-    def ordered_record_properties(record_ids)
+    def ordered_record_properties(_record_ids)
       {}
     end
   end
-
 end

@@ -1,8 +1,7 @@
 require 'spec_helper'
 
 describe 'ASModel' do
-
-  it "knows if it is a top level model" do
+  it 'knows if it is a top level model' do
     # some top level models
     expect(Repository.top_level?).to eq(true)
     expect(Accession.top_level?).to eq(true)
@@ -22,5 +21,4 @@ describe 'ASModel' do
     expect(SubContainer.top_level?).to eq(false)
     expect(ASDate.top_level?).to eq(false)
   end
-
 end

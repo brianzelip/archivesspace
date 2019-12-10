@@ -23,55 +23,48 @@ class Accession < Sequel::Model(:accession)
   include ReindexTopContainers
   include Assessments::LinkedRecord
 
-  agent_role_enum("linked_agent_role")
-  agent_relator_enum("linked_agent_archival_record_relators")
+  agent_role_enum('linked_agent_role')
+  agent_relator_enum('linked_agent_archival_record_relators')
 
   enable_suppression
   set_model_scope :repository
 
+  define_relationship(name: :spawned,
+                      json_property: 'related_resources',
+                      contains_references_to_types: proc { [Resource] })
 
-  define_relationship(:name => :spawned,
-                      :json_property => 'related_resources',
-                      :contains_references_to_types => proc {[Resource]})
-
-
-  define_directional_relationship(:name => :related_accession,
-                                  :json_property => 'related_accessions',
-                                  :contains_references_to_types => proc {[Accession]},
-                                  :class_callback => proc {|clz|
+  define_directional_relationship(name: :related_accession,
+                                  json_property: 'related_accessions',
+                                  contains_references_to_types: proc { [Accession] },
+                                  class_callback: proc { |clz|
                                     clz.instance_eval do
                                       include DynamicEnums
                                       uses_enums({
-                                                   :property => 'relator',
-                                                   :uses_enum => ['accession_parts_relator', 'accession_sibling_relator']
+                                                   property: 'relator',
+                                                   uses_enum: ['accession_parts_relator', 'accession_sibling_relator']
                                                  },
-                                                 {
-                                                   :property => 'relator_type',
-                                                   :uses_enum => ['accession_parts_relator_type', 'accession_sibling_relator_type']
-                                                 })
+                                                 property: 'relator_type',
+                                                 uses_enum: ['accession_parts_relator_type', 'accession_sibling_relator_type'])
                                     end
                                   })
 
+  auto_generate property: :display_string,
+                generator: lambda { |json|
+                  return json['title'] if json['title']
 
-  auto_generate :property => :display_string,
-                :generator => lambda { |json|
-                  return json["title"] if json["title"]
-
-                  %w(id_0 id_1 id_2 id_3).map{|p| json[p]}.compact.join("-")
+                  ['id_0', 'id_1', 'id_2', 'id_3'].map { |p| json[p] }.compact.join('-')
                 }
 
-  auto_generate :property => :slug,
-                :generator => proc { |json|
+  auto_generate property: :slug,
+                generator: proc { |json|
                   if AppConfig[:use_human_readable_urls]
-                    if json["is_slug_auto"]
-                      AppConfig[:auto_generate_slugs_with_id] ? 
-                        SlugHelpers.id_based_slug_for(json, Accession) : 
+                    if json['is_slug_auto']
+                      AppConfig[:auto_generate_slugs_with_id] ?
+                        SlugHelpers.id_based_slug_for(json, Accession) :
                         SlugHelpers.name_based_slug_for(json, Accession)
                     else
-                      json["slug"]
+                      json['slug']
                     end
                   end
-                }               
-
-
+                }
 end

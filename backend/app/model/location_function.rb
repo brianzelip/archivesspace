@@ -3,5 +3,4 @@ class LocationFunction < Sequel::Model(:location_function)
 
   set_model_scope :global
   corresponds_to JSONModel(:location_function)
-
 end

@@ -1,5 +1,4 @@
 class OAIDeletion
-
   def initialize(tombstone)
     @tombstone = tombstone
   end
@@ -19,5 +18,4 @@ class OAIDeletion
   def updated_at
     @tombstone.timestamp
   end
-
 end

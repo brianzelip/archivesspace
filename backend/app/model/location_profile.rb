@@ -5,24 +5,20 @@ class LocationProfile < Sequel::Model(:location_profile)
 
   set_model_scope :global
 
-  define_relationship(:name => :location_profile,
-                      :contains_references_to_types => proc {[Location]},
-                      :is_array => false)
+  define_relationship(name: :location_profile,
+                      contains_references_to_types: proc { [Location] },
+                      is_array: false)
 
   def validate
     super
-    validates_unique(:name, :message => "location profile name not unique")
+    validates_unique(:name, message: 'location profile name not unique')
   end
 
-
   def display_string
-    if depth && width && height
-      return "#{name} [#{depth}d, #{height}h, #{width}w #{I18n.t("enumerations.dimension_units.#{dimension_units}", :default => "")}]"
-    end
+    return "#{name} [#{depth}d, #{height}h, #{width}w #{I18n.t("enumerations.dimension_units.#{dimension_units}", default: '')}]" if depth && width && height
 
     name
   end
-
 
   def self.sequel_to_jsonmodel(objs, opts = {})
     jsons = super
@@ -33,5 +29,4 @@ class LocationProfile < Sequel::Model(:location_profile)
 
     jsons
   end
-
 end

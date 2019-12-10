@@ -9,14 +9,13 @@ class FileVersion < Sequel::Model(:file_version)
   def before_validation
     super
 
-    self.is_representative = nil if self.is_representative != 1
+    self.is_representative = nil if is_representative != 1
   end
-
 
   def validate
     if is_representative
       validates_unique([:is_representative, :digital_object_id],
-                       :message => "A digital object can only have one representative file version")
+                       message: 'A digital object can only have one representative file version')
       map_validation_to_json_property([:is_representative, :digital_object_id], :is_representative)
 
     end
@@ -24,9 +23,8 @@ class FileVersion < Sequel::Model(:file_version)
     super
   end
 
-
   def self.handle_publish_flag(ids, val)
-    ASModel.update_publish_flag(self.filter(:id => ids), val)
+    ASModel.update_publish_flag(filter(id: ids), val)
   end
 
   set_model_scope :global
@@ -35,10 +33,9 @@ class FileVersion < Sequel::Model(:file_version)
     jsons = super
 
     jsons.zip(objs).each do |json, obj|
-      json["identifier"] = obj[:id].to_s
+      json['identifier'] = obj[:id].to_s
     end
 
     jsons
   end
-
 end

@@ -1,29 +1,29 @@
 {
-  :schema => {
-    "$schema" => "http://www.archivesspace.org/archivesspace.json",
-    "version" => 1,
-    "type" => "object",
-    "parent" => "abstract_note",
+  schema: {
+    '$schema' => 'http://www.archivesspace.org/archivesspace.json',
+    'version' => 1,
+    'type' => 'object',
+    'parent' => 'abstract_note',
 
-    "properties" => {
+    'properties' => {
 
-      "content" => {
-        "type" => "array",
-        "items" => {"type" => "string", "maxLength" => 65000},
-        "minItems" => 0,
-        "ifmissing" => nil,
+      'content' => {
+        'type' => 'array',
+        'items' => { 'type' => 'string', 'maxLength' => 65_000 },
+        'minItems' => 0,
+        'ifmissing' => nil
       },
 
-      "type" => {
-        "type" => "string",
-        "readonly" => true,
-        "dynamic_enum" => "note_bibliography_type"
+      'type' => {
+        'type' => 'string',
+        'readonly' => true,
+        'dynamic_enum' => 'note_bibliography_type'
       },
 
-      "items" => {
-        "type" => "array",
-        "items" => {"type" => "string", "maxLength" => 65000}
-      },
-    },
-  },
+      'items' => {
+        'type' => 'array',
+        'items' => { 'type' => 'string', 'maxLength' => 65_000 }
+      }
+    }
+  }
 }

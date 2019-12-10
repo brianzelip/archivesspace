@@ -8,7 +8,7 @@ module ArchivesSpaceHelp
   end
 
   def self.[](key)
-    @config["topics"][key]
+    @config['topics'][key]
   end
 
   def self.enabled?
@@ -16,13 +16,13 @@ module ArchivesSpaceHelp
   end
 
   def self.base_url
-    raise "No AppConfig[:help_url] defined" if AppConfig[:help_url].blank?
+    raise 'No AppConfig[:help_url] defined' if AppConfig[:help_url].blank?
 
     AppConfig[:help_url]
   end
 
   def self.topic_prefix
-    AppConfig[:help_topic_prefix] || ""
+    AppConfig[:help_topic_prefix] || ''
   end
 
   def self.url_for_topic(topic)
@@ -30,7 +30,7 @@ module ArchivesSpaceHelp
   end
 
   def self.topic?(key)
-    @config["topics"].has_key? key
+    @config['topics'].has_key? key
   end
 
   def self.load_help_config_file
@@ -38,4 +38,4 @@ module ArchivesSpaceHelp
   end
 end
 
-ArchivesSpaceHelp::init
+ArchivesSpaceHelp.init

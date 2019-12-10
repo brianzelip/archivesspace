@@ -1,27 +1,27 @@
 {
-  :schema => {
-    "$schema" => "http://www.archivesspace.org/archivesspace.json",
-    "version" => 1,
-    "type" => "object",
+  schema: {
+    '$schema' => 'http://www.archivesspace.org/archivesspace.json',
+    'version' => 1,
+    'type' => 'object',
 
-    "properties" => {
+    'properties' => {
 
-      "title" => {"type" => "string", "maxLength" => 16384},
+      'title' => { 'type' => 'string', 'maxLength' => 16_384 },
 
-      "publish" => {"type" => "boolean"},
+      'publish' => { 'type' => 'boolean' },
 
-      "enumeration" => {
-        "type" => "string",
-        "dynamic_enum" => "note_orderedlist_enumeration"
+      'enumeration' => {
+        'type' => 'string',
+        'dynamic_enum' => 'note_orderedlist_enumeration'
       },
 
-      "items" => {
-        "type" => "array",
-        "items" => {
-          "type" => "string",
-          "maxLength" => 65000
+      'items' => {
+        'type' => 'array',
+        'items' => {
+          'type' => 'string',
+          'maxLength' => 65_000
         }
       }
-    },
-  },
+    }
+  }
 }

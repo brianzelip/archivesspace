@@ -3,23 +3,18 @@ require 'spec_helper'
 require_relative 'export_spec_helper'
 require_relative 'container_spec_helper'
 
-
 describe 'Export Labels Mappings' do
-
   #######################################################################
   # FIXTURES
 
   def load_export_fixtures
-     instances = []
-    #throw in a couple non-digital instances
+    instances = []
+    # throw in a couple non-digital instances
     rand(3).times { instances << build(:json_instance) }
 
-
-
     resource = create(:json_resource,
-                       :instances => instances,
-                       :finding_aid_status => %w(completed in_progress under_revision unprocessed).sample
-                       )
+                      instances: instances,
+                      finding_aid_status: ['completed', 'in_progress', 'under_revision', 'unprocessed'].sample)
 
     @resource = JSONModel(:resource).find(resource.id)
 
@@ -27,75 +22,65 @@ describe 'Export Labels Mappings' do
 
     10.times {
       parent = [true, false].sample ? @archival_objects.keys[rand(@archival_objects.keys.length)] : nil
-      a = create(:json_archival_object_normal,  :resource => {:ref => @resource.uri},
-                 :parent => parent ? {:ref => parent} : nil,
-                 :instances => [ build(:json_instance)]
-                 )
+      a = create(:json_archival_object_normal, resource: { ref: @resource.uri },
+                                               parent: parent ? { ref: parent } : nil,
+                                               instances: [build(:json_instance)])
 
       a = JSONModel(:archival_object).find(a.id)
 
       @archival_objects[a.uri] = a
-     }
+    }
 
     3.times {
       parent = [true, false].sample ? @archival_objects.keys[rand(@archival_objects.keys.length)] : nil
-      a = create(:json_archival_object_normal,  :resource => {:ref => @resource.uri},
-                 :parent => parent ? {:ref => parent} : nil,
-                 :instances => [ build(:json_instance) ])
+      a = create(:json_archival_object_normal, resource: { ref: @resource.uri },
+                                               parent: parent ? { ref: parent } : nil,
+                                               instances: [build(:json_instance)])
       a = JSONModel(:archival_object).find(a.id)
       @archival_objects[a.uri] = a
-     }
+    }
 
     3.times {
       parent = [true, false].sample ? @archival_objects.keys[rand(@archival_objects.keys.length)] : nil
-      a = create(:json_archival_object_normal,  :resource => {:ref => @resource.uri},
-                 :parent => parent ? {:ref => parent} : nil,
-                 :instances => [ build(:json_instance) ])
+      a = create(:json_archival_object_normal, resource: { ref: @resource.uri },
+                                               parent: parent ? { ref: parent } : nil,
+                                               instances: [build(:json_instance)])
       a = JSONModel(:archival_object).find(a.id)
       @archival_objects[a.uri] = a
-     }
-
+    }
 
     @labels = get_labels(@resource)
-
   end
-
 
   #######################################################################
 
-
-  describe "export labels" do
-
+  describe 'export labels' do
     before(:each) do
       load_export_fixtures
     end
 
-    it "should have the proper values" do
+    it 'should have the proper values' do
       # header, 16 arch objs
       expect(@labels.split("\n").length).to eq(17)
     end
   end
 
-
-  describe "how top containers only get listed once" do
-
+  describe 'how top containers only get listed once' do
     before(:each) do
       top_container = create(:json_top_container)
 
-      instances = (0..2).map {|i| build_instance(top_container)}
+      instances = (0..2).map { |_i| build_instance(top_container) }
 
       resource = create(:json_resource)
 
-      component = create(:json_archival_object, :instances => instances, :resource => {:ref => resource.uri})
+      component = create(:json_archival_object, instances: instances, resource: { ref: resource.uri })
 
       @labels = get_labels(resource)
     end
 
-    it "only lists a top container once" do
+    it 'only lists a top container once' do
       # header and single row
       expect(@labels.chomp.split("\n").length).to eq(2)
     end
-
   end
-
 end

@@ -4,16 +4,15 @@ class LDAPException < StandardError
 end
 
 class LDAPAuth
-
   include JSONModel
-
 
   def initialize(definition)
     required = [:hostname, :port, :base_dn, :username_attribute, :attribute_map]
     optional = [:bind_dn, :bind_password, :encryption, :extra_filter]
 
     required.each do |param|
-      raise "LDAPAuth: Need a value for parameter :#{param}" if !definition[param]
+      raise "LDAPAuth: Need a value for parameter :#{param}" unless definition[param]
+
       instance_variable_set("@#{param}", definition[param])
     end
 
@@ -22,11 +21,9 @@ class LDAPAuth
     end
   end
 
-
   def name
     "LDAPAuth - #{@hostname}:#{@port}"
   end
-
 
   def bind
     conn = Net::LDAP.new.tap do |conn|
@@ -37,16 +34,14 @@ class LDAPAuth
       conn.encryption(@encryption) if @encryption
     end
 
-
     if conn.bind
       @connection = conn
     else
-      msg = "Failed when binding to LDAP directory:\n\n#{self.inspect}\n\n"
+      msg = "Failed when binding to LDAP directory:\n\n#{inspect}\n\n"
       msg += "Error: #{conn.get_operation_result.message} (code = #{conn.get_operation_result.code})"
-      raise LDAPException.new(msg)
+      raise LDAPException, msg
     end
   end
-
 
   def bind_as_dn(user_dn, password)
     # Some LDAP servers treat a blank password as an anonymous bind.  Avoid
@@ -57,17 +52,13 @@ class LDAPAuth
     @connection.bind
   end
 
-
   def find_user(username)
     filter = Net::LDAP::Filter.eq(@username_attribute, username)
 
-    if @extra_filter
-      filter = Net::LDAP::Filter.join(Net::LDAP::Filter.construct(@extra_filter), filter)
-    end
+    filter = Net::LDAP::Filter.join(Net::LDAP::Filter.construct(@extra_filter), filter) if @extra_filter
 
-    @connection.search(:base => @base_dn, :filter => filter).first
+    @connection.search(base: @base_dn, filter: filter).first
   end
-
 
   def authenticate(username, password)
     bind
@@ -75,23 +66,21 @@ class LDAPAuth
     user = find_user(username.downcase)
 
     if user && bind_as_dn(user.dn, password)
-      attributes = Hash[@attribute_map.map {|ldap_attribute, aspace_attribute|
+      attributes = Hash[@attribute_map.map { |ldap_attribute, aspace_attribute|
                           [aspace_attribute, user[ldap_attribute].first]
                         }]
 
-      JSONModel(:user).from_hash(attributes.merge(:username => username))
+      JSONModel(:user).from_hash(attributes.merge(username: username))
     end
   end
-
 
   def matching_usernames(query)
     bind
 
     filter = Net::LDAP::Filter.begins(@username_attribute, query)
 
-    @connection.search(:base => @base_dn, :filter => filter).map {|entry|
+    @connection.search(base: @base_dn, filter: filter).map { |entry|
       entry[@username_attribute].first
     }[0..AppConfig[:max_usernames_per_source].to_i]
   end
-
 end

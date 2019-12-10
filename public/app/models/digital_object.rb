@@ -1,5 +1,4 @@
 class DigitalObject < Record
-
   attr_reader :cite, :linked_instances
   def initialize(*args)
     super
@@ -21,9 +20,9 @@ class DigitalObject < Record
   def breadcrumb
     [
       {
-        :uri => '',
-        :type => 'digital_object',
-        :crumb => display_string
+        uri: '',
+        type: 'digital_object',
+        crumb: display_string
       }
     ]
   end
@@ -38,7 +37,7 @@ class DigitalObject < Record
     results = {}
 
     unless ASUtils.wrap(json['linked_instances']).empty?
-      for instance in json['linked_instances']
+      json['linked_instances'].each do |instance|
         uri = instance.dig('ref')
         record = linked_instance_for_uri(uri)
         next if record.nil?
@@ -46,21 +45,21 @@ class DigitalObject < Record
         results[uri] = record_for_type(record)
       end
     end
-    
+
     results
   end
 
   def parse_cite_string
     cite = note('prefercite')
-    unless cite.blank?
-      cite = strip_mixed_content(cite['note_text'])
-    else
-      cite = strip_mixed_content(display_string) + "."
+    if cite.blank?
+      cite = strip_mixed_content(display_string) + '.'
       if resolved_resource
         ttl = resolved_resource.dig('title')
-        cite += " #{strip_mixed_content(ttl)}." unless !ttl
+        cite += " #{strip_mixed_content(ttl)}." if ttl
       end
-      cite += " #{ repository_information['top']['name']}." unless !repository_information.dig('top','name')
+      cite += " #{repository_information['top']['name']}." if repository_information.dig('top', 'name')
+    else
+      cite = strip_mixed_content(cite['note_text'])
     end
 
     "#{cite}   #{cite_url_and_timestamp}."
@@ -70,9 +69,7 @@ class DigitalObject < Record
     if raw['_resolved_linked_instance_uris']
       resolved = raw['_resolved_linked_instance_uris'].fetch(uri, nil)
 
-      if resolved
-        resolved.first
-      end
+      resolved&.first
     end
   end
 
@@ -90,11 +87,9 @@ class DigitalObject < Record
     request[:linked_record_uris] = @linked_instances.keys
 
     note = note('accessrestrict')
-    unless note.blank?
-      request[:restrict] = note['note_text']
-    end
+    request[:restrict] = note['note_text'] unless note.blank?
 
-    request[:hierarchy] = breadcrumb.reverse.drop(1).reverse.collect{|record| record[:crumb]}
+    request[:hierarchy] = breadcrumb.reverse.drop(1).reverse.collect { |record| record[:crumb] }
 
     request
   end

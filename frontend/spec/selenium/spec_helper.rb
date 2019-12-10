@@ -41,7 +41,7 @@ RSpec.configure do |config|
   config.fail_fast = false
 
   config.expect_with(:rspec) do |c|
-    c.syntax = %i[should expect]
+    c.syntax = [:should, :expect]
   end
 
   config.include BackendClientMethods
@@ -82,9 +82,7 @@ RSpec.configure do |config|
         puts Array(example.exception.backtrace).join("\n    ")
       end
 
-      if ENV['SCREENSHOT_ON_ERROR']
-        SeleniumTest.save_screenshot(Driver.current_instance)
-      end
+      SeleniumTest.save_screenshot(Driver.current_instance) if ENV['SCREENSHOT_ON_ERROR']
     end
   end
 

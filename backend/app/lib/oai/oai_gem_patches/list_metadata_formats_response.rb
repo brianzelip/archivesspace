@@ -1,6 +1,5 @@
 module OAI::Provider::Response
   class ListMetadataFormats < RecordResponse
-
     def to_xml
       # Get a list of all the formats the provider understands.
       formats = provider.formats.values
@@ -9,12 +8,12 @@ module OAI::Provider::Response
       if options.include?(:identifier)
         uri = extract_identifier(options[:identifier])
 
-        jsonmodel_type = JSONModel.parse_reference(uri).fetch(:type) { raise OAI::IdException.new }
+        jsonmodel_type = JSONModel.parse_reference(uri).fetch(:type) { raise OAI::IdException }
 
         # Only select formats where this type is supported
-        formats.select! {|f|
+        formats.select! { |f|
           format = ArchivesSpaceOAIRepository.available_record_types.fetch(f.prefix)
-          format.record_types.any?{|jsonmodel_clz|
+          format.record_types.any? { |jsonmodel_clz|
             jsonmodel_clz.my_jsonmodel.record_type == jsonmodel_type
           }
         }
@@ -32,6 +31,5 @@ module OAI::Provider::Response
         end
       end
     end
-
   end
 end

@@ -1,7 +1,6 @@
 require_relative 'oai_utils'
 
 class OAIDCMapper
-
   def map_oai_record(record)
     jsonmodel = record.jsonmodel_record
     result = Nokogiri::XML::Builder.new do |xml|
@@ -13,64 +12,50 @@ class OAIDCMapper
         xml['dc'].publisher (jsonmodel['repository']['_resolved']['name'])
 
         # Parent institution name -> publisher
-        if jsonmodel['repository']['_resolved']['parent_institution_name']
-          xml['dc'].publisher(jsonmodel['repository']['_resolved']['parent_institution_name'])
-        end
+        xml['dc'].publisher(jsonmodel['repository']['_resolved']['parent_institution_name']) if jsonmodel['repository']['_resolved']['parent_institution_name']
 
         # Identifier (own component ID + IDs of parents)
         # TODO: Reuse after implementing 'off' switch for ARK
         merged_identifier = if jsonmodel['jsonmodel_type'] == 'archival_object'
-                              ([jsonmodel['component_id']] + jsonmodel['ancestors'].map {|a| a['_resolved']['component_id']}).compact.reverse.uniq.join(".")
+                              ([jsonmodel['component_id']] + jsonmodel['ancestors'].map { |a| a['_resolved']['component_id'] }).compact.reverse.uniq.join('.')
                             else
-                              (0..3).map {|id| jsonmodel["id_#{id}"]}.compact.join('.')
+                              (0..3).map { |id| jsonmodel["id_#{id}"] }.compact.join('.')
                             end
 
-        unless merged_identifier.empty?
-          xml['dc'].identifier(merged_identifier)
-        end
+        xml['dc'].identifier(merged_identifier) unless merged_identifier.empty?
 
         if AppConfig[:arks_enabled]
-          ark_url = ""
+          ark_url = ''
           if jsonmodel['jsonmodel_type'] == 'resource'
-            ark_url = ArkName::get_ark_url(jsonmodel.id, :resource)
+            ark_url = ArkName.get_ark_url(jsonmodel.id, :resource)
           elsif jsonmodel['jsonmodel_type'] == 'archival_object'
-            ark_url = ArkName::get_ark_url(jsonmodel.id, :archival_object)
+            ark_url = ArkName.get_ark_url(jsonmodel.id, :archival_object)
           end
-          unless ark_url.nil? || ark_url.empty?
-            xml['dc'].identifier(ark_url)
-          end
+          xml['dc'].identifier(ark_url) unless ark_url.nil? || ark_url.empty?
         end
 
         # And a second identifier containing the public url - if public is running
-        if AppConfig[:enable_public]
-          xml['dc'].identifier(AppConfig[:public_proxy_url] + jsonmodel['uri'])
-        end
+        xml['dc'].identifier(AppConfig[:public_proxy_url] + jsonmodel['uri']) if AppConfig[:enable_public]
 
         # Creator -- agents linked with role 'creator' that don't have a relator of 'contributor' or 'publisher'
         Array(jsonmodel['linked_agents']).each do |link|
           next unless link['_resolved']['publish']
 
-          if link['role'] == 'creator' && !['ctb' ,'pbl'].include?(link['relator'])
-            xml['dc'].creator(link['_resolved']['title'])
-          end
+          xml['dc'].creator(link['_resolved']['title']) if link['role'] == 'creator' && !['ctb', 'pbl'].include?(link['relator'])
         end
 
         # Contributor -- agents linked with role 'creator' and relator of 'contributor'
         Array(jsonmodel['linked_agents']).each do |link|
           next unless link['_resolved']['publish']
 
-          if link['role'] == 'creator' && ['ctb'].include?(link['relator'])
-            xml['dc'].contributor(link['_resolved']['title'])
-          end
+          xml['dc'].contributor(link['_resolved']['title']) if link['role'] == 'creator' && ['ctb'].include?(link['relator'])
         end
 
         # Publisher -- agents linked with role 'creator' and relator of 'publisher'
         Array(jsonmodel['linked_agents']).each do |link|
           next unless link['_resolved']['publish']
 
-          if link['role'] == 'creator' && ['pbl'].include?(link['relator'])
-            xml['dc'].publisher(link['_resolved']['title'])
-          end
+          xml['dc'].publisher(link['_resolved']['title']) if link['role'] == 'creator' && ['pbl'].include?(link['relator'])
         end
 
         # Title -- display string
@@ -81,20 +66,20 @@ class OAIDCMapper
           if date['expression']
             xml['dc'].date(date['expression'])
           else
-            date_str = [date['begin'], date['end']].compact.join(" -- ")
+            date_str = [date['begin'], date['end']].compact.join(' -- ')
             xml['dc'].date(date_str)
           end
         end
 
         # Extents
         Array(jsonmodel['extents']).each do |extent|
-          extent_str = [extent['number'] + ' ' + I18n.t('enumerations.extent_extent_type.' + extent['extent_type'], :default => extent['extent_type']), extent['container_summary']].compact.join('; ')
+          extent_str = [extent['number'] + ' ' + I18n.t('enumerations.extent_extent_type.' + extent['extent_type'], default: extent['extent_type']), extent['container_summary']].compact.join('; ')
           xml['dc'].format(extent_str)
         end
 
         # Physical description and Dimensions notes are also extents
         Array(jsonmodel['notes'])
-          .select {|note| ['physdesc', 'dimensions'].include?(note['type'])}
+          .select { |note| ['physdesc', 'dimensions'].include?(note['type']) }
           .each do |note|
           OAIUtils.extract_published_note_content(note).each do |content|
             xml['dc'].format(content)
@@ -103,17 +88,15 @@ class OAIDCMapper
 
         # Languages
         if (lang_materials = Array(jsonmodel['lang_materials']))
-          language_vals = lang_materials.map{|l| l['language_and_script']}.compact
-          if !language_vals.empty?
+          language_vals = lang_materials.map { |l| l['language_and_script'] }.compact
+          unless language_vals.empty?
             language_vals.each do |l|
               xml['dc'].language(l['language'])
-              if l.include?('script')
-                xml['dc'].language(l['script'])
-              end
+              xml['dc'].language(l['script']) if l.include?('script')
             end
           end
-          language_notes = lang_materials.map {|l| l['notes']}.compact.reject {|e|  e == [] }.flatten
-          if !language_notes.empty?
+          language_notes = lang_materials.map { |l| l['notes'] }.compact.reject { |e| e == [] }.flatten
+          unless language_notes.empty?
             language_notes.each do |note|
               OAIUtils.extract_published_note_content(note).each do |content|
                 xml['dc'].language(content)
@@ -124,7 +107,7 @@ class OAIDCMapper
 
         # Description note types
         Array(jsonmodel['notes'])
-          .select {|note| ['langmaterial', 'bioghist', 'scopecontent', 'abstract', 'odd', 'arrangement'].include?(note['type'])}
+          .select { |note| ['langmaterial', 'bioghist', 'scopecontent', 'abstract', 'odd', 'arrangement'].include?(note['type']) }
           .each do |note|
           OAIUtils.extract_published_note_content(note).each do |content|
             xml['dc'].description(content)
@@ -133,7 +116,7 @@ class OAIDCMapper
 
         # Relation note types
         Array(jsonmodel['notes'])
-          .select {|note| ['originalsloc', 'altformavail', 'separatedmaterial', 'relatedmaterial'].include?(note['type'])}
+          .select { |note| ['originalsloc', 'altformavail', 'separatedmaterial', 'relatedmaterial'].include?(note['type']) }
           .each do |note|
           OAIUtils.extract_published_note_content(note).each do |content|
             xml['dc'].relation(content)
@@ -142,7 +125,7 @@ class OAIDCMapper
 
         # Rights note types
         Array(jsonmodel['notes'])
-          .select {|note| ['accessrestrict', 'userestrict'].include?(note['type'])}
+          .select { |note| ['accessrestrict', 'userestrict'].include?(note['type']) }
           .each do |note|
           OAIUtils.extract_published_note_content(note).each do |content|
             xml['dc'].rights(content)
@@ -151,7 +134,7 @@ class OAIDCMapper
 
         # Subjects
         Array(jsonmodel['subjects']).each do |subject|
-          term_types = subject['_resolved']['terms'].map {|term| term['term_type']}
+          term_types = subject['_resolved']['terms'].map { |term| term['term_type'] }
 
           if term_types.include?('geographic')
             xml['dc'].coverage(subject['_resolved']['title'])
@@ -166,15 +149,12 @@ class OAIDCMapper
         Array(jsonmodel['linked_agents']).each do |link|
           next unless link['_resolved']['publish']
 
-          if link['role'] == 'subject'
-            xml['dc'].subject(link['_resolved']['title'])
-          end
+          xml['dc'].subject(link['_resolved']['title']) if link['role'] == 'subject'
         end
-
 
         # Physical facet note
         Array(jsonmodel['notes'])
-          .select {|note| ['physfacet'].include?(note['type'])}
+          .select { |note| ['physfacet'].include?(note['type']) }
           .each do |note|
           OAIUtils.extract_published_note_content(note).each do |content|
             xml['dc'].type(content)
@@ -183,7 +163,7 @@ class OAIDCMapper
 
         # Originating Collection
         if jsonmodel['jsonmodel_type'] == 'archival_object'
-          resource_id_str = (0..3).map {|i| jsonmodel['resource']['_resolved']["id_#{i}"]}.compact.join(".")
+          resource_id_str = (0..3).map { |i| jsonmodel['resource']['_resolved']["id_#{i}"] }.compact.join('.')
           resource_str = [jsonmodel['resource']['_resolved']['title'], resource_id_str].join(', ')
 
           xml['dc'].relation(resource_str)
@@ -191,7 +171,6 @@ class OAIDCMapper
       end
     end
 
-    result.to_xml(:save_with => Nokogiri::XML::Node::SaveOptions::NO_DECLARATION)
+    result.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::NO_DECLARATION)
   end
-
 end

@@ -2,12 +2,31 @@ AllCops:
   Exclude:
     - build/**/*
     - docs/**/*
+    - backend/app/converters/ead_converter.rb
+
+Metrics:
+  Enabled: false
+
+Style/Alias:
+  AutoCorrect: false
+
+Style/BlockDelimiters:
+  AutoCorrect: false
 
 Style/Documentation:
   Enabled: false
 
+Style/FrozenStringLiteralComment:
+  AutoCorrect: false
+
+Style/PreferredHashMethods:
+  AutoCorrect: false
+
 Style/SymbolArray:
   EnforcedStyle: brackets
+
+Style/UnneededInterpolation:
+  AutoCorrect: false
 
 Style/WordArray:
   EnforcedStyle: brackets

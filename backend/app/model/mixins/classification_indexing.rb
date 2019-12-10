@@ -7,18 +7,16 @@
 # levels deep, and not updated often.  Maybe famous last words :)
 
 module ClassificationIndexing
-
   def reindex_children(top = false)
-    if !top
+    unless top
       self.class.fire_update(self.class.to_jsonmodel(self), self)
-      self.class.update_mtime_for_ids([self.id])
+      self.class.update_mtime_for_ids([id])
     end
 
     trigger_reindex_of_dependants
 
-    self.children.each do |child|
+    children.each do |child|
       child.reindex_children
     end
   end
-
 end

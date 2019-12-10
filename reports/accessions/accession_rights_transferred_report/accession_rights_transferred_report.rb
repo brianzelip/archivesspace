@@ -49,9 +49,9 @@ class AccessionRightsTransferredReport < AbstractReport
         GROUP_CONCAT(distinct extent.container_summary SEPARATOR ', ') as container_summary
       from extent
       group by accession_id) as extent_cnt
-      
+
       natural left outer join
-     
+
      (select
         id,
         accession_processed,
@@ -66,16 +66,16 @@ class AccessionRightsTransferredReport < AbstractReport
         where event_link_rlshp.event_id = event.id
           and event.event_type_id = enumeration_value.id and enumeration_value.value = 'processed'
           and not event_link_rlshp.accession_id is null) as processed
-       
+
         natural left outer join
-       
-        (select 
+
+        (select
           event_id,
           ifnull(date.expression, if(date.end is null, date.begin, concat(date.begin, ' - ', date.end)))
             as accession_processed_date
         from date
           where not event_id is null) as dates
-     
+
       group by id) as processed_info
 
       natural left outer join
@@ -96,7 +96,7 @@ class AccessionRightsTransferredReport < AbstractReport
     ReportUtils.fix_identifier_format(row, :accession_number)
     ReportUtils.fix_extent_format(row)
     boolean_fields = [:restrictions_apply, :access_restrictions, :use_restrictions,
-                     :accession_processed, :cataloged, :rights_transferred]
+                      :accession_processed, :cataloged, :rights_transferred]
     ReportUtils.fix_boolean_fields(row, boolean_fields)
     row[:linked_resources] = AccessionResourcesSubreport.new(self, row[:id]).get_content
     row.delete(:id)

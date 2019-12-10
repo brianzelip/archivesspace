@@ -31,7 +31,7 @@ class AdvancedQueryString
   end
 
   def prefix
-    negated? ? "-" : ""
+    negated? ? '-' : ''
   end
 
   def field
@@ -40,18 +40,18 @@ class AdvancedQueryString
 
   def value
     if date?
-      base_time = Time.parse(@query["value"]).utc.iso8601
+      base_time = Time.parse(@query['value']).utc.iso8601
 
-      if @query["comparator"] == "lesser_than"
+      if @query['comparator'] == 'lesser_than'
         "[* TO #{base_time}-1MILLISECOND]"
-      elsif @query["comparator"] == "greater_than"
+      elsif @query['comparator'] == 'greater_than'
         "[#{base_time}+1DAY TO *]"
       else # @query["comparator"] == "equal"
         "[#{base_time} TO #{base_time}+1DAY-1MILLISECOND]"
       end
-    elsif @query["jsonmodel_type"] == "range_query"
-      "[#{@query["from"] || '*'} TO #{@query["to"] || '*'}]"
-    elsif @query["jsonmodel_type"] == "field_query" && (use_literal? || @query["literal"])
+    elsif @query['jsonmodel_type'] == 'range_query'
+      "[#{@query['from'] || '*'} TO #{@query['to'] || '*'}]"
+    elsif @query['jsonmodel_type'] == 'field_query' && (use_literal? || @query['literal'])
       "(\"#{solr_escape(@query['value'])}\")"
     else
       "(#{replace_reserved_chars(@query['value'].to_s)})"
@@ -59,16 +59,16 @@ class AdvancedQueryString
   end
 
   def empty_search?
-    if @query["jsonmodel_type"] == "date_field_query"
-      @query["comparator"] == "empty"
-    elsif @query["jsonmodel_type"] == "boolean_field_query"
+    if @query['jsonmodel_type'] == 'date_field_query'
+      @query['comparator'] == 'empty'
+    elsif @query['jsonmodel_type'] == 'boolean_field_query'
       false
-    elsif @query["jsonmodel_type"] == "field_query"
-      @query["comparator"] == "empty"
-    elsif @query["jsonmodel_type"] == "range_query"
+    elsif @query['jsonmodel_type'] == 'field_query'
+      @query['comparator'] == 'empty'
+    elsif @query['jsonmodel_type'] == 'range_query'
       false
     else
-      raise "Unknown field query type: #{@query["jsonmodel_type"]}" 
+      raise "Unknown field query type: #{@query['jsonmodel_type']}"
     end
   end
 
@@ -77,12 +77,11 @@ class AdvancedQueryString
   end
 
   def date?
-    @query["jsonmodel_type"] == "date_field_query"
+    @query['jsonmodel_type'] == 'date_field_query'
   end
 
-
-  SOLR_CHARS = '+-&|!(){}[]^"~*?:\\/'
-  RESERVED_CHARS = ':'
+  SOLR_CHARS = '+-&|!(){}[]^"~*?:\\/'.freeze
+  RESERVED_CHARS = ':'.freeze
 
   def solr_escape(s)
     pattern = Regexp.quote(SOLR_CHARS)

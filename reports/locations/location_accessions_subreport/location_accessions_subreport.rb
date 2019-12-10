@@ -1,8 +1,7 @@
 class LocationAccessionsSubreport < AbstractSubreport
-
   register_subreport('accession', ['location'])
 
-  def initialize(parent_report, location_id, show_containers=true)
+  def initialize(parent_report, location_id, show_containers = true)
     super(parent_report)
     @location_id = location_id
     @show_containers = show_containers
@@ -13,7 +12,7 @@ class LocationAccessionsSubreport < AbstractSubreport
       accession.id,
       accession.identifier as identifier,
         accession.title as title
-    from 
+    from
       (select
         top_container_id as id
       from top_container_housed_at_rlshp
@@ -37,7 +36,8 @@ class LocationAccessionsSubreport < AbstractSubreport
     ReportUtils.fix_identifier_format(row)
     if @show_containers
       row[:containers] = LocationAccessionsContainersSubreport.new(
-        self, @location_id, row[:id]).get_content
+        self, @location_id, row[:id]
+      ).get_content
     end
     row.delete(:id)
   end

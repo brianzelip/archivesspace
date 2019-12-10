@@ -1,5 +1,4 @@
 class AccessionResourcesSubreport < AbstractSubreport
-
   def initialize(parent_report, accession_id)
     super(parent_report)
     @accession_id = accession_id
@@ -15,5 +14,4 @@ class AccessionResourcesSubreport < AbstractSubreport
   def fix_row(row)
     ReportUtils.fix_identifier_format(row, :identifier)
   end
-
 end

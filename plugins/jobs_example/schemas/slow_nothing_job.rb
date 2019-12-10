@@ -1,17 +1,16 @@
 {
-  :schema => {
-    "$schema" => "http://www.archivesspace.org/archivesspace.json",
-    "version" => 1,
-    "type" => "object",
+  schema: {
+    '$schema' => 'http://www.archivesspace.org/archivesspace.json',
+    'version' => 1,
+    'type' => 'object',
 
-    "properties" => {
-      
-      "times" => {
-        "type" => "string",
-        "ifmissing" => "error"
-      } 
+    'properties' => {
 
-    
+      'times' => {
+        'type' => 'string',
+        'ifmissing' => 'error'
+      }
+
     }
   }
 }

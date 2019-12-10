@@ -1,32 +1,27 @@
 class AssessmentRatingReport < AbstractReport
-
   # Gives us each_slice, used below
   include Enumerable
 
-  register_report({
-                    :params => [['scope_by_date', 'Boolean', 'Scope records by a date range'],
-                                ["from", Date, "The start of report range"],
-                                ["to", Date, "The start of report range"],
-                                ["rating", "Rating", "The assessment rating to report on"],
-                                ["values", "RatingValues", "The assessment rating values to include"]]
-                  })
+  register_report(
+    params: [['scope_by_date', 'Boolean', 'Scope records by a date range'],
+             ['from', Date, 'The start of report range'],
+             ['to', Date, 'The start of report range'],
+             ['rating', 'Rating', 'The assessment rating to report on'],
+             ['values', 'RatingValues', 'The assessment rating values to include']]
+  )
 
   def initialize(params, job, db)
     super
 
     @rating_id = Integer(params.fetch('rating'))
-    @values_of_interest = params.keys.map {|key|
+    @values_of_interest = params.keys.map { |key|
       if key =~ /\Avalue_[0-9]+\z/ && params[key] == 'on'
         # Don't really need integers but it's a decent sanitization step.
         Integer(key.split(/_/)[1])
-      else
-        nil
       end
     }.compact
 
-    if @rating_id.nil? || @values_of_interest.empty?
-      raise "Need a rating and at least one value of interest"
-    end
+    raise 'Need a rating and at least one value of interest' if @rating_id.nil? || @values_of_interest.empty?
 
     @date_scope = params['scope_by_date']
 
@@ -65,12 +60,12 @@ class AssessmentRatingReport < AbstractReport
 
   def query_string
     date_condition = if @date_scope
-                      "survey_begin > 
-                      #{db.literal(@from.split(' ')[0].gsub('-', ''))} 
-                      and survey_begin < 
-                      #{db.literal(@to.split(' ')[0].gsub('-', ''))}"
-                    else
-                      '1=1'
+                       "survey_begin >
+                       #{db.literal(@from.split(' ')[0].gsub('-', ''))}
+                       and survey_begin <
+                       #{db.literal(@to.split(' ')[0].gsub('-', ''))}"
+                     else
+                       '1=1'
                     end
     "select
       null as linked_records,
@@ -91,9 +86,9 @@ class AssessmentRatingReport < AbstractReport
         group_concat(name_person.sort_name separator ', ') as surveyed_by
       from surveyed_by_rlshp
         join agent_person on agent_person.id = surveyed_by_rlshp.agent_person_id
-        join name_person on name_person.agent_person_id = agent_person.id  
+        join name_person on name_person.agent_person_id = agent_person.id
       group by assessment_id) as surveyers
-        
+
       natural join
       (select
         assessment_id as id,
@@ -101,8 +96,8 @@ class AssessmentRatingReport < AbstractReport
       from assessment_attribute
       where assessment_attribute_definition_id = #{db.literal(@rating_id)}
         and value in (#{@values_of_interest
-        .collect {|value| db.literal(value)}.join(', ')})) as valid_ratings
-            
+        .collect { |value| db.literal(value) }.join(', ')})) as valid_ratings
+
       natural left outer join
       (select
         assessment_id as id,
@@ -119,16 +114,11 @@ class AssessmentRatingReport < AbstractReport
                                                            .get_content
   end
 
-  def special_translation(key, subreport_code)
-    if key == :rating_name
-      get_attribute_name
-    else
-      nil
-    end
+  def special_translation(key, _subreport_code)
+    get_attribute_name if key == :rating_name
   end
 
   def identifier_field
     :id
   end
-
 end

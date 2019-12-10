@@ -1,5 +1,4 @@
 class Accession < Record
-
   attr_reader :related_resources, :provenance,
               :use_restrictions_note, :access_restrictions_note
 
@@ -12,13 +11,12 @@ class Accession < Record
   end
 
   def acquisition_type
-    if json['acquisition_type']
-      I18n.t("enumerations.accession_acquisition_type.#{json['acquisition_type']}", :default => json['acquisition_type'])
-    end
+    I18n.t("enumerations.accession_acquisition_type.#{json['acquisition_type']}", default: json['acquisition_type']) if json['acquisition_type']
   end
 
   def deaccessions
     return '' unless AppConfig[:pui_display_deaccessions]
+
     ASUtils.wrap(json['deaccessions'])
   end
 
@@ -54,17 +52,14 @@ class Accession < Record
     json['use_restrictions']
   end
 
-
   private
 
   def parse_related_resources
-    ASUtils.wrap(raw['related_resource_uris']).collect{|uri|
-      if raw['_resolved_related_resource_uris']
-        raw['_resolved_related_resource_uris'][uri].first
-      end
-    }.compact.select{|resource|
+    ASUtils.wrap(raw['related_resource_uris']).collect { |uri|
+      raw['_resolved_related_resource_uris'][uri].first if raw['_resolved_related_resource_uris']
+    }.compact.select { |resource|
       resource['publish']
-    }.map {|accession|
+    }.map { |accession|
       record_from_resolved_json(ASUtils.json_parse(accession['json']))
     }
   end
@@ -72,16 +67,16 @@ class Accession < Record
   def build_request_item
     has_top_container = false
     container_info = build_request_item_container_info
-    container_info.each {|key, value|
-      if key == :top_container_url
-        if ASUtils.wrap(value).any?{|v| !v.blank?}
-          has_top_container = true
-          break
-        end
+    container_info.each { |key, value|
+      next unless key == :top_container_url
+
+      if ASUtils.wrap(value).any? { |v| !v.blank? }
+        has_top_container = true
+        break
       end
     }
 
-    return if (!has_top_container && !RequestItem::allow_nontops(resolved_repository.dig('repo_code')))
+    return if !has_top_container && !RequestItem.allow_nontops(resolved_repository.dig('repo_code'))
 
     request = RequestItem.new(container_info)
 

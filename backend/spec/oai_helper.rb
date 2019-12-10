@@ -6,7 +6,7 @@ require 'stringio'
 # prime the database with fixture data.
 
 class OAIHelper
-  FIXTURES_DIR = File.join(File.dirname(__FILE__), "fixtures", "oai")
+  FIXTURES_DIR = File.join(File.dirname(__FILE__), 'fixtures', 'oai')
 
   def self.fake_job_monitor
     job_monitor = Object.new
@@ -20,7 +20,7 @@ class OAIHelper
 
   def self.load_oai_data
     @oai_repo_id = RequestContext.open do
-      FactoryBot.create(:repo, {:repo_code => "oai_test", :org_code => "oai", :name => "oai_test"}).id
+      FactoryBot.create(:repo, repo_code: 'oai_test', org_code: 'oai', name: 'oai_test').id
     end
 
     test_subjects = ASUtils.json_parse(File.read(File.join(FIXTURES_DIR, 'subjects.json')))
@@ -50,10 +50,10 @@ class OAIHelper
       archival_object = test_archival_object_template.clone
       archival_object['uri'] = "/repositories/2/archival_objects/import_#{SecureRandom.hex}"
       archival_object['component_id'] = "ArchivalObject OAI test #{i}"
-      archival_object['resource'] = {'ref' => test_resources.fetch(i).fetch('uri')}
+      archival_object['resource'] = { 'ref' => test_resources.fetch(i).fetch('uri') }
 
       # Mark one of them with a different level for our set tests
-      archival_object['level'] = ((i == 4) ? 'fonds' : 'file')
+      archival_object['level'] = (i == 4 ? 'fonds' : 'file')
 
       archival_object
     end
@@ -64,15 +64,15 @@ class OAIHelper
                                              test_resources +
                                              test_archival_objects))
 
-    RequestContext.open(:repo_id => @oai_repo_id) do
-      created_records = SpecHelperMethods::as_test_user('admin') do
+    RequestContext.open(repo_id: @oai_repo_id) do
+      created_records = SpecHelperMethods.as_test_user('admin') do
         StreamingImport.new(test_data, fake_job_monitor, false, false).process
       end
 
       @test_resource_record = created_records.fetch(test_resources[0]['uri'])
       @test_archival_object_record = created_records.fetch(test_archival_objects[0]['uri'])
 
-      SpecHelperMethods::as_test_user('admin') do
+      SpecHelperMethods.as_test_user('admin') do
         # Prepare some deletes
         5.times do
           ao = FactoryBot.create(:json_archival_object)
@@ -82,7 +82,6 @@ class OAIHelper
       end
     end
 
-    return [@oai_repo_id, @test_record_count, @test_resource_record, @test_archival_object_record]
+    [@oai_repo_id, @test_record_count, @test_resource_record, @test_archival_object_record]
   end
 end
-

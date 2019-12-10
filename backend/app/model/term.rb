@@ -6,16 +6,14 @@ class Term < Sequel::Model(:term)
 
   def validate
     super
-    validates_unique([:vocab_id, :term, :term_type_id], :message => "Term must be unique")
+    validates_unique([:vocab_id, :term, :term_type_id], message: 'Term must be unique')
     map_validation_to_json_property([:vocab_id, :term, :term_type_id], :term)
   end
 
   def self.set_vocabulary(json, opts)
-    opts["vocab_id"] = nil
+    opts['vocab_id'] = nil
 
-    if json["vocabulary"]
-      opts["vocab_id"] = parse_reference(json["vocabulary"], opts)[:id]
-    end
+    opts['vocab_id'] = parse_reference(json['vocabulary'], opts)[:id] if json['vocabulary']
   end
 
   def self.create_from_json(json, opts = {})
@@ -36,24 +34,23 @@ class Term < Sequel::Model(:term)
     jsons
   end
 
-
-  def self.ensure_exists(json, referrer)
+  def self.ensure_exists(json, _referrer)
     DB.attempt {
-      self.create_from_json(json)
-    }.and_if_constraint_fails {|exception|
-      term_type_id = BackendEnumSource.id_for_value("subject_term_type", json.term_type)
+      create_from_json(json)
+    }.and_if_constraint_fails { |_exception|
+      term_type_id = BackendEnumSource.id_for_value('subject_term_type', json.term_type)
 
-      term = Term.find(:vocab_id => JSONModel(:vocabulary).id_for(json.vocabulary),
-                       :term => json.term,
-                       :term_type_id => term_type_id)
+      term = Term.find(vocab_id: JSONModel(:vocabulary).id_for(json.vocabulary),
+                       term: json.term,
+                       term_type_id: term_type_id)
 
-      if !term
+      unless term
         # The term exists but we can't find it.  This could mean it was
         # created in a currently running transaction.  Abort this one to trigger
         # a retry.
         Log.info("Term '#{json.term}' seems to have been created by a currently running transaction.  Restarting this one.")
         sleep 5
-        raise RetryTransaction.new
+        raise RetryTransaction
       end
 
       term
@@ -61,6 +58,6 @@ class Term < Sequel::Model(:term)
   end
 
   def self.broadcast_changes
-    Notifications.notify("VOCABULARY_CHANGED")
+    Notifications.notify('VOCABULARY_CHANGED')
   end
 end

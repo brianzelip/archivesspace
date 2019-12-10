@@ -5,34 +5,27 @@
 # here.
 
 module I18n
-
   def self.t_raw(*args)
     key = args[0]
     default = if args[1].is_a?(String)
                 args[1]
               else
-                (args[1] || {}).fetch(:default, "")
+                (args[1] || {}).fetch(:default, '')
               end
 
     # String
-    if key && key.kind_of?(String) && key.end_with?(".")
-      return default
-    end
+    return default if key&.is_a?(String) && key&.end_with?('.')
 
     # Hash / Enumeration Value
-    if key && key.kind_of?(Hash) && key.has_key?(:enumeration)
+    if key&.is_a?(Hash) && key&.has_key?(:enumeration)
       backend  = config.backend
       locale   = config.locale
       # Null character to cope with enumeration values containing dots.  Eugh.
-      translation = backend.send(:lookup, locale, ['enumerations', key[:enumeration], key[:value]].join("\0"), [], {:separator => "\0"}) || default
+      translation = backend.send(:lookup, locale, ['enumerations', key[:enumeration], key[:value]].join("\0"), [], separator: "\0") || default
 
-      if translation && !translation.empty?
-        return translation
-      end
+      return translation if translation && !translation.empty?
     end
 
-
-    self.translate(*args)
+    translate(*args)
   end
-
 end

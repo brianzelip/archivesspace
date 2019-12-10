@@ -4,7 +4,7 @@ ArchivesSpace::Application.configure do
   # In the development environment your application's code is reloaded on
   # every request. This slows down response time but is perfect for development
   # since you don't have to restart the web server when you make code changes.
-  config.cache_classes = (ENV['ASPACE_INTEGRATION'] == "true")
+  config.cache_classes = (ENV['ASPACE_INTEGRATION'] == 'true')
 
   config.eager_load = true
 
@@ -39,5 +39,5 @@ ArchivesSpace::Application.configure do
   # If we're running with a prefix, write our on-the-fly compiled assets to the
   # right spot.  NOTE: Don't enable this for production, as it's handled
   # differently there due to precompilation.
-  config.assets.prefix = AppConfig[:frontend_proxy_prefix] + "assets"
+  config.assets.prefix = AppConfig[:frontend_proxy_prefix] + 'assets'
 end

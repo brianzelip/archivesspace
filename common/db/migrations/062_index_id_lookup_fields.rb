@@ -1,7 +1,6 @@
 require 'db/migrations/utils'
 
 Sequel.migration do
-
   up do
     alter_table(:archival_object) do
       add_index(:ref_id)
@@ -23,5 +22,4 @@ Sequel.migration do
       drop_index(:component_id)
     end
   end
-
 end

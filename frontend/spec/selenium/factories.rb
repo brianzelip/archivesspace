@@ -178,7 +178,7 @@ module SeleniumFactories
         record_type { 'archival_object' }
         name { generate(:rde_template_name) }
         order { [] }
-        visible { %w[colLevel colOtherLevel colTitle colCompId colLang colExpr colDType colDBegin colDEnd colIType colCType1 colCInd1 colCBarc1 colCType2 colCInd2 colCType3 colCInd3 colNType1 colNCont1 colNType2 colNCont2 colNType3 colNCont3] }
+        visible { ['colLevel', 'colOtherLevel', 'colTitle', 'colCompId', 'colLang', 'colExpr', 'colDType', 'colDBegin', 'colDEnd', 'colIType', 'colCType1', 'colCInd1', 'colCBarc1', 'colCType2', 'colCInd2', 'colCType3', 'colCInd3', 'colNType1', 'colNCont1', 'colNType2', 'colNCont2', 'colNType3', 'colNCont3'] }
         defaults do
           {
             'colTitle' => 'DEFAULT TITLE',
@@ -193,7 +193,7 @@ module SeleniumFactories
         primary_name { generate(:generic_name) }
         rest_of_name { generate(:generic_name) }
         sort_name { generate(:sort_name) }
-        name_order { %w[direct inverted].sample }
+        name_order { ['direct', 'inverted'].sample }
         number { generate(:alphanumstr) }
         sort_name_auto_generate { true }
         dates { generate(:alphanumstr) }

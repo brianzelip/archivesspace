@@ -3,52 +3,52 @@ class RepositoriesController < ApplicationController
   helper_method :process_repo_info
   skip_before_action  :verify_authenticity_token
 
-  before_action(:only => [:show, :search]) {
+  before_action(only: [:show, :search]) {
     process_slug_or_id(params)
   }
 
-  DEFAULT_SEARCH_FACET_TYPES = ['primary_type', 'subjects', 'published_agents']
+  DEFAULT_SEARCH_FACET_TYPES = ['primary_type', 'subjects', 'published_agents'].freeze
   DEFAULT_REPO_SEARCH_OPTS = {
-     'sort' => 'title_sort asc',
+    'sort' => 'title_sort asc',
     'resolve[]' => ['repository:id', 'resource:id@compact_resource', 'ancestors:id@compact_resource', 'top_container_uri_u_sstr:id'],
     'facet.mincount' => 1
-  }
-  DEFAULT_TYPES =  %w{archival_object digital_object agent resource accession}
+  }.freeze
+  DEFAULT_TYPES = ['archival_object', 'digital_object', 'agent', 'resource', 'accession'].freeze
 
   # get all repositories
   # TODO: get this somehow in line with using the Searchable module
   def index
     @criteria = {}
-    @criteria['sort'] = "repo_sort asc"  # per James Bullen
+    @criteria['sort'] = 'repo_sort asc' # per James Bullen
     # let's not include any 0-collection repositories unless specified
     # include_zero = (!params.blank? && params['include_empty'])
     # ok, page sizing is kind of complicated if not including zero counts
-    page_size =  params['page_size'].to_i if !params.blank?
+    page_size =  params['page_size'].to_i unless params.blank?
     page_size = AppConfig[:pui_search_results_page_size] if page_size == 0
     query = 'primary_type:repository'
     facets = find_resource_facet
-    page = params['page'] || 1 if !params.blank?
+    page = params['page'] || 1 unless params.blank?
     @criteria['page_size'] = 100
-    @search_data =  archivesspace.search(query, page, @criteria) || {}
+    @search_data = archivesspace.search(query, page, @criteria) || {}
     Rails.logger.debug("TOTAL HITS: #{@search_data['total_hits']}, last_page: #{@search_data['last_page']}")
     @json = []
 
     if !@search_data['results'].blank?
-      @pager =  Pager.new("/repositories?", @search_data['this_page'],@search_data['last_page'])
+      @pager = Pager.new('/repositories?', @search_data['this_page'], @search_data['last_page'])
       @search_data['results'].each do |result|
         hash = ASUtils.json_parse(result['json']) || {}
         id = hash['uri']
-        if !facets[id].blank?
+        unless facets[id].blank?
           hash['count'] = facets[id]
           @json.push(hash)
         end
       end
       Rails.logger.debug("First hash: #{@json[0]}")
     else
-      raise NoResultsError.new("No repository records found!")
+      raise NoResultsError, 'No repository records found!'
     end
-    @json.sort_by!{|h| h['display_string'].upcase}
-    @page_title = I18n.t('list', {:type => (@json.length > 1 ? I18n.t('repository._plural') : I18n.t('repository._singular'))})
+    @json.sort_by! { |h| h['display_string'].upcase }
+    @page_title = I18n.t('list', type: (@json.length > 1 ? I18n.t('repository._plural') : I18n.t('repository._singular')))
     render
   end
 
@@ -56,18 +56,18 @@ class RepositoriesController < ApplicationController
     @repo_id = params.require(:rid)
     @base_search = "/repositories/#{repo_id}/search?"
     begin
-      new_search_opts =  DEFAULT_REPO_SEARCH_OPTS
+      new_search_opts = DEFAULT_REPO_SEARCH_OPTS
       new_search_opts['repo_id'] = @repo_id
       set_up_advanced_search(DEFAULT_TYPES, DEFAULT_SEARCH_FACET_TYPES, new_search_opts, params)
     #   NOTE the redirect back here on error!
-    rescue Exception => error
-      Rails.logger.debug( error.backtrace )
+    rescue Exception => e
+      Rails.logger.debug(e.backtrace)
       flash[:error] = I18n.t('errors.unexpected_error')
-      redirect_back(fallback_location: "/repositories/#{@repo_id}/" ) and return
+      redirect_back(fallback_location: "/repositories/#{@repo_id}/") && return
     end
-    page = Integer(params.fetch(:page, "1"))
+    page = Integer(params.fetch(:page, '1'))
     @results = archivesspace.advanced_search('/search', page, @criteria)
-    if @results['total_hits'].blank? ||  @results['total_hits'] == 0
+    if @results['total_hits'].blank? || @results['total_hits'] == 0
       flash[:notice] = I18n.t('search_results.no_results')
       redirect_back(fallback_location: @base_search)
     else
@@ -79,29 +79,29 @@ class RepositoriesController < ApplicationController
 
   def metadata
     md = {
-          '@context' => "http://schema.org/",
-          '@type' => 'ArchiveOrganization',
-          '@id' => AppConfig[:public_proxy_url] + @result['uri'],
-          #this next bit will always be the repo name, not the name associated with the agent record (which is overwritten if the repo record is updated)
-          'name' => @result['agent_representation']['_resolved']['display_name']['sort_name'],
-          'url' => @result['url'],
-          'logo' => @result['image_url'],
-          #this next bit will never work since ASpace has a bug with how it enacts its repo-to-agent concept (at least in versions 2.4 and 2.5).... and you can't add an authority ID directly to a repo record.
-          'sameAs' => @result['agent_representation']['_resolved']['display_name']['authority_id'],
-          'parentOrganization' => {
-            '@type' => 'Organization',
-            'name' => @result['parent_institution_name']
-          }
-          # removing contactPoint, since this would need to be on the repo record (along with different contact types... e.g. reference assistance, digitization requests, whatever)
-          # 'contactPoint' => @result['agent_representation']['_resolved']['agent_contacts'][0]['name']
-        }
+      '@context' => 'http://schema.org/',
+      '@type' => 'ArchiveOrganization',
+      '@id' => AppConfig[:public_proxy_url] + @result['uri'],
+      # this next bit will always be the repo name, not the name associated with the agent record (which is overwritten if the repo record is updated)
+      'name' => @result['agent_representation']['_resolved']['display_name']['sort_name'],
+      'url' => @result['url'],
+      'logo' => @result['image_url'],
+      # this next bit will never work since ASpace has a bug with how it enacts its repo-to-agent concept (at least in versions 2.4 and 2.5).... and you can't add an authority ID directly to a repo record.
+      'sameAs' => @result['agent_representation']['_resolved']['display_name']['authority_id'],
+      'parentOrganization' => {
+        '@type' => 'Organization',
+        'name' => @result['parent_institution_name']
+      }
+      # removing contactPoint, since this would need to be on the repo record (along with different contact types... e.g. reference assistance, digitization requests, whatever)
+      # 'contactPoint' => @result['agent_representation']['_resolved']['agent_contacts'][0]['name']
+    }
 
     if @result['org_code']
-      if @result['country']
-        md['identifier'] = @result['country']+'-'+ @result['org_code']
-      else
-        md['identifier'] = @result['org_code']
-      end
+      md['identifier'] = if @result['country']
+                           @result['country'] + '-' + @result['org_code']
+                         else
+                           @result['org_code']
+                         end
     end
 
     if @result['repo_info']
@@ -111,18 +111,18 @@ class RepositoriesController < ApplicationController
 
       if @result['repo_info']['telephones']
         md['faxNumber'] = @result['repo_info']['telephones']
-          .select{|t| t['number_type'] == 'fax'}
-          .map{|f| f['number']}
+                          .select { |t| t['number_type'] == 'fax' }
+                          .map { |f| f['number'] }
 
-        md['telephone'] =  @result['repo_info']['telephones']
-          .select{|t| t['number_type'] == 'business'}
-          .map{|b| b['number']}
+        md['telephone'] = @result['repo_info']['telephones']
+                          .select { |t| t['number_type'] == 'business' }
+                          .map { |b| b['number'] }
       end
 
       if @result['repo_info']['address']
         md['address'] = {
           '@type' => 'PostalAddress',
-          'streetAddress' => @result['repo_info']['address'].join(", "),
+          'streetAddress' => @result['repo_info']['address'].join(', '),
           'addressLocality' => @result['repo_info']['city'],
           'addressRegion' => @result['repo_info']['region'],
           'postalCode' => @result['repo_info']['post_code'],
@@ -144,15 +144,13 @@ class RepositoriesController < ApplicationController
     #  Pry::ColorPrinter.pp(counts)
     @criteria = {}
     @criteria[:page_size] = 1
-    @data =  archivesspace.search(query, 1, @criteria) || {}
+    @data = archivesspace.search(query, 1, @criteria) || {}
     if !@data['results'].blank?
       @result = ASUtils.json_parse(@data['results'][0]['json'])
       @badges = Repository.badge_list(@result['repo_code'].downcase)
       # Pry::ColorPrinter.pp @badges
       # make the repository details easier to get at in the view
-      if @result['agent_representation']['_resolved'] && @result['agent_representation']['_resolved']['jsonmodel_type'] == 'agent_corporate_entity'
-        @result['repo_info'] = process_repo_info(@result)
-      end
+      @result['repo_info'] = process_repo_info(@result) if @result['agent_representation']['_resolved'] && @result['agent_representation']['_resolved']['jsonmodel_type'] == 'agent_corporate_entity'
       @sublist_action = "/repositories/#{params[:id]}/"
       @result['count'] = resources
       @page_title = strip_mixed_content(@result['name'])
@@ -170,29 +168,28 @@ class RepositoriesController < ApplicationController
 
     else
       @type = I18n.t('repository._singular')
-      @page_title = I18n.t('errors.error_404', :type => @type)
+      @page_title = I18n.t('errors.error_404', type: @type)
       @uri = uri
       @back_url = request.referer || ''
-      render  'shared/not_found', :status => 404
+      render 'shared/not_found', status: 404
     end
   end
 
   private
+
   # get counts for repository
   def get_counts(repo_id = nil, collection_only = false)
-    if collection_only
-      types = ['pui_collection']
-    else
-      types = %w(pui_collection pui_record pui_record_group pui_accession pui_digital_object pui_agent  pui_subject)
-    end
+    types = if collection_only
+              ['pui_collection']
+            else
+              ['pui_collection', 'pui_record', 'pui_record_group', 'pui_accession', 'pui_digital_object', 'pui_agent', 'pui_subject']
+            end
     # for now, we've got to get the whole enchilada, until we figure out what's wrong
     #  counts = archivesspace.get_types_counts(types, repo_id)
     counts = archivesspace.get_types_counts(types)
     final_counts = {}
-    if counts[repo_id]
-      counts[repo_id].each do |k, v|
-        final_counts[k.sub("pui_",'')] = v
-      end
+    counts[repo_id]&.each do |k, v|
+      final_counts[k.sub('pui_', '')] = v
     end
     final_counts
   end
@@ -209,10 +206,9 @@ class RepositoriesController < ApplicationController
   # compose a string of 'OR'd titles for a query
   def compose_title_list(pairs)
     query = ''
-    pairs.each do |s, ct|
-      query = query + " title:\"#{s}\""
+    pairs.each do |s, _ct|
+      query += " title:\"#{s}\""
     end
     "(#{query})"
   end
-
 end

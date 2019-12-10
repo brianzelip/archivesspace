@@ -1,5 +1,4 @@
 class AccessionSubjectsSubreport < AbstractSubreport
-
   def initialize(parent_report, accession_id)
     super(parent_report)
     @accession_id = accession_id
@@ -24,5 +23,4 @@ class AccessionSubjectsSubreport < AbstractSubreport
   def fix_row(row)
     ReportUtils.get_enum_values(row, [:type, :source])
   end
-
 end

@@ -5,7 +5,7 @@ def init
 end
 
 def specs
-  erb(:specs)  
+  erb(:specs)
 end
 
 def schemata
@@ -16,9 +16,9 @@ def schemata
     end
   end
   return unless @schemata
+
   erb(:schemata)
 end
-
 
 def children
   @inner = [[:modules, []], [:classes, []], [:schemata, []]]
@@ -27,7 +27,8 @@ def children
     @inner[1][1] << child if child.type == :class
     @inner[2][1] << child if child.type == :schema
   end
-  @inner.map! {|v| [v[0], run_verifier(v[1].sort_by {|o| o.name.to_s })] }
+  @inner.map! { |v| [v[0], run_verifier(v[1].sort_by { |o| o.name.to_s })] }
   return if (@inner[0][1].size + @inner[1][1].size) == 0
+
   erb(:children)
 end

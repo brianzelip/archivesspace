@@ -96,10 +96,7 @@ class AccessionReport < AbstractReport
     ReportUtils.fix_identifier_format(row, :accession_number)
     ReportUtils.get_enum_values(row, [:acquisition_type, :extent_type])
     ReportUtils.fix_extent_format(row)
-    ReportUtils.fix_boolean_fields(row, %i[restrictions_apply
-                                           access_restrictions use_restrictions
-                                           rights_transferred
-                                           acknowledgement_sent])
+    ReportUtils.fix_boolean_fields(row, [:restrictions_apply, :access_restrictions, :use_restrictions, :rights_transferred, :acknowledgement_sent])
   end
 
   def add_sub_reports(row)

@@ -1,17 +1,13 @@
 require 'spec_helper'
 
-
 describe 'Component Add Children controllers' do
-
-  let(:resource) {   create(:json_resource) }
-  let(:ao) { create(:json_archival_object, :resource => {:ref => resource.uri}) }
-
-
+  let(:resource) { create(:json_resource) }
+  let(:ao) { create(:json_archival_object, resource: { ref: resource.uri }) }
 
   def perform_delete(record_uris)
-    uri = "/batch_delete"
+    uri = '/batch_delete'
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
-    JSONModel::HTTP.post_json(url, {:record_uris => record_uris})
+    JSONModel::HTTP.post_json(url, record_uris: record_uris)
   end
 
   def get_ao_tree(id)
@@ -20,28 +16,27 @@ describe 'Component Add Children controllers' do
     JSON(last_response.body)
   end
 
-  it "allows you to post multiple children and not mix up the order" do
+  it 'allows you to post multiple children and not mix up the order' do
     children = []
-    3.times { children << create(:json_archival_object, :resource => {:ref => resource.uri}, :parent => {:ref => ao.uri}).uri  }
-    response = JSONModel::HTTP::post_form("#{resource.uri}/accept_children", {"children[]" => children, "position" => 0})
+    3.times { children << create(:json_archival_object, resource: { ref: resource.uri }, parent: { ref: ao.uri }).uri }
+    response = JSONModel::HTTP.post_form("#{resource.uri}/accept_children", 'children[]' => children, 'position' => 0)
     json_response = ASUtils.json_parse(response.body)
-    expect(json_response["status"]).to eq("Updated")
+    expect(json_response['status']).to eq('Updated')
 
-    tree = JSONModel(:resource_tree).find(nil, :resource_id => resource.id)
+    tree = JSONModel(:resource_tree).find(nil, resource_id: resource.id)
     expect(tree.children.length).to eq(4)
 
     # we've moved the children up a level to be with their original parent.
     children << ao.uri
 
     tree.children.each_with_index do |child, i|
-      expect(child["record_uri"]).to eq children[i]
+      expect(child['record_uri']).to eq children[i]
     end
-
   end
 
-  it "can keep the order even if the tree has been reworked" do
+  it 'can keep the order even if the tree has been reworked' do
     children = []
-    100.times { children << create(:json_archival_object, :resource => {:ref => resource.uri}, :parent => {:ref => ao.uri}).uri  }
+    100.times { children << create(:json_archival_object, resource: { ref: resource.uri }, parent: { ref: ao.uri }).uri }
 
     tree = get_ao_tree(ao.id)
     expect(tree.length).to eq(100)
@@ -54,12 +49,12 @@ describe 'Component Add Children controllers' do
     expect(tree.length).to eq(80)
 
     tree.each_with_index do |child, i|
-      expect(child["uri"]).to eq(children[i])
+      expect(child['uri']).to eq(children[i])
     end
 
-    #now let's move some things around.
+    # now let's move some things around.
     movers = children.pop(10)
-    the_move = JSONModel::HTTP::post_form("#{ao.uri}/accept_children", {"children[]" => movers, "position" => 20})
+    the_move = JSONModel::HTTP.post_form("#{ao.uri}/accept_children", 'children[]' => movers, 'position' => 20)
     expect(the_move).to be_ok
 
     # we've delete 20 ( from position 20) and moved 10 from the bottom to
@@ -71,16 +66,16 @@ describe 'Component Add Children controllers' do
     expect(tree.length).to eq(80)
     # check the new order
     tree.each_with_index do |child, i|
-      expect(child["uri"]).to eq(new_order[i])
+      expect(child['uri']).to eq(new_order[i])
     end
 
     # one more time, but moving down the tree
     # let's refresh out children list
-    children = tree.collect { |n| n["uri"] }
+    children = tree.collect { |n| n['uri'] }
 
     # take the first 10 and move them
     movers = children.shift(10)
-    the_move = JSONModel::HTTP::post_form("#{ao.uri}/accept_children", {"children[]" => movers, "position" => 20})
+    the_move = JSONModel::HTTP.post_form("#{ao.uri}/accept_children", 'children[]' => movers, 'position' => 20)
     expect(the_move).to be_ok
 
     new_order = children.slice(0..19) + movers + children.drop(20)
@@ -90,26 +85,21 @@ describe 'Component Add Children controllers' do
     expect(tree.length).to eq(80)
     # check the new order
     tree.each_with_index do |child, i|
-      expect(child["uri"]).to eq(new_order[i])
+      expect(child['uri']).to eq(new_order[i])
     end
-
   end
 
-
   it "won't let you be your own grandparent" do
-    parent = create(:json_archival_object, :resource => {:ref => resource.uri})
+    parent = create(:json_archival_object, resource: { ref: resource.uri })
     child = create(:json_archival_object,
-                   :resource => {:ref => resource.uri},
-                   :parent => {:ref => parent.uri})
+                   resource: { ref: resource.uri },
+                   parent: { ref: parent.uri })
     grandchild = create(:json_archival_object,
-                        :resource => {:ref => resource.uri},
-                        :parent => {:ref => child.uri})
+                        resource: { ref: resource.uri },
+                        parent: { ref: child.uri })
 
-
-    response = JSONModel::HTTP::post_form("#{grandchild.uri}/accept_children", {"children[]" => [parent.uri], "position" => 0})
+    response = JSONModel::HTTP.post_form("#{grandchild.uri}/accept_children", 'children[]' => [parent.uri], 'position' => 0)
 
     expect(response.status).to eq(409)
   end
-
-
 end

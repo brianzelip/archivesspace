@@ -30,7 +30,7 @@ class AbstractReport
   end
 
   def title
-    I18n.t("reports.#{code}.title", :default => code)
+    I18n.t("reports.#{code}.title", default: code)
   end
 
   def orientation
@@ -74,7 +74,7 @@ class AbstractReport
   end
 
   def self.code
-    self.name.gsub(/(.)([A-Z])/,'\1_\2').downcase
+    name.gsub(/(.)([A-Z])/, '\1_\2').downcase
   end
 
   def identifier_field
@@ -85,7 +85,7 @@ class AbstractReport
     Repository.get_or_die(repo_id).name
   end
 
-  def special_translation(key, subreport_code)
+  def special_translation(_key, _subreport_code)
     nil
   end
 end

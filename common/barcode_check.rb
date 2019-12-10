@@ -1,12 +1,11 @@
 class BarcodeCheck
-
   attr_reader :min, :max
 
   def initialize(repo_code)
     @min = 0
     @max = 255
 
-    return if !AppConfig.has_key?(:container_management_barcode_length)
+    return unless AppConfig.has_key?(:container_management_barcode_length)
 
     cfg = AppConfig[:container_management_barcode_length]
 
@@ -18,9 +17,7 @@ class BarcodeCheck
     end
   end
 
-
   def valid?(barcode)
     !barcode || (min..max).cover?(barcode.length)
   end
-
 end

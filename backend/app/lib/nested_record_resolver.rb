@@ -1,7 +1,6 @@
-require_relative "../model/ASModel_database_mapping"
+require_relative '../model/ASModel_database_mapping'
 
 class NestedRecordResolver
-
   include ASModel::DatabaseMapping
   include JSONModel
 
@@ -22,31 +21,26 @@ class NestedRecordResolver
     @objs = objs
   end
 
-
   def resolve
     do_resolve
   end
-
 
   private
 
   def do_resolve
     # Walk across the objects we're resolving, link their nested records
     # back to them, and turn whole lot into JSONModels.
-    @objs.map {|obj|
+    @objs.map { |obj|
       jsonmodel = obj.class.my_jsonmodel
       json = jsonmodel.new(self.class.map_db_types_to_json(jsonmodel.schema,
-                                                           obj.values.reject {|k, v| v.nil? }))
+                                                           obj.values.reject { |_k, v| v.nil? }))
 
-      unless skip_resolve?(json["jsonmodel_type"])
-        uri = jsonmodel.uri_for(obj.id, :repo_id => obj.class.active_repository)
-
+      unless skip_resolve?(json['jsonmodel_type'])
+        uri = jsonmodel.uri_for(obj.id, repo_id: obj.class.active_repository)
 
         json.uri = uri if uri
 
-        if obj.class.model_scope == :repository
-          json['repository'] = {'ref' => JSONModel(:repository).uri_for(obj.class.active_repository)}
-        end
+        json['repository'] = { 'ref' => JSONModel(:repository).uri_for(obj.class.active_repository) } if obj.class.model_scope == :repository
 
         # If there are nested records for this class, insert them into our
         # JSON structure here.
@@ -55,11 +49,9 @@ class NestedRecordResolver
 
           nested_objs = Array(obj.send(nested_record[:association][:name]))
 
-          unless nested_record[:association][:order]
-            nested_objs.sort_by!{ |rec| rec[:id] }
-          end
+          nested_objs.sort_by! { |rec| rec[:id] } unless nested_record[:association][:order]
 
-          records = model.sequel_to_jsonmodel(nested_objs).map {|rec|
+          records = model.sequel_to_jsonmodel(nested_objs).map { |rec|
             rec.to_hash(:trusted)
           }
 
@@ -93,19 +85,18 @@ class NestedRecordResolver
     if graph.empty?
       objs
     else
-      if graph.keys.all? {|association| objs.all? {|obj| obj.associations.has_key?(association)}}
+      if graph.keys.all? { |association| objs.all? { |obj| obj.associations.has_key?(association) } }
         # All loaded separately.  No need to redo it.
         objs
       else
-        loaded = model.any_repo.eager(graph).filter(:id => objs.map(&:id)).all
+        loaded = model.any_repo.eager(graph).filter(id: objs.map(&:id)).all
 
         # return the objects in the same order in which we received them
         # some callers care about the order!
-        loaded.sort_by { |loaded_obj| objs.index {|obj| obj.id == loaded_obj.id} }
+        loaded.sort_by { |loaded_obj| objs.index { |obj| obj.id == loaded_obj.id } }
       end
     end
   end
-
 
   # Create a graph of all Sequel associations starting with `model`.  Passed to
   # `eager` to eagerly fetch the rows we know we'll need.
@@ -119,7 +110,6 @@ class NestedRecordResolver
       nested_model = Kernel.const_get(association[:class_name])
       result[association[:name]] = nested_record_association_graph(nested_model)
     end
-
 
     # Add any extras that were marked too
     model.associations_to_eagerly_load.each do |association_name|

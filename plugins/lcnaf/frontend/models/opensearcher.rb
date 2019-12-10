@@ -3,20 +3,18 @@ require 'nokogiri'
 require 'asutils'
 require_relative 'opensearchresultset'
 
-LCNAF='http://id.loc.gov/authorities/names'
-LCSH='http://id.loc.gov/authorities/subjects'
+LCNAF = 'http://id.loc.gov/authorities/names'.freeze
+LCSH = 'http://id.loc.gov/authorities/subjects'.freeze
 
 class OpenSearcher
   attr_accessor :scheme
 
-
   class OpenSearchException < StandardError; end
 
-  def initialize(base_url, scheme )
+  def initialize(base_url, scheme)
     @base_url = base_url
     @scheme = scheme
   end
-
 
   def default_params
     {
@@ -24,25 +22,21 @@ class OpenSearcher
     }
   end
 
-
   def calculate_start_record(page, records_per_page)
     ((page - 1) * records_per_page) + 1
   end
-
 
   def results_to_marcxml_file(lccns)
     tempfile = ASUtils.tempfile('lcnaf_import')
     tempfile.write("<collection>\n")
 
     lccns.each do |lccn|
-      lccn.sub!( 'info:lc/authorities/subjects/', '')
+      lccn.sub!('info:lc/authorities/subjects/', '')
       uri = URI("#{@scheme}/#{lccn}.marcxml.xml")
       p uri
 
       HTTPRequest.new.get(uri) do |response|
-        if response.code != '200'
-          raise OpenSearchException.new("Error during OpenSearch search: #{response.body}")
-        end
+        raise OpenSearchException, "Error during OpenSearch search: #{response.body}" if response.code != '200'
 
         doc = Nokogiri::XML.parse(response.body) do |config|
           config.default_xml.noblanks
@@ -60,9 +54,8 @@ class OpenSearcher
     tempfile.flush
     tempfile.rewind
 
-    return tempfile
+    tempfile
   end
-
 
   def search(query, page, records_per_page)
     uri = URI(@base_url)
@@ -74,9 +67,7 @@ class OpenSearcher
     uri.query = URI.encode_www_form(params)
     p uri
     results = HTTPRequest.new.get(uri) do |response|
-      if response.code != '200'
-        raise OpenSearchException.new("Error during OpenSearch search: #{response.body}")
-      end
+      raise OpenSearchException, "Error during OpenSearch search: #{response.body}" if response.code != '200'
 
       OpenSearchResultSet.new(response.body, query)
     end
@@ -85,15 +76,12 @@ class OpenSearcher
       marc_uri = URI("#{entry['uri']}.marcxml.xml")
 
       HTTPRequest.new.get(marc_uri) do |response|
-        if response.code != '200'
-          raise OpenSearchException.new("Error during OpenSearch search: #{response.body}")
-        end
+        raise OpenSearchException, "Error during OpenSearch search: #{response.body}" if response.code != '200'
 
-        entry['xml'] = response.body.force_encoding("iso-8859-1").encode('utf-8')
+        entry['xml'] = response.body.force_encoding('iso-8859-1').encode('utf-8')
       end
     end
 
     results
   end
-
 end

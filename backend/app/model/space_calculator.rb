@@ -1,6 +1,5 @@
 class SpaceCalculator
-
-  MAX_CONTAINERS_TO_PACK = 99999
+  MAX_CONTAINERS_TO_PACK = 99_999
 
   class UnsupportedUnitException < StandardError
   end
@@ -22,10 +21,9 @@ class SpaceCalculator
     calculate
   end
 
-
   def to_hash
     {
-      'container_profile' => {'ref' => @container_profile.uri},
+      'container_profile' => { 'ref' => @container_profile.uri },
       'total_spaces_available' => @total_spaces_available,
       'total_containers_of_type' => @total_containers_of_type,
       'locations_with_space' => @locations_with_space,
@@ -33,7 +31,6 @@ class SpaceCalculator
       'uncalculatable_locations' => @uncalculatable_locations
     }
   end
-
 
   private
 
@@ -50,7 +47,7 @@ class SpaceCalculator
 
       if location_profile.nil?
         # the location doesn't have a profile so not much we can do
-        @uncalculatable_locations << {'ref' => loc.uri, 'reason' => :location_lacks_a_profile}
+        @uncalculatable_locations << { 'ref' => loc.uri, 'reason' => :location_lacks_a_profile }
         next
       end
 
@@ -61,13 +58,13 @@ class SpaceCalculator
                                  location_profile.dimension_units)
       rescue MissingDimensionException
         # the location's profile doesn't have the necessary data
-        @uncalculatable_locations << {'ref' => loc.uri, 'reason' => :location_lacks_dimension_data}
+        @uncalculatable_locations << { 'ref' => loc.uri, 'reason' => :location_lacks_dimension_data }
         next
       end
 
       if cp_dims.bigger_in_any_than?(lp_dims)
         # the container is bigger than the location in at least one dimension
-        @locations_without_space << {'ref' => loc.uri, 'reason' => :container_is_bigger}
+        @locations_without_space << { 'ref' => loc.uri, 'reason' => :container_is_bigger }
         next
       end
 
@@ -84,7 +81,7 @@ class SpaceCalculator
       container_profiles.each do |tcp|
         if tcp.nil?
           # need to say uncalculatable and get out
-          @uncalculatable_locations << {'ref' => loc.uri, 'reason' => :container_at_location_lacks_profile}
+          @uncalculatable_locations << { 'ref' => loc.uri, 'reason' => :container_at_location_lacks_profile }
 
           hit_error = true
           break
@@ -92,18 +89,18 @@ class SpaceCalculator
 
         @total_containers_of_type += 1 if tcp.id == @container_profile.id
 
-        unless packer.add_container(tcp.name,
-                                    Dimensions.new(tcp.width,
-                                                   tcp.height,
-                                                   tcp.depth,
-                                                   tcp.dimension_units),
-                                    tcp.stacking_limit)
-          # this shouldn't happen - we're just packing the containers already at the location
-          # we'll have to add it to uncalculatable and get out
-          @uncalculatable_locations << {'ref' => loc.uri, 'reason' => :containers_at_location_dont_fit}
-          hit_error = true
-          break
-        end
+        next if packer.add_container(tcp.name,
+                                     Dimensions.new(tcp.width,
+                                                    tcp.height,
+                                                    tcp.depth,
+                                                    tcp.dimension_units),
+                                     tcp.stacking_limit)
+
+        # this shouldn't happen - we're just packing the containers already at the location
+        # we'll have to add it to uncalculatable and get out
+        @uncalculatable_locations << { 'ref' => loc.uri, 'reason' => :containers_at_location_dont_fit }
+        hit_error = true
+        break
       end
 
       # If we missed any of the required data for this location, skip over it.
@@ -125,36 +122,34 @@ class SpaceCalculator
       end
 
       if count == 0
-        @locations_without_space << {'ref' => loc.uri, 'reason' => :location_cannot_fit_container}
+        @locations_without_space << { 'ref' => loc.uri, 'reason' => :location_cannot_fit_container }
       else
         @total_spaces_available += count
-        @locations_with_space << {'ref' => loc.uri, 'count' => count}
+        @locations_with_space << { 'ref' => loc.uri, 'count' => count }
       end
     end
   end
 
-
   # Encapsulate our DB queries for efficiently getting the
   # location/container/profile information we need.
   class LocationContainerLookup
-
     def initialize(locations)
       calculate(locations)
     end
 
     def location_profile_for(location)
-      #location.related_records(:location_profile)
+      # location.related_records(:location_profile)
       @locations_to_location_profiles[location.id]
     end
 
     def container_profiles_at_location(location)
-      #TopContainer.find_relationship(:top_container_housed_at).who_participates_with(location)
+      # TopContainer.find_relationship(:top_container_housed_at).who_participates_with(location)
       Array(@locations_to_container_profiles[location.id])
     end
 
     private
 
-    def calculate(locations)
+    def calculate(_locations)
       build_location_to_profile_mapping
       build_container_profile_mapping
     end
@@ -166,7 +161,7 @@ class SpaceCalculator
         location_ids_to_profile_ids = {}
 
         db[:location]
-          .join(location_profile_rlshp.table_name, :location_id => Sequel.qualify(:location, :id))
+          .join(location_profile_rlshp.table_name, location_id: Sequel.qualify(:location, :id))
           .select(Sequel.as(:location__id, :location_id),
                   Sequel.as(Sequel.qualify(location_profile_rlshp.table_name, :location_profile_id),
                             :location_profile_id)).each do |row|
@@ -174,10 +169,10 @@ class SpaceCalculator
         end
 
         location_profiles_lookup = Hash[LocationProfile
-                                         .filter(:id => location_ids_to_profile_ids.values.uniq)
-                                         .map {|profile| [profile.id, profile]}]
+                                   .filter(id: location_ids_to_profile_ids.values.uniq)
+                                   .map { |profile| [profile.id, profile] }]
 
-        @locations_to_location_profiles = Hash[location_ids_to_profile_ids.map {|location_id, profile_id|
+        @locations_to_location_profiles = Hash[location_ids_to_profile_ids.map { |location_id, profile_id|
                                                  [location_id, location_profiles_lookup[profile_id]]
                                                }]
       end
@@ -191,8 +186,8 @@ class SpaceCalculator
         location_ids_to_container_profile_ids = {}
 
         db[:location]
-          .join(housed_at_rlshp.table_name, :location_id => Sequel.qualify(:location, :id))
-          .left_join(profile_rlshp.table_name, :top_container_id => Sequel.qualify(housed_at_rlshp.table_name, :top_container_id))
+          .join(housed_at_rlshp.table_name, location_id: Sequel.qualify(:location, :id))
+          .left_join(profile_rlshp.table_name, top_container_id: Sequel.qualify(housed_at_rlshp.table_name, :top_container_id))
           .select(Sequel.as(:location__id, :location_id),
                   Sequel.as(Sequel.qualify(profile_rlshp.table_name, :container_profile_id),
                             :container_profile_id)).each do |row|
@@ -201,31 +196,28 @@ class SpaceCalculator
         end
 
         container_profiles_lookup = Hash[ContainerProfile
-                                          .filter(:id => location_ids_to_container_profile_ids.values.flatten.compact.uniq)
-                                          .map {|profile| [profile.id, profile]}]
+                                    .filter(id: location_ids_to_container_profile_ids.values.flatten.compact.uniq)
+                                    .map { |profile| [profile.id, profile] }]
 
-        @locations_to_container_profiles = Hash[location_ids_to_container_profile_ids.map {|location_id, profile_ids|
-                                                  [location_id, profile_ids.map {|profile_id|
-                                                     if profile_id
-                                                       container_profiles_lookup.fetch(profile_id)
-                                                     else
-                                                       # A container without a container profile.  Return a nil.
-                                                       nil
-                                                     end
-                                                   }]
-                                               }]
+        @locations_to_container_profiles = Hash[location_ids_to_container_profile_ids.map { |location_id, profile_ids|
+                                                  [location_id, profile_ids.map { |profile_id|
+                                                                  if profile_id
+                                                                    container_profiles_lookup.fetch(profile_id)
+                                                                  else
+                                                                    # A container without a container profile.  Return a nil.
+                                                                    nil
+                                                                  end
+                                                                }]
+                                                }]
       end
     end
   end
 
-
   class LocationPacker
-
     def initialize(dimensions)
       @dimensions = dimensions
       @piles = []
     end
-
 
     # Some types of containers can't be stacked on top of each other.  The
     # `max_tower_count` parameter lets you specify the maximum number of levels
@@ -250,20 +242,17 @@ class SpaceCalculator
       true
     end
 
-
     def find_pile_for(container)
       @piles.each do |pile|
-        if pile.will_fit(container)
-          return pile
-        end
+        return pile if pile.will_fit(container)
       end
 
       false
     end
 
-
     def pile_fits?(pile)
       return false if pile.height > @dimensions.height || pile.depth > @dimensions.depth
+
       piles_width = 0
       @piles.each do |pile|
         piles_width += pile.width
@@ -272,65 +261,50 @@ class SpaceCalculator
       (piles_width + pile.width) <= @dimensions.width
     end
 
-
     class Pile
-
       def initialize(location_dims)
         @location_dims = location_dims
         @containers = []
       end
 
-
       def add(container)
         @containers << container
       end
-
 
       def width
         @containers[0].dimensions.width
       end
 
-
       def height
         @containers[0].dimensions.height
       end
-
 
       def depth
         @containers[0].dimensions.depth
       end
 
-
       def will_fit(container)
-        if @containers.length > 0 && @containers[0].name != container.name
-          return false
-        end
+        return false if !@containers.empty? && @containers[0].name != container.name
 
         @containers.length < max_container_count
       end
-
 
       def containers_per_tower
         container = @containers[0]
         number_that_fit = (@location_dims.height / container.dimensions.height).to_i
 
         # If there's a limit on how high we can stack these, cap it.
-        if container.max_tower_count != :unlimited
-          number_that_fit = [number_that_fit, container.max_tower_count].min
-        end
+        number_that_fit = [number_that_fit, container.max_tower_count].min if container.max_tower_count != :unlimited
 
         number_that_fit
       end
-
 
       def max_container_count
         number_of_towers = (@location_dims.depth / @containers[0].dimensions.depth).to_i
 
         containers_per_tower * number_of_towers
       end
-
     end
-
 
     class Container
       attr_reader :name, :dimensions, :max_tower_count
@@ -338,11 +312,10 @@ class SpaceCalculator
       def initialize(name, dimensions, max_tower_count)
         @name = name
         @dimensions = dimensions
-        @max_tower_count = (max_tower_count == :unlimited) ? :unlimited : Integer(max_tower_count)
+        @max_tower_count = max_tower_count == :unlimited ? :unlimited : Integer(max_tower_count)
       end
     end
   end
-
 
   class Dimensions
     attr_reader :width, :height, :depth, :provided_unit
@@ -350,82 +323,74 @@ class SpaceCalculator
     WORKING_UNIT = :millimeters
 
     UNIT_CONVERSIONS = {
-      :millimeters => {
-        :centimeters => 0.1,
-        :meters => 0.001,
-        :inches => 0.0393701,
-        :feet => 0.00328084,
-        :yards => 0.00328084/3.0,
+      millimeters: {
+        centimeters: 0.1,
+        meters: 0.001,
+        inches: 0.0393701,
+        feet: 0.00328084,
+        yards: 0.00328084 / 3.0
       },
-      :centimeters => {
-        :millimeters => 10.0,
-        :meters => 0.01,
-        :inches => 0.393701,
-        :feet => 0.0328084,
-        :yards => 0.0328084/3.0,
+      centimeters: {
+        millimeters: 10.0,
+        meters: 0.01,
+        inches: 0.393701,
+        feet: 0.0328084,
+        yards: 0.0328084 / 3.0
       },
-      :meters => {
-        :millimeters => 1000.0,
-        :centimeters => 100.0,
-        :inches => 39.3701,
-        :feet => 3.28084,
-        :yards => 3.28084/3.0,
+      meters: {
+        millimeters: 1000.0,
+        centimeters: 100.0,
+        inches: 39.3701,
+        feet: 3.28084,
+        yards: 3.28084 / 3.0
       },
-      :inches => {
-        :millimeters => 25.4,
-        :centimeters => 2.54,
-        :meters => 0.0254,
-        :feet => 1.0/12.0,
-        :yards => 1.0/36.0,
+      inches: {
+        millimeters: 25.4,
+        centimeters: 2.54,
+        meters: 0.0254,
+        feet: 1.0 / 12.0,
+        yards: 1.0 / 36.0
       },
-      :feet => {
-        :millimeters => 25.4*12.0,
-        :centimeters => 2.54*12.0,
-        :meters => 0.3048,
-        :inches => 12.0,
-        :yards => 1.0/3.0,
+      feet: {
+        millimeters: 25.4 * 12.0,
+        centimeters: 2.54 * 12.0,
+        meters: 0.3048,
+        inches: 12.0,
+        yards: 1.0 / 3.0
       },
-      :yards => {
-        :millimeters => 25.4*36.0,
-        :centimeters => 2.54*36.0,
-        :meters => 0.3048*3.0,
-        :inches => 36.0,
-        :feet => 3.0,
-      },
-    }
-
+      yards: {
+        millimeters: 25.4 * 36.0,
+        centimeters: 2.54 * 36.0,
+        meters: 0.3048 * 3.0,
+        inches: 36.0,
+        feet: 3.0
+      }
+    }.freeze
 
     def initialize(width, height, depth, unit = nil)
       @provided_unit = (unit ? unit.intern : :inches)
-      unless UNIT_CONVERSIONS.has_key?(@provided_unit)
-        raise UnsupportedUnitException.new("Provided unit not supported: #{@provided_unit}")
-      end
-      if width.nil? || height.nil? || depth.nil?
-        raise MissingDimensionException.new("Values must be provided for width (#{width}), height (#{height}) and depth (#{depth})")
-      end
+      raise UnsupportedUnitException, "Provided unit not supported: #{@provided_unit}" unless UNIT_CONVERSIONS.has_key?(@provided_unit)
+      raise MissingDimensionException, "Values must be provided for width (#{width}), height (#{height}) and depth (#{depth})" if width.nil? || height.nil? || depth.nil?
+
       @width = convert(width.to_f)
       @height = convert(height.to_f)
       @depth = convert(depth.to_f)
     end
 
-
     def convert(val)
       return val if @provided_unit == WORKING_UNIT
+
       conv = UNIT_CONVERSIONS.fetch(@provided_unit, {}).fetch(WORKING_UNIT)
       val * conv
     end
-
 
     def bigger_in_any_than?(other_dim)
       @width > other_dim.width || @height > other_dim.height || @depth > other_dim.depth
     end
 
-
     def has_missing_dimension?
       # if initialized with nil the .to_f will coerce it to 0.0
       @width == 0.0 || @height == 0.0 || @depth == 0.0
     end
-
   end
-
 end

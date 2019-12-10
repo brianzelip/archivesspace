@@ -1,5 +1,4 @@
 module DigitalObjects
-
   def update_from_json(json, opts = {}, apply_nested_records = true)
     result = super
     reindex_linked_records
@@ -7,7 +6,6 @@ module DigitalObjects
   end
 
   def reindex_linked_records
-    self.class.update_mtime_for_ids([self.id])
+    self.class.update_mtime_for_ids([id])
   end
-
 end

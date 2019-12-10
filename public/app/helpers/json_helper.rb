@@ -1,5 +1,4 @@
 module JsonHelper
-
   # process the entire notes structure.  If req is specified, process and return only the notes that
   #  match the requested types (may be nil)
   def process_json_notes(notes, req = nil)
@@ -31,7 +30,7 @@ module JsonHelper
 
     if note_2.has_key?('subnotes')
       note_1['subnotes'] ||= []
-      note_1['subnotes'] = note_1['subnotes'] + note_2['subnotes'].map{|sub|
+      note_1['subnotes'] = note_1['subnotes'] + note_2['subnotes'].map { |sub|
         sub_copy = sub.clone
         sub_copy['_inline_label'] = note_2['label']
         sub_copy
@@ -44,7 +43,7 @@ module JsonHelper
   private
 
   def handle_note_structure(note, type)
-    return nil unless note['publish'] || defined?(AppConfig[:pui_ignore_false])  # temporary switch due to ingest issues
+    return nil unless note['publish'] || defined?(AppConfig[:pui_ignore_false]) # temporary switch due to ingest issues
 
     renderer = NoteRenderer.for(note['jsonmodel_type'])
 
@@ -59,7 +58,7 @@ module JsonHelper
   def parse_date(date)
     label = date['label'].blank? ? '' : "#{date['label'].titlecase}: "
     label = '' if label == 'Creation: '
-    exp =  date['expression'] || ''
+    exp = date['expression'] || ''
     if exp.blank?
       exp = date['begin'] unless date['begin'].blank?
       unless date['end'].blank?
@@ -67,9 +66,9 @@ module JsonHelper
       end
     end
     if date['date_type'] == 'bulk'
-      exp = exp.sub('bulk','').sub('()', '').strip
-      exp = date['begin'] == date['end'] ? I18n.t('bulk._singular', :dates => exp) :
-              I18n.t('bulk._plural', :dates => exp)
+      exp = exp.sub('bulk', '').sub('()', '').strip
+      exp = date['begin'] == date['end'] ? I18n.t('bulk._singular', dates: exp) :
+              I18n.t('bulk._plural', dates: exp)
     end
 
     [label, exp]

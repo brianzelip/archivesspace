@@ -1,7 +1,6 @@
 require 'time'
 
 Sequel.migration do
-
   # The 1.5.0 release introduced a bug that caused the "fullrecord" field to be
   # incomplete, causing certain subrecords (such as notes, extents and rights
   # statements) to be unsearchable.
@@ -17,12 +16,10 @@ Sequel.migration do
                      :agent_corporate_entity]
 
     reindex_types.each do |table|
-      self[table].update(:system_mtime => Time.now)
+      self[table].update(system_mtime: Time.now)
     end
   end
 
   down do
   end
-
 end
-

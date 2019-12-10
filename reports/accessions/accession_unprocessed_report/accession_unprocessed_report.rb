@@ -1,5 +1,4 @@
 class AccessionUnprocessedReport < AbstractReport
-
   register_report
 
   def query
@@ -24,9 +23,9 @@ class AccessionUnprocessedReport < AbstractReport
       extent_type
 
     from accession
-  
+
       natural left outer join
-      
+
       (select
         accession_id as id,
         true as processed
@@ -35,9 +34,9 @@ class AccessionUnprocessedReport < AbstractReport
         and event.event_type_id = enumeration_value.id
         and enumeration_value.value = 'processed'
       group by accession_id) as processed
-      
+
       natural left outer join
-      
+
       (select
           accession_id as id,
           sum(number) as extent_number,
@@ -46,9 +45,9 @@ class AccessionUnprocessedReport < AbstractReport
             as container_summary
       from extent
       group by accession_id) as extent_cnt
-        
+
       natural left outer join
-      
+
       (select
         event_link_rlshp.accession_id as id,
         count(*) != 0 as cataloged
@@ -57,7 +56,7 @@ class AccessionUnprocessedReport < AbstractReport
         and event.event_type_id = enumeration_value.id
         and enumeration_value.value = 'cataloged'
       group by event_link_rlshp.accession_id) as cataloged
-      
+
     where repo_id = #{db.literal(@repo_id)}
       and processed is null"
   end
@@ -68,12 +67,12 @@ class AccessionUnprocessedReport < AbstractReport
     ReportUtils.fix_identifier_format(row, :accession_number)
     ReportUtils.fix_boolean_fields(row, [:cataloged])
     row[:linked_resources] = AccessionResourcesSubreport.new(
-      self, row[:id]).get_content
+      self, row[:id]
+    ).get_content
     row.delete(:id)
   end
 
   def identifier_field
     :accession_number
   end
-
 end

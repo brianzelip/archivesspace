@@ -22,11 +22,11 @@ class Tree
   def prepare_breadcrumb
     crumbs = []
 
-    if !json['path_to_root'].blank?
-      ASUtils.wrap(json['path_to_root']).each_with_index {|node, i|
+    unless json['path_to_root'].blank?
+      ASUtils.wrap(json['path_to_root']).each_with_index { |node, _i|
         crumbs << {
-          :crumb => title_for_node(node),
-          :uri => node['record_uri'] || ''
+          crumb: title_for_node(node),
+          uri: node['record_uri'] || ''
         }
       }
     end
@@ -37,9 +37,7 @@ class Tree
   def title_for_node(node)
     title = node['title'] || ''
 
-    if ['classification', 'classification_term'].include?(node['node_type'])
-      title = "#{node['identifier']} #{node['title']}"
-    end
+    title = "#{node['identifier']} #{node['title']}" if ['classification', 'classification_term'].include?(node['node_type'])
 
     process_mixed_content(title)
   end

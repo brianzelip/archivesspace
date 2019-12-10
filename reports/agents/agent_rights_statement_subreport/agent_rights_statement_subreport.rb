@@ -1,16 +1,15 @@
 class AgentRightsStatementSubreport < AbstractSubreport
+  register_subreport('rights_statement', ['agent'])
 
-	register_subreport('rights_statement', ['agent'])
+  def initialize(parent_custom_report, id)
+    super(parent_custom_report)
 
-	def initialize(parent_custom_report, id)
-		super(parent_custom_report)
+    @id_type = parent_custom_report.record_type
+    @id = id
+  end
 
-		@id_type = parent_custom_report.record_type
-		@id = id
-	end
-
-	def query_string
-		"select
+  def query_string
+    "select
 			rights_statement.id,
 			rights_type_id as rights_type,
 			statute_citation,
@@ -25,27 +24,30 @@ class AgentRightsStatementSubreport < AbstractSubreport
 		where linked_agents_rlshp.rights_statement_id
 			= rights_statement.id
 			and linked_agents_rlshp.#{@id_type}_id = #{db.literal(@id)}"
-	end
+  end
 
-	def fix_row(row)
-		enum_fields = [:rights_type, :jurisdiction, :status, :other_rights_basis]
-		ReportUtils.get_enum_values(row, enum_fields)
-		row[:accession] = LinkedAccessionSubreport.new(self, row[:id]).get_content
-		row[:archival_object] = LinkedArchivalObjectSubreport.new(
-			self, row[:id]).get_content
-		row[:digital_object] = LinkedDigitalObjectSubreport.new(
-			self, row[:id]).get_content
-		row[:digital_object_component] = LinkedDigitalObjectComponentSubreport.new(
-			self, row[:id]).get_content
-		row[:resource] = LinkedResourceSubreport.new(self, row[:id]).get_content
-		row.delete(:id)
-	end
+  def fix_row(row)
+    enum_fields = [:rights_type, :jurisdiction, :status, :other_rights_basis]
+    ReportUtils.get_enum_values(row, enum_fields)
+    row[:accession] = LinkedAccessionSubreport.new(self, row[:id]).get_content
+    row[:archival_object] = LinkedArchivalObjectSubreport.new(
+      self, row[:id]
+    ).get_content
+    row[:digital_object] = LinkedDigitalObjectSubreport.new(
+      self, row[:id]
+    ).get_content
+    row[:digital_object_component] = LinkedDigitalObjectComponentSubreport.new(
+      self, row[:id]
+    ).get_content
+    row[:resource] = LinkedResourceSubreport.new(self, row[:id]).get_content
+    row.delete(:id)
+  end
 
-	def record_type
-		'rights_statement'
-	end
+  def record_type
+    'rights_statement'
+  end
 
-	def self.field_name
-		'rights_statement'
-	end
+  def self.field_name
+    'rights_statement'
+  end
 end

@@ -6,7 +6,7 @@ class RequestMailer < ApplicationMailer
 
     mail(from: email_address(@request),
          to: user_email,
-         subject: I18n.t('request.email.subject', :title => request.title))
+         subject: I18n.t('request.email.subject', title: request.title))
   end
 
   def request_received_staff_email(request)
@@ -14,7 +14,7 @@ class RequestMailer < ApplicationMailer
 
     mail(from: email_address(@request),
          to: email_address(@request, :to),
-         subject: I18n.t('request.email.subject', :title => request.title))
+         subject: I18n.t('request.email.subject', title: request.title))
   end
 
   # TODO: not implemented
@@ -34,9 +34,8 @@ class RequestMailer < ApplicationMailer
     fallback_to    = AppConfig[:pui_request_email_fallback_to_address]
     begin
       use_repo_email ? request.repo_email : AppConfig[:pui_repos][request.repo_code][:request_email]
-    rescue
+    rescue StandardError
       type == :from ? fallback_from : fallback_to
     end
   end
-
 end

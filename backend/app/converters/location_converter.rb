@@ -1,14 +1,13 @@
 require_relative 'converter'
 class LocationConverter < Converter
-
   require_relative 'lib/csv_converter'
   include ASpaceImport::CSVConvert
 
-  def self.import_types(show_hidden = false)
+  def self.import_types(_show_hidden = false)
     [
       {
         name: 'location_csv',
-        description: 'Import Location records from a CSV file',
+        description: 'Import Location records from a CSV file'
       }
     ]
   end
@@ -31,7 +30,7 @@ class LocationConverter < Converter
       'location_coordinate_2_indicator' => 'location.coordinate_2_indicator',
       'location_coordinate_3_label' => 'location.coordinate_3_label',
       'location_coordinate_3_indicator' => 'location.coordinate_3_indicator',
-      'location_temporary' => 'location.temporary',
+      'location_temporary' => 'location.temporary'
     }
   end
 end

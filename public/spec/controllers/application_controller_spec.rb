@@ -128,7 +128,6 @@ require 'spec_helper'
 #   end
 # end
 
-
 # tests for slug -> id resolution for repo spec controllers, eg:
 # Resources, Accessions, Classifications, Digital Objects
 

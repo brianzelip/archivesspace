@@ -2,41 +2,38 @@ class Accession < JSONModel(:accession)
   attr_accessor :resource_link
 
   def resource_link
-    if @resource_link.blank? then
-      @resource_link = "defer"
-    end
+    @resource_link = 'defer' if @resource_link.blank?
     @resource_link
   end
-  
+
   def ref_id
-    ref_id = ""
-    
+    ref_id = ''
+
     (0..3).each do |i|
-      next if self.send("id_#{i.to_s}").blank?
-      ref_id << " - " unless i === 0
-      ref_id << self.send("id_#{i.to_s}")
+      next if send("id_#{i}").blank?
+
+      ref_id << ' - ' unless i === 0
+      ref_id << send("id_#{i}")
     end
-    
+
     ref_id
   end
-
 
   def populate_from_accession(accession)
     values = accession.to_hash(:raw)
 
     # Recursively remove bits that don't make sense to copy (like "lock_version" properties)
     values = JSONSchemaUtils.map_hash_with_schema(values, JSONModel(:accession).schema,
-                                                  [proc { |hash, schema|
-                                                          hash = hash.clone
-                                                     hash.delete_if {|k, v| k.to_s =~ /^(id_[0-9]|lock_version)$/}
-                                                          hash
+                                                  [proc { |hash, _schema|
+                                                     hash = hash.clone
+                                                     hash.delete_if { |k, _v| k.to_s =~ /^(id_[0-9]|lock_version)$/ }
+                                                     hash
                                                    }])
 
     prepare_for_clone(values)
 
-    self.update(values)
+    update(values)
   end
-
 
   private
 
@@ -52,5 +49,4 @@ class Accession < JSONModel(:accession)
     values.delete('collection_management')
     values.delete('classification')
   end
-
 end

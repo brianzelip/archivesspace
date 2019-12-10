@@ -1,5 +1,4 @@
 class LargeTreeDocIndexer
-
   attr_reader :batch, :deletes
 
   def initialize(batch)
@@ -16,13 +15,13 @@ class LargeTreeDocIndexer
       @node_uris.clear
 
       json = JSONModel::HTTP.get_json(node_uri + '/tree/root',
-                                      :published_only => true)
+                                      published_only: true)
 
       batch << {
         'id' => "#{node_uri}/tree/root",
         'pui_parent_id' => node_uri,
-        'publish' => "true",
-        'primary_type' => "tree_root",
+        'publish' => 'true',
+        'primary_type' => 'tree_root',
         'json' => ASUtils.to_json(json)
       }
 
@@ -35,16 +34,15 @@ class LargeTreeDocIndexer
   def add_waypoints(json, root_record_uri, parent_uri)
     json.fetch('waypoints').times do |waypoint_number|
       json = JSONModel::HTTP.get_json(root_record_uri + '/tree/waypoint',
-                                      :offset => waypoint_number,
-                                      :parent_node => parent_uri,
-                                      :published_only => true)
+                                      offset: waypoint_number,
+                                      parent_node: parent_uri,
+                                      published_only: true)
 
-      
       batch << {
         'id' => "#{root_record_uri}/tree/waypoint_#{parent_uri}_#{waypoint_number}",
         'pui_parent_id' => (parent_uri || root_record_uri),
-        'publish' => "true",
-        'primary_type' => "tree_waypoint",
+        'publish' => 'true',
+        'primary_type' => 'tree_waypoint',
         'json' => ASUtils.to_json(json)
       }
 
@@ -62,8 +60,8 @@ class LargeTreeDocIndexer
     # Index the node itself if it has children
     if waypoint_record.fetch('child_count') > 0
       json = JSONModel::HTTP.get_json(root_record_uri + '/tree/node',
-                                      :node_uri => record_uri,
-                                      :published_only => true)
+                                      node_uri: record_uri,
+                                      published_only: true)
 
       # We might bomb out if a record was deleted out from under us.
       return if json.nil?
@@ -71,8 +69,8 @@ class LargeTreeDocIndexer
       batch << {
         'id' => "#{root_record_uri}/tree/node_#{json.fetch('uri')}",
         'pui_parent_id' => json.fetch('uri'),
-        'publish' => "true",
-        'primary_type' => "tree_node",
+        'publish' => 'true',
+        'primary_type' => 'tree_node',
         'json' => ASUtils.to_json(json)
       }
 
@@ -88,8 +86,7 @@ class LargeTreeDocIndexer
 
   def index_paths_to_root(root_uri, node_uris)
     node_uris.each_slice(128) do |node_uris|
-
-      node_id_to_uri = Hash[node_uris.map {|uri| [JSONModel.parse_reference(uri).fetch(:id), uri]}]
+      node_id_to_uri = Hash[node_uris.map { |uri| [JSONModel.parse_reference(uri).fetch(:id), uri] }]
       node_paths = JSONModel::HTTP.get_json(root_uri + '/tree/node_from_root',
                                             'node_ids[]' => node_id_to_uri.keys,
                                             :published_only => true)
@@ -98,12 +95,11 @@ class LargeTreeDocIndexer
         batch << {
           'id' => "#{root_uri}/tree/node_from_root_#{node_id}",
           'pui_parent_id' => node_id_to_uri.fetch(Integer(node_id)),
-          'publish' => "true",
-          'primary_type' => "tree_node_from_root",
-          'json' => ASUtils.to_json({node_id => path})
+          'publish' => 'true',
+          'primary_type' => 'tree_node_from_root',
+          'json' => ASUtils.to_json(node_id => path)
         }
       end
     end
   end
-
 end

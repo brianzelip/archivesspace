@@ -1,19 +1,16 @@
 class RecordInheritance
-
   def self.merge(json, opts = {})
-    self.new.merge(json, opts)
+    new.merge(json, opts)
   end
-
 
   def self.has_type?(type)
-    self.new.has_type?(type)
+    new.has_type?(type)
   end
-
 
   # Add our inheritance-specific definitions to relevant JSONModel schemas
   def self.prepare_schemas
     get_config.each do |record_type, config|
-      config[:inherited_fields].map {|fld| fld[:property]}.uniq.each do |property|
+      config[:inherited_fields].map { |fld| fld[:property] }.uniq.each do |property|
         schema_def = {
           'type' => 'object',
           'subtype' => 'ref',
@@ -21,9 +18,9 @@ class RecordInheritance
             # Not a great type for a ref, but in this context we don't really
             # know for sure what type the ancestor might be.  Might need to
             # think harder about this if it causes problems.
-            'ref' => {'type' => 'string'},
-            'level' => {'type' => 'string'},
-            'direct' => {'type' => 'boolean'},
+            'ref' => { 'type' => 'string' },
+            'level' => { 'type' => 'string' },
+            'direct' => { 'type' => 'boolean' }
           }
         }
 
@@ -36,7 +33,7 @@ class RecordInheritance
             if item_type['type'].include?('object')
               add_inline_inheritance_field(item_type, schema_def)
             else
-              $stderr.puts("Inheritence metadata for string arrays is not currently supported (record type: #{record_type}; property: #{property}).  Please file a bug if you need this!")
+              warn("Inheritence metadata for string arrays is not currently supported (record type: #{record_type}; property: #{property}).  Please file a bug if you need this!")
             end
           end
         else
@@ -46,7 +43,6 @@ class RecordInheritance
       end
     end
   end
-
 
   # Extract a list elements like {'type' => 'mytype'} from the various forms
   # JSON schemas allow types to be in.  For example:
@@ -58,7 +54,7 @@ class RecordInheritance
   #
   def self.extract_referenced_types(typedef)
     if typedef.is_a?(Array)
-      typedef.map {|elt| extract_referenced_types(elt)}.flatten
+      typedef.map { |elt| extract_referenced_types(elt) }.flatten
     elsif typedef.is_a?(Hash)
       if typedef['type'].is_a?(String)
         [typedef]
@@ -66,7 +62,7 @@ class RecordInheritance
         extract_referenced_types(typedef['type'])
       end
     else
-      $stderr.puts("Unrecognized type: #{typedef.inspect}")
+      warn("Unrecognized type: #{typedef.inspect}")
       []
     end
   end
@@ -77,14 +73,14 @@ class RecordInheritance
     if target.has_key?('properties')
       schema = target['properties']
     elsif target['type'] =~ /JSONModel\(:(.*?)\) object/
-      referenced_jsonmodel = $1.intern
+      referenced_jsonmodel = Regexp.last_match(1).intern
       schema = JSONModel::JSONModel(referenced_jsonmodel).schema['properties']
     end
 
     if schema
       schema['_inherited'] = schema_def
     else
-      $stderr.puts("Inheritence metadata for string arrays is not currently supported (property was: #{property}).  Please file a bug if you need this!")
+      warn("Inheritence metadata for string arrays is not currently supported (property was: #{property}).  Please file a bug if you need this!")
     end
   end
 
@@ -96,7 +92,6 @@ class RecordInheritance
     @config = config || self.class.get_config
   end
 
-
   def merge(jsons, opts = {})
     return merge_record(jsons, opts) unless jsons.is_a? Array
 
@@ -105,14 +100,11 @@ class RecordInheritance
     end
   end
 
-
   def has_type?(type)
     @config.has_key?(type.intern)
   end
 
-
   private
-
 
   def merge_record(json_in, opts)
     json = json_in.clone
@@ -131,26 +123,26 @@ class RecordInheritance
 
         if val.is_a?(Array)
           if val.empty? || fld.has_key?(:inherit_if) && fld[:inherit_if].call(val).empty?
-            json['ancestors'].map {|ancestor|
+            json['ancestors'].map { |ancestor|
               ancestor_val = fld.has_key?(:inherit_if) ? fld[:inherit_if].call(ancestor['_resolved'][fld[:property]])
                                                        : ancestor['_resolved'][fld[:property]]
-              unless ancestor_val.empty?
-                json[fld[:property]] = json[fld[:property]] + ancestor_val
-                json[fld[:property]].flatten!
-                json = apply_inheritance_properties(json, ancestor_val, ancestor, fld)
-                break
-              end
+              next if ancestor_val.empty?
+
+              json[fld[:property]] = json[fld[:property]] + ancestor_val
+              json[fld[:property]].flatten!
+              json = apply_inheritance_properties(json, ancestor_val, ancestor, fld)
+              break
             }
           end
         else
           if !json[fld[:property]] || fld.has_key?(:inherit_if) && !fld[:inherit_if].call(json[fld[:property]])
-            json['ancestors'].map {|ancestor|
+            json['ancestors'].map { |ancestor|
               ancestor_val = ancestor['_resolved'][fld[:property]]
-              if ancestor_val
-                json[fld[:property]] = ancestor_val
-                json = apply_inheritance_properties(json, ancestor_val, ancestor, fld)
-                break
-              end
+              next unless ancestor_val
+
+              json[fld[:property]] = ancestor_val
+              json = apply_inheritance_properties(json, ancestor_val, ancestor, fld)
+              break
             }
           end
         end
@@ -162,22 +154,18 @@ class RecordInheritance
         json['ancestors'].reverse.each do |ancestor|
           if ancestor['_resolved']['component_id']
             id = ancestor['_resolved']['component_id']
-            if config[:composite_identifiers][:include_level]
-              id = [translate_level(ancestor['level']), id].join(' ')
-            end
+            id = [translate_level(ancestor['level']), id].join(' ') if config[:composite_identifiers][:include_level]
             ids << id
           elsif ancestor['_resolved']['id_0']
-            ids << (0..3).map { |i| ancestor['_resolved']["id_#{i}"] }.compact.
-              join(config[:composite_identifiers].fetch(:identifier_delimiter, ' '))
+            ids << (0..3).map { |i| ancestor['_resolved']["id_#{i}"] }.compact
+                         .join(config[:composite_identifiers].fetch(:identifier_delimiter, ' '))
           end
         end
 
         # include our own id in the composite if it wasn't inherited
         if json['component_id'] && !json['component_id_inherited']
           id = json['component_id']
-          if config[:composite_identifiers][:include_level]
-            id = [translate_level(json['level']), id].join(' ')
-          end
+          id = [translate_level(json['level']), id].join(' ') if config[:composite_identifiers][:include_level]
           ids << id
         end
 
@@ -191,7 +179,6 @@ class RecordInheritance
     json
   end
 
-  
   def apply_inheritance_properties(json, vals, ancestor, field_config)
     props = {
       'ref' => ancestor['ref'],
@@ -209,9 +196,7 @@ class RecordInheritance
     json
   end
 
-
   def translate_level(level)
-    I18n.t("enumerations.archival_record_level.#{level}", :default => level)
+    I18n.t("enumerations.archival_record_level.#{level}", default: level)
   end
-
 end

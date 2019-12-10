@@ -41,12 +41,12 @@ class AssessmentListReport < AbstractReport
 
   def query_string
     date_condition = if @date_scope
-                      "survey_begin >
-                      #{db.literal(@from.split(' ')[0].gsub('-', ''))}
-                      and survey_begin <
-                      #{db.literal(@to.split(' ')[0].gsub('-', ''))}"
-                    else
-                      '1=1'
+                       "survey_begin >
+                       #{db.literal(@from.split(' ')[0].gsub('-', ''))}
+                       and survey_begin <
+                       #{db.literal(@to.split(' ')[0].gsub('-', ''))}"
+                     else
+                       '1=1'
                     end
     "select
       null as linked_records,
@@ -124,35 +124,30 @@ class AssessmentListReport < AbstractReport
     if @form == 'csv'
       row.merge!(@att_defs)
       formats_hash = AssessmentMaterialTypesFormatsSubreport.new(
-        self, row[:id]).get_content
-      unless formats_hash.nil?
-        formats_hash.each do | fo |
-          row[ReportUtils.normalize_label(fo[:_format]).to_sym] = 'Yes'
-        end
+        self, row[:id]
+      ).get_content
+      formats_hash&.each do |fo|
+        row[ReportUtils.normalize_label(fo[:_format]).to_sym] = 'Yes'
       end
       conservation_issues_hash = AssessmentConservationIssuesSubreport
-        .new(self, row[:id]).get_content
-      unless conservation_issues_hash.nil?
-        conservation_issues_hash.each do | ci |
-          row[ReportUtils.normalize_label(ci[:_format]).to_sym] = 'Yes'
-        end
+                                 .new(self, row[:id]).get_content
+      conservation_issues_hash&.each do |ci|
+        row[ReportUtils.normalize_label(ci[:_format]).to_sym] = 'Yes'
       end
       row.delete(:formats)
       row.delete(:conservation_issues)
       ratings_hash = AssessmentRatingSubreport.new(self, row[:id]).get_content
-      unless ratings_hash.nil?
-        ratings_hash.each do | ra |
-          rate_label = ra[:field] + ' Rating'
-          note_label = ra[:field] + ' Note' if ra[:field] != "Research Value"
-          row[ReportUtils.normalize_label(rate_label).to_sym] = ra[:rating]
-          row[ReportUtils.normalize_label(note_label).to_sym] = ra[:note] if ra[:field] != "Research Value"
-        end
+      ratings_hash&.each do |ra|
+        rate_label = ra[:field] + ' Rating'
+        note_label = ra[:field] + ' Note' if ra[:field] != 'Research Value'
+        row[ReportUtils.normalize_label(rate_label).to_sym] = ra[:rating]
+        row[ReportUtils.normalize_label(note_label).to_sym] = ra[:note] if ra[:field] != 'Research Value'
       end
     else
       row[:ratings] = AssessmentRatingSubreport.new(self, row[:id]).get_content
     end
     row[:linked_records] = AssessmentLinkedRecordsSubreport.new(self, row[:id])
-                           .get_content
+                                                           .get_content
   end
 
   def identifier_field
@@ -165,15 +160,15 @@ class AssessmentListReport < AbstractReport
     format_def = {}
     cons_iss_def = {}
     assess_defs = AssessmentAttributeDefinitions.get(@repo_id)['definitions']
-    assess_defs.each do | ad |
-      if ad[:type] == "rating"
+    assess_defs.each do |ad|
+      if ad[:type] == 'rating'
         rate_label = ad[:label] + ' Rating'
-        note_label = ad[:label] + ' Note' if ad[:label] != "Research Value"
+        note_label = ad[:label] + ' Note' if ad[:label] != 'Research Value'
         rating_def[ReportUtils.normalize_label(rate_label).to_sym] = ''
-        rating_def[ReportUtils.normalize_label(note_label).to_sym] = '' if ad[:label] != "Research Value"
-      elsif ad[:type] == "format"
+        rating_def[ReportUtils.normalize_label(note_label).to_sym] = '' if ad[:label] != 'Research Value'
+      elsif ad[:type] == 'format'
         format_def[ReportUtils.normalize_label(ad[:label]).to_sym] = ''
-      elsif ad[:type] == "conservation_issue"
+      elsif ad[:type] == 'conservation_issue'
         cons_iss_def[ReportUtils.normalize_label(ad[:label]).to_sym] = ''
       end
     end

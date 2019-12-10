@@ -1,5 +1,4 @@
 module AuthHelpers
-
   def create_session_for(username, expiring_session)
     session = Session.new
     session[:user] = username
@@ -9,5 +8,4 @@ module AuthHelpers
 
     session
   end
-
 end

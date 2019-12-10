@@ -1,5 +1,4 @@
 class AgentListReport < AbstractReport
-
   register_report
 
   def query_string
@@ -13,9 +12,9 @@ class AgentListReport < AbstractReport
     where is_display_name
       and not source_id is null
       and user.id is null)
-    
+
     union
-        
+
     (select
       sort_name,
         'Family' as name_type,
@@ -23,7 +22,7 @@ class AgentListReport < AbstractReport
     from name_family
     where is_display_name
       and not source_id is null)
-        
+
     union
 
     (select
@@ -46,5 +45,4 @@ class AgentListReport < AbstractReport
   def page_break
     false
   end
-  
 end

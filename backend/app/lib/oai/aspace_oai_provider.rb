@@ -8,7 +8,7 @@ require_relative 'marc_format'
 require_relative 'mods_format'
 
 # Load our gem overrides
-Dir.glob(File.join(File.dirname(__FILE__), "oai_gem_patches", "*.rb")).sort.each do |patch|
+Dir.glob(File.join(File.dirname(__FILE__), 'oai_gem_patches', '*.rb')).sort.each do |patch|
   require File.absolute_path(patch)
 end
 

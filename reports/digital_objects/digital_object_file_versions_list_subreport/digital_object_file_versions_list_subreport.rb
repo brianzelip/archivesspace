@@ -1,5 +1,4 @@
 class DigitalObjectFileVersionsListSubreport < AbstractSubreport
-
   register_subreport('file_version', ['digital_object'])
 
   def initialize(parent_report, digital_object_id)
@@ -23,5 +22,4 @@ class DigitalObjectFileVersionsListSubreport < AbstractSubreport
   def self.field_name
     'file_version'
   end
-
 end

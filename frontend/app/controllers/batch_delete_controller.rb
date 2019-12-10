@@ -1,12 +1,11 @@
 class BatchDeleteController < ApplicationController
+  set_access_control  'delete_archival_record' => [:archival_records],
+                      'delete_subject_record' => [:subjects],
+                      'delete_agent_record' => [:agents],
+                      'delete_classification_record' => [:classifications],
+                      'administer_system' => [:locations],
+                      'delete_assessment_record' => [:assessments]
 
-  set_access_control  "delete_archival_record" => [:archival_records],
-                      "delete_subject_record" => [:subjects],
-                      "delete_agent_record" => [:agents],
-                      "delete_classification_record" => [:classifications],
-                      "administer_system" => [:locations],
-                      "delete_assessment_record" => [:assessments]
-  
   def locations
     delete_records(params[:record_uris])
   end
@@ -34,23 +33,21 @@ class BatchDeleteController < ApplicationController
   private
 
   def delete_records(uris)
-    response = JSONModel::HTTP.post_form("/batch_delete",
-                                         {
-                                           "record_uris[]" => Array(uris)
-                                         })
+    response = JSONModel::HTTP.post_form('/batch_delete',
+                                         'record_uris[]' => Array(uris))
 
-    if response.code === "200"
+    if response.code === '200'
       flash[:success] = I18n.t("batch_delete.#{params[:action]}.success")
-      deleted_uri_param = params[:record_uris].map{|uri| "deleted_uri[]=#{uri}"}.join("&")
-      redirect_to request.referrer.include?("?") ? "#{request.referrer}&#{deleted_uri_param}" : "#{request.referrer}?#{deleted_uri_param}"
+      deleted_uri_param = params[:record_uris].map { |uri| "deleted_uri[]=#{uri}" }.join('&')
+      redirect_to request.referrer.include?('?') ? "#{request.referrer}&#{deleted_uri_param}" : "#{request.referrer}?#{deleted_uri_param}"
     else
       error_flash = ''
 
-      if response.code === "403"
+      if response.code === '403'
         begin
           errors_by_uri = parse_failures(response.body)
           error_flash = render_delete_errors(errors_by_uri)
-        rescue
+        rescue StandardError
           # If we couldn't successfully parse the result, report a generic error.
         end
       end
@@ -84,11 +81,11 @@ class BatchDeleteController < ApplicationController
       result += '<ul>'
 
       errors_by_uri.each do |error, uri|
-        record_link = url_for(:controller => :resolver, :action => :resolve_readonly, :uri => uri)
+        record_link = url_for(controller: :resolver, action: :resolve_readonly, uri: uri)
         result += '<li>'
         result += "<a href=\"#{record_link}\">#{ERB::Util.html_escape(uri)}</a>"
         result += ' - '
-        result += ERB::Util.html_escape(I18n.t("errors.#{error}", :default => error))
+        result += ERB::Util.html_escape(I18n.t("errors.#{error}", default: error))
         result += '</li>'
       end
 
@@ -97,5 +94,4 @@ class BatchDeleteController < ApplicationController
 
     result
   end
-
 end

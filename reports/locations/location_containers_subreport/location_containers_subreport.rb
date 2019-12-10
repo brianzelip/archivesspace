@@ -21,7 +21,7 @@ class LocationContainersSubreport < AbstractSubreport
   def fix_row(row)
     row[:container_profile] = query_profiles(row[:id])
     row[:records] = ContainerResourcesAccessionsSubreport
-                          .new(self, row[:id]).get_content
+                    .new(self, row[:id]).get_content
     row.delete(:id)
   end
 
@@ -35,6 +35,7 @@ where top_container_id = #{db.literal(container_id)}"
     profiles.each do |profile_row|
       profile = profile_row.to_hash
       next unless profile[:name]
+
       profile_string += ', ' if profile_string != ''
       profile_string += profile[:name]
     end

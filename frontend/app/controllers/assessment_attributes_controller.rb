@@ -1,7 +1,5 @@
 class AssessmentAttributesController < ApplicationController
-
-  set_access_control  "manage_assessment_attributes" => [:edit, :update]
-
+  set_access_control 'manage_assessment_attributes' => [:edit, :update]
 
   def edit
     @assessment_attribute_definitions = AssessmentAttributeDefinitions.find(nil)
@@ -23,7 +21,7 @@ class AssessmentAttributesController < ApplicationController
       @assessment_attribute_definitions = AssessmentAttributeDefinitions.find(nil)
       flash.now[:success] = I18n.t('assessment_attribute_definitions._frontend.messages.updated')
     rescue ConflictException => e
-      if "RECORD_IN_USE" == e.conflicts
+      if e.conflicts == 'RECORD_IN_USE'
         flash.now[:error] = I18n.t('assessment_attribute_definitions._frontend.messages.attribute_in_use')
 
         # Add back anything that was deleted
@@ -32,11 +30,11 @@ class AssessmentAttributesController < ApplicationController
         @assessment_attribute_definitions.repo_conservation_issues = revert_deletions(@assessment_attribute_definitions.repo_conservation_issues, original_repo_conservation_issues)
       else
         flash.now[:error] = I18n.t('assessment_attribute_definitions._frontend.messages.conflict',
-                                   :conflicts => e.conflicts.join('; '))
+                                   conflicts: e.conflicts.join('; '))
       end
     end
 
-    render :template => 'assessment_attributes/edit'
+    render template: 'assessment_attributes/edit'
   end
 
   private
@@ -44,26 +42,23 @@ class AssessmentAttributesController < ApplicationController
   # Revert any deleted definitions and restore the original sorting
   def revert_deletions(form_definitions, original_definitions)
     form_definitions += attribute_set_subtract(original_definitions, form_definitions)
-    form_definitions.sort{|a, b| a['position'] <=> b['position']}
+    form_definitions.sort { |a, b| a['position'] <=> b['position'] }
   end
 
   # Return only the attributes of `a1` that aren't present in `a2`
   #
   # Comparison is against the 'id' fields
   def attribute_set_subtract(a1, a2)
-    a2_ids = a2.map {|a| a['id']}.compact
+    a2_ids = a2.map { |a| a['id'] }.compact
 
-    a1.select {|a| a['id'] && !a2_ids.include?(a['id'])}
+    a1.select { |a| a['id'] && !a2_ids.include?(a['id']) }
   end
 
   def prepare(attributes)
-    result = ASUtils.wrap(attributes).reject {|entry| entry['label'].blank?}
+    result = ASUtils.wrap(attributes).reject { |entry| entry['label'].blank? }
 
     result.each do |attribute|
-      if attribute['id'] == ''
-        attribute.delete('id')
-      end
+      attribute.delete('id') if attribute['id'] == ''
     end
   end
-
 end

@@ -1,16 +1,16 @@
 class ArchivesSpaceService < Sinatra::Base
-  Endpoint.get("/ark:/:naan/:id")
-    .description("Redirect to resource identified by ARK Name")
-    .params(["id", :id])
-    .permissions([])
-    .returns([404, "Not found"],
-             [302, :redirect]) \
+  Endpoint.get('/ark:/:naan/:id')
+          .description('Redirect to resource identified by ARK Name')
+          .params(['id', :id])
+          .permissions([])
+          .returns([404, 'Not found'],
+                   [302, :redirect]) \
   do
     if ark = ArkName[params[:id]]
       response_hash = find_entity_data(ark)
       json_response(response_hash)
     else
-      json_response({"type" => "not_found"})
+      json_response('type' => 'not_found')
     end
   end
 
@@ -23,18 +23,18 @@ class ArchivesSpaceService < Sinatra::Base
       id = ark.archival_object_id
     end
 
-    rh = if entity = klass.any_repo.filter(:id => id).first
+    rh = if entity = klass.any_repo.filter(id: id).first
            if entity.external_ark_url
-             {"type" => "external", "external_url" => entity.external_ark_url}
+             { 'type' => 'external', 'external_url' => entity.external_ark_url }
            else
-             {"type" => klass.to_s,
-              "repo_id" => entity[:repo_id],
-              "id" => id}
+             { 'type' => klass.to_s,
+               'repo_id' => entity[:repo_id],
+               'id' => id }
            end
          else
-           {"type" => "not_found"}
+           { 'type' => 'not_found' }
          end
 
-    return rh
+    rh
   end
 end

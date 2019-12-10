@@ -4,7 +4,6 @@ require 'csv'
 require_relative '../app/converters/location_converter'
 
 describe 'Location converter' do
-
   def my_converter
     LocationConverter
   end
@@ -15,11 +14,10 @@ describe 'Location converter' do
       File.dirname(__FILE__)
     )
     @records = convert(test_file)
-    @locations = @records.select {|r| r['jsonmodel_type'] == 'location' }
+    @locations = @records.select { |r| r['jsonmodel_type'] == 'location' }
   end
 
   it 'created one Location record for each row in the CSV file' do
     expect(@locations.count).to eq(3)
   end
-
 end

@@ -1,11 +1,7 @@
 module YARD::CodeObjects
-  
   class EndpointObject < Base
-     
-    def describe  
-
+    def describe
       self
-      
     end
   end
 end

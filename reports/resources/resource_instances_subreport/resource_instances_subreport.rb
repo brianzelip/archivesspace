@@ -1,5 +1,4 @@
 class ResourceInstancesSubreport < AbstractSubreport
-
   register_subreport('instance', ['resource'])
 
   def initialize(parent_report, resource_id)
@@ -59,10 +58,10 @@ class ResourceInstancesSubreport < AbstractSubreport
         = #{db.literal(@resource_id)}) as instances
 
       left outer join sub_container on instances.id = sub_container.instance_id
-      
+
       left outer join top_container_link_rlshp
         on sub_container.id = top_container_link_rlshp.sub_container_id
-      
+
       left outer join top_container
         on top_container.id = top_container_link_rlshp.top_container_id
 
@@ -97,6 +96,7 @@ class ResourceInstancesSubreport < AbstractSubreport
     profiles.each do |profile_row|
       profile = profile_row.to_hash
       next unless profile[:name]
+
       profile_string += ', ' if profile_string != ''
       profile_string += profile[:name]
     end

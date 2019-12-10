@@ -8,23 +8,17 @@ class EACConverter < Converter
   include ASpaceImport::XML::DOM
 
   def self.instance_for(type, input_file)
-    if type == "eac_xml"
-      self.new(input_file)
-    else
-      nil
-    end
+    new(input_file) if type == 'eac_xml'
   end
 
-
-  def self.import_types(show_hidden = false)
+  def self.import_types(_show_hidden = false)
     [
-     {
-       :name => "eac_xml",
-       :description => "Import EAC-CPF records from an XML file"
-     }
+      {
+        name: 'eac_xml',
+        description: 'Import EAC-CPF records from an XML file'
+      }
     ]
   end
-
 end
 
 EACConverter.configure do |config|

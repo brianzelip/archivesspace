@@ -35,7 +35,7 @@ class AccessionInventoryReport < AbstractReport
     from accession
 
       natural left outer join
-  
+
       (select
         accession_id as id,
         sum(number) as extent_number,
@@ -43,7 +43,7 @@ class AccessionInventoryReport < AbstractReport
         GROUP_CONCAT(distinct extent.container_summary SEPARATOR ', ') as container_summary
       from extent
       group by accession_id) as extent_cnt
-      
+
       natural left outer join
       (select
         accession_id as id,

@@ -1,5 +1,4 @@
 class LargeTreeClassification
-
   def root(response, root_record)
     response['identifier'] = root_record.identifier
     response
@@ -13,11 +12,10 @@ class LargeTreeClassification
   def waypoint(response, record_ids)
     # Add identifier to nodes
     ClassificationTerm
-        .filter(:classification_term__id => record_ids)
-        .select(Sequel.as(:classification_term__id, :id),
-                Sequel.as(:classification_term__identifier, :identifier))
-        .each do |row|
-
+      .filter(classification_term__id: record_ids)
+      .select(Sequel.as(:classification_term__id, :id),
+              Sequel.as(:classification_term__identifier, :identifier))
+      .each do |row|
       id = row[:id]
       result_for_record = response.fetch(record_ids.index(id))
       result_for_record['identifier'] = row[:identifier]
@@ -25,5 +23,4 @@ class LargeTreeClassification
 
     response
   end
-
 end

@@ -41,7 +41,7 @@ describe ResourcesController, type: :controller do
     expect(get(:index)).to have_http_status(200)
     results = assigns(:results)
     expect(results['total_hits']).to eq(5)
-    expect(results.records.first['title']).to eq("Published Resource")
+    expect(results.records.first['title']).to eq('Published Resource')
   end
 
   describe 'Tree Node Actions' do
@@ -75,13 +75,13 @@ describe ResourcesController, type: :controller do
 
     it 'should return a 404 when it cannot find the tree waypoint' do
       get(:tree_waypoint, params: { rid: @repo.id, id: @resource.id,
-                                node: @resource.uri, offset: 100 })
+                                    node: @resource.uri, offset: 100 })
       expect(response.status).to eq(404)
     end
 
     it 'should get the tree node from the root ' do
       get(:tree_node_from_root, params: { rid: @repo.id, id: @resource.id,
-                                          node_ids: [@a1,@a2,@a3].map(&:id) })
+                                          node_ids: [@a1, @a2, @a3].map(&:id) })
       expect(response.status).to eq(200)
     end
 

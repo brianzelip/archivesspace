@@ -2,30 +2,26 @@ require 'securerandom'
 
 module ASpaceImport
   module Utils
-
     # Fake an ID to create URIs
     def self.mint_id
       "import_#{SecureRandom.uuid}"
     end
 
-
     def self.get_property_type(property_def)
       # subrecord slots taking more than one type
       if property_def['type'].is_a? Array
-        if ((property_def['type'] | ["integer", "string"]) - (property_def['type'] & ["integer", "string"])).empty?
+        if ((property_def['type'] | ['integer', 'string']) - (property_def['type'] & ['integer', 'string'])).empty?
           return [:string_or_integer, nil]
-        elsif property_def['type'].reject {|t| t['type'].match(/object$/)}.length != 0
-          raise ASpaceImportException.new(:property_def => property_def)
+        elsif !property_def['type'].reject { |t| t['type'].match(/object$/) }.empty?
+          raise ASpaceImportException.new(property_def: property_def)
         end
 
-        return [:record_inline, property_def['type'].map {|t| t['type'].scan(/:([a-zA-Z_]*)/)[0][0] }]
+        return [:record_inline, property_def['type'].map { |t| t['type'].scan(/:([a-zA-Z_]*)/)[0][0] }]
       end
 
       # dynamic enums
 
-      if property_def['type'] == 'string' && property_def.has_key?('dynamic_enum')
-        return [:dynamic_enum, nil]
-      end
+      return [:dynamic_enum, nil] if property_def['type'] == 'string' && property_def.has_key?('dynamic_enum')
 
       # all other cases
 
@@ -55,26 +51,25 @@ module ASpaceImport
         [(arr[0].to_s + '_list').to_sym, arr[1]]
 
       when /^JSONModel\(:([a-z_]*)\)\s(uri)$/
-        [:record_uri, [$1]]
+        [:record_uri, [Regexp.last_match(1)]]
 
       when /^JSONModel\(:([a-z_]*)\)\s(uri_or_object)$/
-        [:record_uri_or_record_inline, [$1]]
+        [:record_uri_or_record_inline, [Regexp.last_match(1)]]
 
       when /^JSONModel\(:([a-z_]*)\)\sobject$/
-        [:record_inline, [$1]]
+        [:record_inline, [Regexp.last_match(1)]]
 
       else
 
-        raise ASpaceImportException.new(:property_def => property_def)
+        raise ASpaceImportException.new(property_def: property_def)
       end
     end
-
 
     def self.value_filter(property_type)
       case property_type
 
       when /^record_uri_or_record_inline/
-        lambda {|val|
+        lambda { |val|
           val.block_further_reception if val.respond_to? :block_further_reception
           if val.class.method_defined? :uri
             val.uri
@@ -84,7 +79,7 @@ module ASpaceImport
         }
 
       when /^record_uri/
-        lambda {|val|
+        lambda { |val|
           if val.class.method_defined? :uri
             val.uri
           else
@@ -93,21 +88,21 @@ module ASpaceImport
         }
 
       when /^record_inline/
-        lambda {|val|
+        lambda { |val|
           val
         }
 
       when /^record_ref/
-        lambda {|val|
+        lambda { |val|
           if val.respond_to?(:uri)
-            {'ref' => val.uri}
+            { 'ref' => val.uri }
           else
             val
           end
         }
 
       when :boolean
-        lambda {|val|
+        lambda { |val|
           if [false, true].include? val
             val
           elsif val.to_s == '0'
@@ -118,28 +113,26 @@ module ASpaceImport
         }
 
       when :dynamic_enum
-        lambda {|val|
+        lambda { |val|
           val
         }
 
-       when /^string/
-         lambda {|val|
-           val.split("\n").map {|s| s.strip }.join("\n")
-         }
-       
-       when :integer
-         lambda {|val|
-           val.to_i
-         }
+      when /^string/
+        lambda { |val|
+          val.split("\n").map { |s| s.strip }.join("\n")
+        }
 
-       else
-         raise "Can't handle #{property_type}"
+      when :integer
+        lambda { |val|
+          val.to_i
+        }
+
+      else
+        raise "Can't handle #{property_type}"
        end
      end
 
-
     def self.ref_type_list(property_ref_type)
-
       if property_ref_type.is_a?(Array) && property_ref_type[0].is_a?(Hash)
         property_ref_type.map { |t| t['type'].scan(/:([a-zA-Z_]*)/)[0][0] }
 
@@ -150,10 +143,9 @@ module ASpaceImport
       end
     end
 
-
     def self.update_record_references(record, ref_source)
       if record.is_a?(Array) || record.respond_to?(:to_array)
-        record.map {|e| update_record_references(e, ref_source)}
+        record.map { |e| update_record_references(e, ref_source) }
       elsif record.is_a?(Hash) || record.respond_to?(:each)
         fixed = {}
 
@@ -166,7 +158,6 @@ module ASpaceImport
         ref_source[record] || record
       end
     end
-
 
     class ASpaceImportException < StandardError
       attr_accessor :property
@@ -189,27 +180,21 @@ module ASpaceImport
         end
       end
     end
-
   end
 end
 
-
-
 module ASpaceMappings
   module MARC21
-
     def self.get_aspace_source_code(code)
       case code.to_s
-      when '0'; 'lcsh'
-      when '1'; 'lcshac'
-      when '2'; 'mesh'
-      when '3'; 'nal'
-      when '4'; 'ingest'
-      when '5'; 'cash'
-      when '6'; 'rvm'
-      else; nil
+      when '0' then 'lcsh'
+      when '1' then 'lcshac'
+      when '2' then 'mesh'
+      when '3' then 'nal'
+      when '4' then 'ingest'
+      when '5' then 'cash'
+      when '6' then 'rvm'
       end
     end
   end
 end
-

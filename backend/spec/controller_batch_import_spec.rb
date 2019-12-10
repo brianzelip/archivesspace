@@ -1,13 +1,11 @@
 require 'spec_helper'
 
-describe "Batch Import Controller" do
-
+describe 'Batch Import Controller' do
   before(:each) do
     create(:repo)
   end
 
-
-  it "can import a batch of JSON objects" do
+  it 'can import a batch of JSON objects' do
     batch_array = []
 
     types = [:json_resource, :json_archival_object]
@@ -15,7 +13,7 @@ describe "Batch Import Controller" do
     ids = (0..10).to_a
     10.times do
       obj = build(types.sample)
-      obj.uri = obj.class.uri_for(ids.shift, {:repo_id => $repo_id})
+      obj.uri = obj.class.uri_for(ids.shift, repo_id: $repo_id)
       batch_array << obj.to_hash(:raw)
     end
 
@@ -30,17 +28,16 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(10)
   end
 
-  it "can import a batch of JSON objects from a migrator and not slam the database with checks if position is provided" do
-
+  it 'can import a batch of JSON objects from a migrator and not slam the database with checks if position is provided' do
     expect_any_instance_of(ArchivalObject).not_to receive(:set_position_in_list)
     batch_array = []
 
-   resource = create(:json_resource)
+    resource = create(:json_resource)
 
     10.times do |i|
-	obj = build(:json_archival_object, :resource => {:ref => resource.uri}, :title => "A#{i.to_s}", :position => i )
-        obj.uri = obj.class.uri_for(rand(100000), {:repo_id => $repo_id})
-        batch_array << obj
+      obj = build(:json_archival_object, resource: { ref: resource.uri }, title: "A#{i}", position: i)
+      obj.uri = obj.class.uri_for(rand(100_000), repo_id: $repo_id)
+      batch_array << obj
     end
 
     uri = "/repositories/#{$repo_id}/batch_imports?migration=true"
@@ -54,17 +51,16 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(10)
   end
 
-  it "can import a batch of hierarchical JSON objects not from a migrator and will check positioning" do
-
+  it 'can import a batch of hierarchical JSON objects not from a migrator and will check positioning' do
     expect_any_instance_of(ArchivalObject).to receive(:set_position_in_list).at_least(:once)
     batch_array = []
 
-   resource = create(:json_resource)
+    resource = create(:json_resource)
 
     1.times do |i|
-	    obj = build(:json_archival_object, :resource => {:ref => resource.uri}, :title => "B#{i.to_s}", :position => 1)
-        obj.uri = obj.class.uri_for(rand(100000), {:repo_id => $repo_id})
-        batch_array << obj
+      obj = build(:json_archival_object, resource: { ref: resource.uri }, title: "B#{i}", position: 1)
+      obj.uri = obj.class.uri_for(rand(100_000), repo_id: $repo_id)
+      batch_array << obj
     end
 
     uri = "/repositories/#{$repo_id}/batch_imports"
@@ -77,22 +73,20 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(1)
   end
 
-  it "can import a batch of JSON objects with unknown enum values" do
-
+  it 'can import a batch of JSON objects with unknown enum values' do
     # Set the enum source to the backend version
     old_enum_source = JSONModel.init_args[:enum_source]
     JSONModel.init_args[:enum_source] = BackendEnumSource
 
-
     begin
       batch_array = []
 
-      enum = JSONModel::JSONModel(:enumeration).all.find {|obj| obj.name == 'resource_resource_type' }
+      enum = JSONModel::JSONModel(:enumeration).all.find { |obj| obj.name == 'resource_resource_type' }
 
       expect(enum.values).not_to include('spaghetti')
 
-      obj = build(:json_resource, :resource_type => 'spaghetti')
-      obj.uri = obj.class.uri_for(rand(100000), {:repo_id => $repo_id})
+      obj = build(:json_resource, resource_type: 'spaghetti')
+      obj.uri = obj.class.uri_for(rand(100_000), repo_id: $repo_id)
 
       batch_array << obj.to_hash(:raw)
 
@@ -106,7 +100,7 @@ describe "Batch Import Controller" do
       results = ASUtils.json_parse(response.body)
       expect(results.last['saved'].length).to eq(1)
 
-      enum = JSONModel::JSONModel(:enumeration).all.find {|obj| obj.name == 'resource_resource_type' }
+      enum = JSONModel::JSONModel(:enumeration).all.find { |obj| obj.name == 'resource_resource_type' }
 
       expect(enum.values).to include('spaghetti')
     ensure
@@ -115,22 +109,17 @@ describe "Batch Import Controller" do
     end
   end
 
-
-  it "can import a batch containing a record with a reference to already existing records" do
-
+  it 'can import a batch containing a record with a reference to already existing records' do
     subject = create(:json_subject)
     accession = create(:json_accession)
 
     resource = build(:json_resource,
-            :subjects => [{'ref' => subject.uri}],
-            :related_accessions => [{'ref' => accession.uri}])
+                     subjects: [{ 'ref' => subject.uri }],
+                     related_accessions: [{ 'ref' => accession.uri }])
 
-
-
-    resource.uri = resource.class.uri_for(rand(100000), {:repo_id => $repo_id})
+    resource.uri = resource.class.uri_for(rand(100_000), repo_id: $repo_id)
 
     batch_array = [resource.to_hash(:raw)]
-
 
     uri = "/repositories/#{$repo_id}/batch_imports"
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
@@ -143,19 +132,17 @@ describe "Batch Import Controller" do
 
     real_id = results.last['saved'][resource.uri][-1]
 
-    resource_reloaded = JSONModel(:resource).find(real_id, "resolve[]" => ['subjects', 'related_accessions'])
+    resource_reloaded = JSONModel(:resource).find(real_id, 'resolve[]' => ['subjects', 'related_accessions'])
 
     expect(resource_reloaded.subjects[0]['ref']).to eq(subject.uri)
     expect(resource_reloaded.related_accessions[0]['ref']).to eq(accession.uri)
-
   end
 
-  it "can import a batch containing a record with an inline (non-schematized) external id object" do
+  it 'can import a batch containing a record with an inline (non-schematized) external id object' do
+    resource = build(:json_resource, external_ids: [{ external_id: '1',
+                                                      source: 'jdbc:mysql://tracerdb.cyo37z0ucix8.us-east-1.rds.amazonaws.com/at2::RESOURCE' }])
 
-    resource = build(:json_resource, :external_ids => [{:external_id => '1',
-                                                        :source => 'jdbc:mysql://tracerdb.cyo37z0ucix8.us-east-1.rds.amazonaws.com/at2::RESOURCE'}])
-
-    resource.uri = resource.class.uri_for(rand(100000), {:repo_id => $repo_id})
+    resource.uri = resource.class.uri_for(rand(100_000), repo_id: $repo_id)
 
     batch_array = [resource.to_hash(:raw)]
 
@@ -169,23 +156,21 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(1)
   end
 
-
-  it "cannot import a batch containing records with inter-repository references" do
-
+  it 'cannot import a batch containing records with inter-repository references' do
     accession = create(:json_accession)
 
     new_repo = create(:repo)
 
     resource = build(:json_resource,
-            :related_accessions => [{'ref' => accession.uri}])
+                     related_accessions: [{ 'ref' => accession.uri }])
 
-    resource.uri = resource.class.uri_for(rand(100000), {:repo_id => $repo_id})
+    resource.uri = resource.class.uri_for(rand(100_000), repo_id: $repo_id)
 
     batch_array = [resource.to_hash(:raw)]
 
     uri = "/repositories/#{new_repo.id}/batch_imports"
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
-    url.query = URI.encode_www_form({:use_transaction => true})
+    url.query = URI.encode_www_form(use_transaction: true)
 
     response = JSONModel::HTTP.post_json(url, batch_array.to_json)
     expect(response.code).to eq('200')
@@ -208,21 +193,19 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(1)
   end
 
-
-  it "cannot import a batch containing records with non-existent references" do
-
+  it 'cannot import a batch containing records with non-existent references' do
     accession = create(:json_accession)
 
     resource = build(:json_resource,
-            :related_accessions => [{'ref' => accession.uri << "9"}])
+                     related_accessions: [{ 'ref' => accession.uri << '9' }])
 
-    resource.uri = resource.class.uri_for(rand(100000), {:repo_id => $repo_id})
+    resource.uri = resource.class.uri_for(rand(100_000), repo_id: $repo_id)
 
     batch_array = [resource.to_hash(:raw)]
 
     uri = "/repositories/#{$repo_id}/batch_imports"
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
-    url.query = URI.encode_www_form({:use_transaction => true})
+    url.query = URI.encode_www_form(use_transaction: true)
 
     response = JSONModel::HTTP.post_json(url, batch_array.to_json)
     expect(response.code).to eq('200')
@@ -245,11 +228,9 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(1)
   end
 
-
-  it "creates a well-ordered resource tree" do
-
+  it 'creates a well-ordered resource tree' do
     resource = build(:json_resource)
-    resource.uri = resource.class.uri_for(rand(100000), {:repo_id => $repo_id})
+    resource.uri = resource.class.uri_for(rand(100_000), repo_id: $repo_id)
 
     a1 = build(:json_archival_object)
     a2 = build(:json_archival_object)
@@ -261,14 +242,14 @@ describe "Batch Import Controller" do
 
     batch_array = [resource.to_hash(:raw)]
     [a3, a1, a2].each do |ao|
-      ao.uri = ao.class.uri_for(rand(100000), {:repo_id => $repo_id})
-      ao.resource = {:ref => resource.uri}
+      ao.uri = ao.class.uri_for(rand(100_000), repo_id: $repo_id)
+      ao.resource = { ref: resource.uri }
       batch_array << ao.to_hash(:raw)
     end
 
     uri = "/repositories/#{$repo_id}/batch_imports"
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
-    url.query = URI.encode_www_form({:use_transaction => true})
+    url.query = URI.encode_www_form(use_transaction: true)
 
     response = JSONModel::HTTP.post_json(url, batch_array.to_json)
     expect(response.code).to eq('200')
@@ -277,27 +258,26 @@ describe "Batch Import Controller" do
     expect(results.last['saved'].length).to eq(4)
     r_id = results.last['saved'][resource.uri][1]
 
-    r = JSONModel.JSONModel(:resource).find(r_id, "resolve[]" => ['tree'])
+    r = JSONModel.JSONModel(:resource).find(r_id, 'resolve[]' => ['tree'])
     children = r['tree']['_resolved']['children']
 
-    expect(children.map {|child| child['title']}).to eq [a1, a2, a3].map {|a| a.title}
+    expect(children.map { |child| child['title'] }).to eq [a1, a2, a3].map { |a| a.title }
   end
 
-
-  it "manages repeated position numbers in batch" do
+  it 'manages repeated position numbers in batch' do
     resource = build(:json_resource)
-    resource.uri = resource.class.uri_for(123, {:repo_id => $repo_id})
+    resource.uri = resource.class.uri_for(123, repo_id: $repo_id)
     archival_objects = []
     (0..10).each do  |i|
       a = build(:json_archival_object)
       a.title = "AO #{i}"
-      a.uri = a.class.uri_for(i, {:repo_id => $repo_id})
-      a.resource = {:ref => resource.uri}
+      a.uri = a.class.uri_for(i, repo_id: $repo_id)
+      a.resource = { ref: resource.uri }
       a.position = i
       archival_objects[i] = a
     end
 
-    correct_order = archival_objects.map{ |a| a['title'] }
+    correct_order = archival_objects.map { |a| a['title'] }
 
     # simulate a double entry
     archival_objects[-3..-1].each do |a|
@@ -316,7 +296,7 @@ describe "Batch Import Controller" do
 
     uri = "/repositories/#{$repo_id}/batch_imports"
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
-    url.query = URI.encode_www_form({:use_transaction => true})
+    url.query = URI.encode_www_form(use_transaction: true)
 
     response = JSONModel::HTTP.post_json(url, batch_array.to_json)
     expect(response.code).to eq('200')
@@ -324,10 +304,10 @@ describe "Batch Import Controller" do
     results = ASUtils.json_parse(response.body)
     r_id = results.last['saved'][resource.uri][1]
 
-    r = JSONModel.JSONModel(:resource).find(r_id, "resolve[]" => ['tree'])
+    r = JSONModel.JSONModel(:resource).find(r_id, 'resolve[]' => ['tree'])
     children = r['tree']['_resolved']['children']
 
-    result_order = children.map {|child| child['title']}
+    result_order = children.map { |child| child['title'] }
 
     # everything up to the double entry should be the same:
     expect(result_order[0..6]).to eq(correct_order[0..6])
@@ -338,10 +318,9 @@ describe "Batch Import Controller" do
     # (the double-entry members occupy 7 and 8)
   end
 
-
-  it "respects the publish default user preference" do
+  it 'respects the publish default user preference' do
     obj = build(:json_resource)
-    obj.uri = obj.class.uri_for(1729, {:repo_id => $repo_id})
+    obj.uri = obj.class.uri_for(1729, repo_id: $repo_id)
     obj.publish = nil
 
     uri = "/repositories/#{$repo_id}/batch_imports"
@@ -358,5 +337,4 @@ describe "Batch Import Controller" do
 
     expect(obj_reloaded.publish).to eq(Preference.defaults['publish'])
   end
-
 end

@@ -2,15 +2,14 @@
 require 'fog/aws'
 require 'stringio'
 class IndexStateS3
-
   def initialize(state_dir = 'indexer_state')
     Excon.defaults[:ciphers] = 'DEFAULT'
-    @connection = Fog::Storage.new({
-      :provider                 => 'AWS',
-      :region                   => AppConfig[:index_state_s3][:region],
-      :aws_access_key_id        => AppConfig[:index_state_s3][:aws_access_key_id],
-      :aws_secret_access_key    => AppConfig[:index_state_s3][:aws_secret_access_key],
-    })
+    @connection = Fog::Storage.new(
+      provider: 'AWS',
+      region: AppConfig[:index_state_s3][:region],
+      aws_access_key_id: AppConfig[:index_state_s3][:aws_access_key_id],
+      aws_secret_access_key: AppConfig[:index_state_s3][:aws_secret_access_key]
+    )
     prefix = AppConfig[:index_state_s3][:prefix].call
 
     @bucket    = @connection.directories.get(AppConfig[:index_state_s3][:bucket])
@@ -35,12 +34,12 @@ class IndexStateS3
   def set_last_mtime(repository_id, record_type, time)
     file = @bucket.files.get(path_for(repository_id, record_type))
     if file
-      file.body = StringIO.new("#{time.to_i.to_s}")
+      file.body = StringIO.new("#{time.to_i}")
       file.save
     else
       @bucket.files.create(
-        :key  => path_for(repository_id, record_type),
-        :body => StringIO.new("#{time.to_i.to_s}"),
+        key: path_for(repository_id, record_type),
+        body: StringIO.new("#{time.to_i}")
       )
     end
   end

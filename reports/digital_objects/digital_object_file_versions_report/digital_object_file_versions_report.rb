@@ -8,7 +8,7 @@ class DigitalObjectFileVersionsReport < AbstractReport
   end
 
   def query_string
-    "select 
+    "select
       id,
       digital_object_id as identifier,
       title as record_title

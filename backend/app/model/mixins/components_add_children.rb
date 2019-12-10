@@ -1,25 +1,20 @@
 require_relative 'tree_nodes'
 
 module ComponentsAddChildren
-
   def self.included(base)
-    if not base.included_modules.include?(TreeNodes)
-      base.extend(ClassMethods)
-    end
+    base.extend(ClassMethods) unless base.included_modules.include?(TreeNodes)
   end
 
   def add_children(children)
-
     children.children.each do |child|
       obj = JSONModel(self.class.node_record_type.intern).from_hash(child)
 
       root_model = Kernel.const_get(self.class.root_record_type.camelize)
       node_model = Kernel.const_get(self.class.node_record_type.camelize)
 
-
       if root_model == self.class
         obj[self.class.root_record_type] = {
-          'ref' => self.uri
+          'ref' => uri
         }
       else
         obj[self.class.root_record_type] = {
@@ -27,7 +22,7 @@ module ComponentsAddChildren
         }
 
         obj['parent'] = {
-          'ref' => self.uri
+          'ref' => uri
         }
       end
 
@@ -35,9 +30,7 @@ module ComponentsAddChildren
     end
   end
 
-
   module ClassMethods
-
     def tree_record_types(root, node)
       @root_record_type = root.to_s
       @node_record_type = node.to_s
@@ -50,7 +43,5 @@ module ComponentsAddChildren
     def node_record_type
       @node_record_type
     end
-
   end
-
 end

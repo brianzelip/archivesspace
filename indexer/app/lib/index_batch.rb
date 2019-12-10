@@ -5,8 +5,7 @@
 require 'tempfile'
 
 class IndexBatch
-
-  SEPARATORS = [",\n", "]\n"]
+  SEPARATORS = [",\n", "]\n"].freeze
 
   def initialize
     @bytes = 0
@@ -18,17 +17,15 @@ class IndexBatch
     # Don't mess up our line breaks under Windows!
     @filestore.binmode
 
-    self.write("[\n")
+    write("[\n")
   end
-
 
   def close
     unless @closed
       @closed = true
-      self.write("]\n")
+      write("]\n")
     end
   end
-
 
   def write(s)
     @bytes += s.bytes.count
@@ -36,56 +33,50 @@ class IndexBatch
     @filestore.flush
   end
 
-
   def <<(doc)
     json = ASUtils.to_json(doc)
 
-    if @record_count > 0
-      self.write(",\n")
-    end
+    write(",\n") if @record_count > 0
 
-    self.write(json)
-    self.write("\n")
+    write(json)
+    write("\n")
 
     @record_count += 1
   end
 
   def rewind
     @filestore.rewind
-    @filestore.readline         # skip the opening [
+    @filestore.readline # skip the opening [
   end
 
   def map(&block)
-    self.rewind
+    rewind
 
     result = []
     @filestore.each_line("\n") do |line|
-      result << block.call(ASUtils.json_parse(line)) if !SEPARATORS.include?(line)
+      result << block.call(ASUtils.json_parse(line)) unless SEPARATORS.include?(line)
     end
 
     result
   end
 
-
   def each(&block)
-    self.rewind
+    rewind
 
     @filestore.each_line("\n") do |line|
-      block.call(ASUtils.json_parse(line)) if !SEPARATORS.include?(line)
+      block.call(ASUtils.json_parse(line)) unless SEPARATORS.include?(line)
     end
 
     self
   end
 
-
   def to_json_stream
-    self.close
+    close
     @filestore.close
 
     # Open with "b" to avoid converting \n to \r\n on Windows
-    File.open(@filestore.path, "rb")
+    File.open(@filestore.path, 'rb')
   end
-
 
   def byte_count
     @bytes
@@ -97,21 +88,17 @@ class IndexBatch
     end
   end
 
-
   def empty?
     @record_count == 0
   end
-
 
   def length
     @record_count
   end
 
-
   def destroy
-    self.close
+    close
     @filestore.close
     @filestore.unlink
   end
-
 end

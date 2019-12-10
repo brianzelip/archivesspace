@@ -2,7 +2,6 @@ require_relative 'indexer_common'
 require 'net/http'
 
 class RealtimeIndexer < IndexerCommon
-
   def initialize(backend_url, should_continue)
     super(backend_url)
 
@@ -11,19 +10,15 @@ class RealtimeIndexer < IndexerCommon
   end
 
   def get_updates(last_sequence = 0)
-
-    resolve_params = resolved_attributes.map {|a| "resolve[]=#{a}"}.join("&")
+    resolve_params = resolved_attributes.map { |a| "resolve[]=#{a}" }.join('&')
 
     response = do_http_request(URI.parse(@backend_url),
                                Net::HTTP::Get.new("/update-feed?last_sequence=#{last_sequence}&#{resolve_params}"))
 
-    if response.code != '200'
-      raise "Indexing error: #{response.body}"
-    end
+    raise "Indexing error: #{response.body}" if response.code != '200'
 
     ASUtils.json_parse(response.body)
   end
-
 
   def run_index_round(last_sequence)
     next_sequence = last_sequence
@@ -33,7 +28,7 @@ class RealtimeIndexer < IndexerCommon
       # Blocks until something turns up
       updates = get_updates(last_sequence)
 
-      if !updates.empty?
+      unless updates.empty?
 
         # Pick out updates that represent deleted records
         deletes = updates.find_all { |update| update['record'] == 'deleted' }
@@ -49,7 +44,7 @@ class RealtimeIndexer < IndexerCommon
       end
     rescue Timeout::Error
       # Doesn't matter...
-    rescue
+    rescue StandardError
       reset_session
       Log.error("#{$!.inspect}")
       Log.error($@.join("\n"))
@@ -62,10 +57,6 @@ class RealtimeIndexer < IndexerCommon
   def run
     last_sequence = 0
 
-    while @should_continue.call
-     last_sequence = run_index_round(last_sequence) unless paused?   
-    end
-
+    last_sequence = run_index_round(last_sequence) unless paused? while @should_continue.call
   end
-
 end

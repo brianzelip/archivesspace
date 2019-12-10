@@ -48,7 +48,7 @@ module ASModel
     def freeze
       initial_values.freeze
       missing_initial_values.freeze
-      @previous_changes.freeze if @previous_changes
+      @previous_changes&.freeze
       super
     end
 
@@ -58,7 +58,7 @@ module ASModel
     #
     #   initial_value(:name) # => 'Initial'
     def initial_value(column)
-      initial_values.fetch(column){get_column_value(column)}
+      initial_values.fetch(column) { get_column_value(column) }
     end
 
     # A hash with column symbol keys and initial values.
@@ -74,12 +74,8 @@ module ASModel
     #   reset_column(:name)
     #   name # => 'Initial'
     def reset_column(column)
-      if initial_values.has_key?(column)
-        set_column_value(:"#{column}=", initial_values[column])
-      end
-      if missing_initial_values.include?(column)
-        values.delete(column)
-      end
+      set_column_value(:"#{column}=", initial_values[column]) if initial_values.has_key?(column)
+      values.delete(column) if missing_initial_values.include?(column)
     end
 
     # Manually specify that a column will change.  This should only be used
@@ -93,19 +89,19 @@ module ASModel
       check_missing_initial_value(column)
 
       value = if initial_values.has_key?(column)
-        initial_values[column]
-      else
-        get_column_value(column)
+                initial_values[column]
+              else
+                get_column_value(column)
       end
 
       initial_values[column] = if value && value != true && value.respond_to?(:clone)
-        begin
-          value.clone
-        rescue TypeError
-          value
-        end
-      else
-        value
+                                 begin
+                                   value.clone
+                                 rescue TypeError
+                                   value
+                                 end
+                               else
+                                 value
       end
     end
 
@@ -168,9 +164,8 @@ module ASModel
 
     # Clear the data structures that store the initial values.
     def reset_initial_values
-      @initial_values.clear if @initial_values
-      @missing_initial_values.clear if @missing_initial_values
+      @initial_values&.clear
+      @missing_initial_values&.clear
     end
-
   end
 end

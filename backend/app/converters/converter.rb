@@ -6,20 +6,19 @@ require_relative 'lib/parse_queue'
 # the "IMPLEMENT ME" methods marked below.
 #
 class Converter
-
   # Implement this in your Converter class!
   #
   # Returns descriptive metadata for the import type(s) implemented by this
   # Converter.
-  def self.import_types(show_hidden = false)
-    raise NotImplementedError.new
+  def self.import_types(_show_hidden = false)
+    raise NotImplementedError
 
     # Example:
     [
-     {
-       :name => "my_import_type",
-       :description => "Description of new importer"
-     }
+      {
+        name: 'my_import_type',
+        description: 'Description of new importer'
+      }
     ]
   end
 
@@ -27,23 +26,18 @@ class Converter
   #
   # If this Converter will handle `type` and `input_file`, return an instance.
   def self.instance_for(type, input_file)
-    raise NotImplementedError.new
+    raise NotImplementedError
 
     # Example:
-    if type == "my_import_type"
-      self.new(input_file)
-    else
-      nil
-    end
+    new(input_file) if type == 'my_import_type'
   end
 
   # Implement this in your Converter class!
   #
   # Process @input_file and load records into @batch.
   def run
-    raise NotImplementedError.new
+    raise NotImplementedError
   end
-
 
   ##
   ## That's it!  Other implementation bits follow...
@@ -57,28 +51,26 @@ class Converter
     @batch = ASpaceImport::RecordBatch.new
   end
 
-
   def get_output_path
     @batch.get_output_path
   end
 
-
   # forcibly remove files in the event of an interruption
   def remove_files
     @batch.each_open_file_path do |path|
-      3.times do |i| 
-        begin 
+      3.times do |i|
+        begin
           File.unlink(path)
-          break 
+          break
         rescue Errno::EACCES # sometimes windows does not like this. let's wait and retry.
           sleep(1) # just in case it's open by something else..
-          next unless i == 2 
-          $stderr.puts "Cannot remove #{path}...giving up."
-        end 
+          next unless i == 2
+
+          warn "Cannot remove #{path}...giving up."
+        end
       end
     end
   end
-
 
   def self.register_converter(subclass)
     @converters ||= []
@@ -88,13 +80,11 @@ class Converter
     @converters.unshift(subclass)
   end
 
-
   def self.inherited(subclass)
     # We name Converter explicitly so that subclasses of subclasses still get
     # registered at the top-most level.
     Converter.register_converter(subclass)
   end
-
 
   # List all available import types.  Subclasses have the option of hiding
   # certain import types that they actually support (for example, for
@@ -103,8 +93,8 @@ class Converter
   def self.list_import_types(show_hidden = false)
     seen_types = {}
 
-    Array(@converters).map {|converter|
-      converter.import_types(show_hidden).map {|import|
+    Array(@converters).map { |converter|
+      converter.import_types(show_hidden).map { |import|
         # Plugins might define their own converters that replace the standard
         # ones.  Only show one instance of each importer.
         if seen_types[import[:name]]
@@ -117,14 +107,12 @@ class Converter
     }.flatten(1).compact
   end
 
-
   def self.for(type, input_file)
     Array(@converters).each do |converter|
       converter = converter.instance_for(type, input_file)
       return converter if converter
     end
 
-    raise ConverterNotFound.new("No suitable converter found for #{type}")
+    raise ConverterNotFound, "No suitable converter found for #{type}"
   end
-
 end

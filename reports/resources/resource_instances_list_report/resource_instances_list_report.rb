@@ -1,5 +1,4 @@
 class ResourceInstancesListReport < AbstractReport
-
   register_report
 
   def query
@@ -20,7 +19,7 @@ class ResourceInstancesListReport < AbstractReport
       level_id as level,
       date,
       extent_number
-        
+
     from resource
 
       natural left outer join
@@ -30,14 +29,14 @@ class ResourceInstancesListReport < AbstractReport
           concat(begin, ' - ', end))) separator ', ') as date
       from date
       group by resource_id) as record_date
-      
+
       natural left outer join
       (select
         resource_id as id,
         sum(number) as extent_number
       from extent
       group by resource_id) as extent_cnt
-        
+
     where repo_id = #{db.literal(@repo_id)}"
   end
 
@@ -53,5 +52,4 @@ class ResourceInstancesListReport < AbstractReport
   def identifier_field
     :identifier
   end
-
 end

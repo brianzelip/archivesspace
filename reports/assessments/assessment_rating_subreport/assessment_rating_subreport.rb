@@ -1,7 +1,6 @@
 class AssessmentRatingSubreport < AbstractSubreport
-
   register_subreport('ratings', ['assessment'],
-    :translation => 'assessment._frontend.ratings')
+                     translation: 'assessment._frontend.ratings')
 
   def initialize(parent_report, assessment_id)
     super(parent_report)
@@ -17,7 +16,7 @@ class AssessmentRatingSubreport < AbstractSubreport
       join assessment_attribute_definition
         on assessment_attribute_definition.id
         = assessment_attribute.assessment_attribute_definition_id
-      
+
       left outer join assessment_attribute_note
         on assessment_attribute_note.assessment_id
         = assessment_attribute.assessment_id
@@ -31,5 +30,4 @@ class AssessmentRatingSubreport < AbstractSubreport
   def self.field_name
     'ratings'
   end
-
 end

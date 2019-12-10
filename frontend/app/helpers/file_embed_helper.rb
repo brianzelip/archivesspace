@@ -1,6 +1,5 @@
 module FileEmbedHelper
-
-  SUPPORTED_URL_SCHEMES = ['http', 'https']
+  SUPPORTED_URL_SCHEMES = ['http', 'https'].freeze
 
   def self.supported_scheme?(scheme)
     SUPPORTED_URL_SCHEMES.include?(scheme)
@@ -23,18 +22,15 @@ module FileEmbedHelper
   end
 
   def can_embed?(file_version)
-    begin
-      uri = URI(file_version['file_uri'])
-      if %w(jpeg gif).include?(file_version['file_format_name']) &&
-        uri.scheme =~ /http/ &&
-        file_version['file_size_bytes'].to_i < 512001
-        true
-      else
-        false
-      end
-    rescue Exception => ex
+    uri = URI(file_version['file_uri'])
+    if ['jpeg', 'gif'].include?(file_version['file_format_name']) &&
+       uri.scheme =~ /http/ &&
+       file_version['file_size_bytes'].to_i < 512_001
+      true
+    else
       false
     end
+  rescue Exception => e
+    false
   end
-
 end

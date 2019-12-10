@@ -1,5 +1,4 @@
 class AccessionLocationsSubreport < AbstractSubreport
-
   def initialize(parent_report, accession_id)
     super(parent_report)
     @accession_id = accession_id
@@ -8,8 +7,8 @@ class AccessionLocationsSubreport < AbstractSubreport
   def query_string
     "select
       location.title as location,
-        GROUP_CONCAT(distinct 
-        if(not container_type is null, 
+        GROUP_CONCAT(distinct
+        if(not container_type is null,
           CONCAT(container_type, ' ', top_container.indicator),
           top_container.indicator)
       SEPARATOR ', ') as container
@@ -32,5 +31,4 @@ class AccessionLocationsSubreport < AbstractSubreport
     where instance.accession_id = #{db.literal(@accession_id)}
     group by location.id"
   end
-
 end

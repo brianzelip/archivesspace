@@ -52,7 +52,7 @@ Rails.application.configure do
   # config.log_level = :debug
 
   # Prepend all log lines with the following tags.
-  config.log_tags = [ :request_id ]
+  config.log_tags = [:request_id]
 
   # Use a different cache store in production.
   # config.cache_store = :mem_cache_store
@@ -84,12 +84,12 @@ Rails.application.configure do
   # logger           = ActiveSupport::Logger.new(STDOUT)
   #  logger.formatter = config.log_formatter
   #   config.logger = ActiveSupport::TaggedLogging.new(logger)
-  #end
+  # end
 
   # Do not dump schema after migrations.
   # DISABLED BY MST # config.active_record.dump_schema_after_migration = false
 
-  if AppConfig[:public_proxy_prefix] != "/"
+  if AppConfig[:public_proxy_prefix] != '/'
     require 'action_dispatch/middleware/static'
 
     # The default file handler doesn't know about asset prefixes and returns a 404.  Make it strip the prefix before looking for the path on disk.
@@ -98,14 +98,12 @@ Rails.application.configure do
         alias :match_orig :match?
         def match?(path)
           prefix = AppConfig[:public_proxy_prefix]
-          modified_path = path.gsub(/^#{Regexp.quote(prefix)}/, "/")
+          modified_path = path.gsub(/^#{Regexp.quote(prefix)}/, '/')
           match_orig(modified_path)
         end
       end
     end
   end
 
-  if AppConfig[:public_proxy_prefix] && AppConfig[:public_proxy_prefix].length > 1
-    AssetPathRewriter.new.rewrite(AppConfig[:public_proxy_prefix], File.dirname(__FILE__))
-  end
+  AssetPathRewriter.new.rewrite(AppConfig[:public_proxy_prefix], File.dirname(__FILE__)) if AppConfig[:public_proxy_prefix] && AppConfig[:public_proxy_prefix].length > 1
 end

@@ -9,7 +9,7 @@ class IndexerTiming
   end
 
   def to_s
-    subtotal = @metrics.values.inject(0) {|a, b| a + b}
+    subtotal = @metrics.values.inject(0) { |a, b| a + b }
 
     if @total
       # If we have a total, report any difference between the total and the
@@ -20,12 +20,10 @@ class IndexerTiming
       @total = subtotal
     end
 
-    "#{@total.to_i} ms (#{@metrics.map {|k, v| "#{k}: #{v}"}.join('; ')})"
+    "#{@total.to_i} ms (#{@metrics.map { |k, v| "#{k}: #{v}" }.join('; ')})"
   end
 
-  def total=(ms)
-    @total = ms
-  end
+  attr_writer :total
 
   def time_block(metric)
     start_time = Time.now

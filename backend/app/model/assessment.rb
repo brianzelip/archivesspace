@@ -1,11 +1,9 @@
 class Assessment < Sequel::Model(:assessment)
-
   KEY_TO_TYPE = {
     'ratings' => 'rating',
     'formats' => 'format',
-    'conservation_issues' => 'conservation_issue',
-  }
-
+    'conservation_issues' => 'conservation_issue'
+  }.freeze
 
   include ASModel
 
@@ -13,17 +11,17 @@ class Assessment < Sequel::Model(:assessment)
 
   set_model_scope :repository
 
-  define_relationship(:name => :assessment,
-                      :json_property => 'records',
-                      :contains_references_to_types => proc {[Accession, Resource, ArchivalObject, DigitalObject]})
+  define_relationship(name: :assessment,
+                      json_property: 'records',
+                      contains_references_to_types: proc { [Accession, Resource, ArchivalObject, DigitalObject] })
 
-  define_relationship(:name => :surveyed_by,
-                      :json_property => 'surveyed_by',
-                      :contains_references_to_types => proc {[AgentPerson]})
+  define_relationship(name: :surveyed_by,
+                      json_property: 'surveyed_by',
+                      contains_references_to_types: proc { [AgentPerson] })
 
-  define_relationship(:name => :assessment_reviewer,
-                      :json_property => 'reviewer',
-                      :contains_references_to_types => proc {[AgentPerson]})
+  define_relationship(name: :assessment_reviewer,
+                      json_property: 'reviewer',
+                      contains_references_to_types: proc { [AgentPerson] })
 
   def self.create_from_json(json, opts = {})
     prepare_monetary_value_for_save(json, opts)
@@ -31,7 +29,6 @@ class Assessment < Sequel::Model(:assessment)
     apply_attributes(obj, json)
     obj
   end
-
 
   def update_from_json(json, opts = {}, apply_nested_records = true)
     self.class.prepare_monetary_value_for_save(json, opts)
@@ -56,34 +53,34 @@ class Assessment < Sequel::Model(:assessment)
     # are equivalent.
     DB.open do |db|
       repo_attribute_links = db[:assessment_attribute_definition]
-                               .left_join(:assessment_attribute, :assessment_attribute_definition_id => :assessment_attribute_definition__id)
-                               .left_join(:assessment_attribute_note, :assessment_attribute_definition_id => :assessment_attribute_definition__id)
-                               .filter(:assessment_attribute_definition__repo_id => self.class.active_repository)
-                               .where(Sequel.|({:assessment_attribute__assessment_id => self.id},
-                                               {:assessment_attribute_note__assessment_id => self.id}))
-                               .select(:assessment_attribute_definition__id,
-                                       :assessment_attribute_definition__label,
-                                       :assessment_attribute_definition__type,
-                                       :assessment_attribute__value,
-                                       :assessment_attribute_note__note)
-                               .map {|row| TransferRepoAttribute.new(row[:id], row[:label], row[:type], row[:value], row[:note])}
+                             .left_join(:assessment_attribute, assessment_attribute_definition_id: :assessment_attribute_definition__id)
+                             .left_join(:assessment_attribute_note, assessment_attribute_definition_id: :assessment_attribute_definition__id)
+                             .filter(assessment_attribute_definition__repo_id: self.class.active_repository)
+                             .where(Sequel.|({ assessment_attribute__assessment_id: id },
+                                             { assessment_attribute_note__assessment_id: id }))
+                             .select(:assessment_attribute_definition__id,
+                                     :assessment_attribute_definition__label,
+                                     :assessment_attribute_definition__type,
+                                     :assessment_attribute__value,
+                                     :assessment_attribute_note__note)
+                             .map { |row| TransferRepoAttribute.new(row[:id], row[:label], row[:type], row[:value], row[:note]) }
 
       # Do the transfer
       super
 
       # Make sure we observe the updated repo_id
-      self.refresh
+      refresh
 
       unless repo_attribute_links.empty?
         # Unlink the repository-scoped attributes and notes that are no longer valid
         db[:assessment_attribute]
-          .filter(:assessment_id => self.id,
-                  :assessment_attribute_definition_id => repo_attribute_links.map(&:definition_id))
+          .filter(assessment_id: id,
+                  assessment_attribute_definition_id: repo_attribute_links.map(&:definition_id))
           .delete
 
         db[:assessment_attribute_note]
-          .filter(:assessment_id => self.id,
-                  :assessment_attribute_definition_id => repo_attribute_links.map(&:definition_id))
+          .filter(assessment_id: id,
+                  assessment_attribute_definition_id: repo_attribute_links.map(&:definition_id))
           .delete
 
         # Search for replacements based on label and link them up
@@ -122,47 +119,53 @@ class Assessment < Sequel::Model(:assessment)
   def self.apply_attributes(obj, json)
     # Add the appropriate list of attributes
     DB.open do |db|
-      db[:assessment_attribute].filter(:assessment_id => obj.id).delete
-      db[:assessment_attribute_note].filter(:assessment_id => obj.id).delete
+      db[:assessment_attribute].filter(assessment_id: obj.id).delete
+      db[:assessment_attribute_note].filter(assessment_id: obj.id).delete
 
       valid_attribute_ids = db[:assessment_attribute_definition]
-                              .filter(:repo_id => [Repository.global_repo_id, active_repository])
-                              .select(:id)
-                              .map {|row| row[:id]}
+                            .filter(repo_id: [Repository.global_repo_id, active_repository])
+                            .select(:id)
+                            .map { |row| row[:id] }
 
-      KEY_TO_TYPE.each do |key, type|
+      KEY_TO_TYPE.each do |key, _type|
         Array(json[key]).each do |attribute|
           next unless valid_attribute_ids.include?(attribute['definition_id'])
 
           if attribute['value']
-            db[:assessment_attribute].insert(:assessment_id => obj.id,
-                                             :value => attribute['value'],
-                                             :assessment_attribute_definition_id => attribute['definition_id'])
+            db[:assessment_attribute].insert(assessment_id: obj.id,
+                                             value: attribute['value'],
+                                             assessment_attribute_definition_id: attribute['definition_id'])
           end
 
-          if attribute['note']
-            db[:assessment_attribute_note].insert(:assessment_id => obj.id,
-                                                  :note => attribute['note'],
-                                                  :assessment_attribute_definition_id => attribute['definition_id'])
-          end
+          next unless attribute['note']
+
+          db[:assessment_attribute_note].insert(assessment_id: obj.id,
+                                                note: attribute['note'],
+                                                assessment_attribute_definition_id: attribute['definition_id'])
         end
       end
 
       # Calculate the derived "Research Value" rating (the sum of Interest and Documentation Quality)
-      research_value_id = db[:assessment_attribute_definition].filter(:label => 'Research Value').get(:id)
+      research_value_id = db[:assessment_attribute_definition].filter(label: 'Research Value').get(:id)
       values = db[:assessment_attribute]
-        .join(:assessment_attribute_definition, :id => :assessment_attribute__assessment_attribute_definition_id)
-        .filter(:assessment_attribute_definition__label => ['Interest', 'Documentation Quality'],
-                :assessment_attribute__assessment_id => obj.id)
-        .select(:assessment_attribute__value)
-        .map {|row| row[:value] ? (Integer(row[:value]) rescue nil) : nil}
+               .join(:assessment_attribute_definition, id: :assessment_attribute__assessment_attribute_definition_id)
+               .filter(assessment_attribute_definition__label: ['Interest', 'Documentation Quality'],
+                       assessment_attribute__assessment_id: obj.id)
+               .select(:assessment_attribute__value)
+               .map { |row|
+        row[:value] ? (begin
+                            Integer(row[:value])
+                       rescue StandardError
+                         nil
+                          end) : nil
+      }
 
-      research_value = values.compact.reduce {|sum, n| sum + n}
+      research_value = values.compact.reduce { |sum, n| sum + n }
 
       if research_value
-        db[:assessment_attribute].insert(:assessment_id => obj.id,
-                                         :value => research_value.to_s,
-                                         :assessment_attribute_definition_id => research_value_id)
+        db[:assessment_attribute].insert(assessment_id: obj.id,
+                                         value: research_value.to_s,
+                                         assessment_attribute_definition_id: research_value_id)
       end
     end
   end
@@ -174,9 +177,11 @@ class Assessment < Sequel::Model(:assessment)
 
     jsons.zip(objs).each do |json, obj|
       json['display_string'] = obj.id.to_s
-      json['collections'] = obj.linked_collection_uris.map{|uri| {
-        'ref' => uri
-      }}
+      json['collections'] = obj.linked_collection_uris.map { |uri|
+        {
+          'ref' => uri
+        }
+      }
     end
 
     definitions_by_obj = {}
@@ -184,10 +189,10 @@ class Assessment < Sequel::Model(:assessment)
     # each assessment has some attributes that link to a definition
     DB.open do |db|
       db[:assessment_attribute_definition]
-        .filter(:repo_id => [Repository.global_repo_id, active_repository])
+        .filter(repo_id: [Repository.global_repo_id, active_repository])
         .each do |definition|
         jsons.zip(objs).each do |json, obj|
-          KEY_TO_TYPE.each do |key, type|
+          KEY_TO_TYPE.each do |key, _type|
             json[key] ||= []
           end
 
@@ -198,7 +203,7 @@ class Assessment < Sequel::Model(:assessment)
             'value' => nil,
             'note' => nil,
             'readonly' => (definition[:readonly] == 1),
-            'definition_id' => definition[:id],
+            'definition_id' => definition[:id]
           }
 
           definitions_by_obj[obj.id] ||= {}
@@ -210,9 +215,8 @@ class Assessment < Sequel::Model(:assessment)
 
       # Load our attribute values
       db[:assessment_attribute]
-        .filter(:assessment_id => objs.map(&:id))
+        .filter(assessment_id: objs.map(&:id))
         .each do |attribute|
-
         assessment_id = attribute[:assessment_id]
         definition_id = attribute[:assessment_attribute_definition_id]
 
@@ -223,9 +227,8 @@ class Assessment < Sequel::Model(:assessment)
 
       # Load our attribute notes
       db[:assessment_attribute_note]
-        .filter(:assessment_id => objs.map(&:id))
+        .filter(assessment_id: objs.map(&:id))
         .each do |attribute|
-
         assessment_id = attribute[:assessment_id]
         definition_id = attribute[:assessment_attribute_definition_id]
 
@@ -238,19 +241,17 @@ class Assessment < Sequel::Model(:assessment)
     end
   end
 
-
   def linked_collection_uris
     uris = self.class.find_relationship(:assessment).who_participates_with(self).map do |record|
       if record.is_a? Resource
-        JSONModel(:resource).uri_for(record.id, :repo_id => record.repo_id)
+        JSONModel(:resource).uri_for(record.id, repo_id: record.repo_id)
       elsif record.is_a? ArchivalObject
-        JSONModel(:resource).uri_for(record.root_record_id, :repo_id => record.repo_id)
+        JSONModel(:resource).uri_for(record.root_record_id, repo_id: record.repo_id)
       end
     end
 
     uris.compact.uniq
   end
-
 
   private
 
@@ -258,64 +259,59 @@ class Assessment < Sequel::Model(:assessment)
     DB.open do |db|
       repo_attribute_links.each do |link|
         replacement = db[:assessment_attribute_definition]
-                        .filter(:repo_id => cloned_assessment.repo_id,
-                                :label => link.label,
-                                :type => link.type)
-                        .first
+                      .filter(repo_id: cloned_assessment.repo_id,
+                              label: link.label,
+                              type: link.type)
+                      .first
 
-        if replacement
-          if link.value
-            db[:assessment_attribute].insert(:assessment_id => cloned_assessment.id,
-                                             :assessment_attribute_definition_id => replacement[:id],
-                                             :value => link.value)
-          end
+        next unless replacement
 
-          if link.note
-            db[:assessment_attribute_note].insert(:assessment_id => cloned_assessment.id,
-                                                  :assessment_attribute_definition_id => replacement[:id],
-                                                  :note => link.note)
-          end
+        if link.value
+          db[:assessment_attribute].insert(assessment_id: cloned_assessment.id,
+                                           assessment_attribute_definition_id: replacement[:id],
+                                           value: link.value)
         end
+
+        next unless link.note
+
+        db[:assessment_attribute_note].insert(assessment_id: cloned_assessment.id,
+                                              assessment_attribute_definition_id: replacement[:id],
+                                              note: link.note)
       end
     end
   end
 
-
   def self.extract_transfer_repo_attributes(attribute_list, attribute_type)
-    attribute_list.map {|attribute|
-      unless attribute['global']
-        TransferRepoAttribute.new(attribute['definition_id'],
-                                  attribute['label'],
-                                  attribute_type,
-                                  attribute['value'],
-                                  attribute['note'])
-      end
+    attribute_list.map { |attribute|
+      next if attribute['global']
+
+      TransferRepoAttribute.new(attribute['definition_id'],
+                                attribute['label'],
+                                attribute_type,
+                                attribute['value'],
+                                attribute['note'])
     }.compact
   end
 
   def self.prepare_monetary_value_for_save(json, opts)
-    if json['monetary_value']
-      opts['monetary_value'] = BigDecimal.new(json['monetary_value'])
-    end
+    opts['monetary_value'] = BigDecimal(json['monetary_value']) if json['monetary_value']
   end
 
   def self.prepare_monetary_value_for_jsonmodel(objs, jsons)
     jsons.zip(objs).each do |json, obj|
       # These columns come out of the DB as BigDecimal objects.  Format them as
       # NNN.DD.
-      if obj[:monetary_value]
-        value = obj[:monetary_value].to_s('F')
+      next unless obj[:monetary_value]
 
-        # If the value is 500.0, just render as 500
-        value = value.gsub(/\.0$/, '')
+      value = obj[:monetary_value].to_s('F')
 
-        # If the value is 500.4, show 500.40
-        if value =~ /\.[0-9]$/
-          value += '0'
-        end
+      # If the value is 500.0, just render as 500
+      value = value.gsub(/\.0$/, '')
 
-        json[:monetary_value] = value
-      end
+      # If the value is 500.4, show 500.40
+      value += '0' if value =~ /\.[0-9]$/
+
+      json[:monetary_value] = value
     end
 
     jsons
@@ -323,19 +319,16 @@ class Assessment < Sequel::Model(:assessment)
 
   def self.json_key_for_type(target_type)
     KEY_TO_TYPE.each do |key, type|
-      if type == target_type
-        return key
-      end
+      return key if type == target_type
     end
 
     raise "Unrecognized type: #{target_type}"
   end
 
-
   def self.handle_delete(ids_to_delete)
     DB.open do |db|
-      db[:assessment_attribute_note].filter(:assessment_id => ids_to_delete).delete
-      db[:assessment_attribute].filter(:assessment_id => ids_to_delete).delete
+      db[:assessment_attribute_note].filter(assessment_id: ids_to_delete).delete
+      db[:assessment_attribute].filter(assessment_id: ids_to_delete).delete
     end
 
     super

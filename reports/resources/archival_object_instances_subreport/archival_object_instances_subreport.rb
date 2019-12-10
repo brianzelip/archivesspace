@@ -1,5 +1,4 @@
 class ArchivalObjectInstancesSubreport < AbstractSubreport
-
   register_subreport('instance', ['archival_object'])
 
   def initialize(parent_report, archival_object_id)
@@ -55,10 +54,10 @@ class ArchivalObjectInstancesSubreport < AbstractSubreport
       where archival_object_id = #{db.literal(@archival_object_id)}) as instances
 
       left outer join sub_container on instances.id = sub_container.instance_id
-      
+
       left outer join top_container_link_rlshp
         on sub_container.id = top_container_link_rlshp.sub_container_id
-      
+
       left outer join top_container
         on top_container.id = top_container_link_rlshp.top_container_id
 
@@ -93,6 +92,7 @@ class ArchivalObjectInstancesSubreport < AbstractSubreport
     profiles.each do |profile_row|
       profile = profile_row.to_hash
       next unless profile[:name]
+
       profile_string += ', ' if profile_string != ''
       profile_string += profile[:name]
     end

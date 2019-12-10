@@ -1,5 +1,4 @@
 class OAI::Provider::Response::Base
-
   def parse_date(value)
     return value if value.respond_to?(:strftime)
 
@@ -21,7 +20,7 @@ class OAI::Provider::Response::Base
     else
       parsed
     end
-  rescue
+  rescue StandardError
     raise OAI::ArgumentException.new, "unparsable date: '#{value}'"
   end
 end

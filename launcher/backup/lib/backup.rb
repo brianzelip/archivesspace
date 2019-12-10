@@ -12,26 +12,23 @@ require 'ashttp'
 require 'asutils'
 
 class ArchivesSpaceBackup
-
   def to_archive_path(path, basedir)
     base_path = Pathname.new(basedir)
     File.join(File.basename(basedir),
               Pathname.new(path).relative_path_from(base_path).to_path)
   end
 
-
   def add_whole_directory(dir, zipfile)
-    Dir.glob(File.join(dir, "**", "*")).each do |path|
+    Dir.glob(File.join(dir, '**', '*')).each do |path|
       zipfile.add(to_archive_path(path, dir), path)
     end
   end
-
 
   def create_mysql_dump(outfile)
     if AppConfig[:db_url] =~ /jdbc:mysql/
       db_uri = URI.parse(AppConfig[:db_url][5..-1])
 
-      params = CGI::parse(db_uri.query)
+      params = CGI.parse(db_uri.query)
 
       host     = db_uri.host
       port     = db_uri.port
@@ -40,47 +37,44 @@ class ArchivesSpaceBackup
       database = db_uri.path.gsub('/', '')
 
       mysqldump_cmd = [
-        "mysqldump",
+        'mysqldump',
         "--host=#{host}",
         "--port=#{port}",
         "--user=#{username}",
         "--password=#{password}",
-        "--routines",
-        "--single-transaction",
-        "--quick",
+        '--routines',
+        '--single-transaction',
+        '--quick'
       ]
-      mysqldump_cmd << "--master-data=2" if AppConfig[:mysql_binlog]
+      mysqldump_cmd << '--master-data=2' if AppConfig[:mysql_binlog]
       mysqldump_cmd << database
       begin
         IO.popen(mysqldump_cmd) do |io|
-          while true
+          loop do
             chunk = io.read(4096)
             break if chunk.nil?
+
             outfile.write(chunk)
           end
         end
 
         outfile.close
 
-        if $? == 0
-          return outfile
-        end
-      rescue
-        $stderr.puts "mysqldump not run: #{$!}"
+        return outfile if $? == 0
+      rescue StandardError
+        warn "mysqldump not run: #{$!}"
       end
     end
 
     nil
   end
 
-
   def create_demodb_snapshot
     if AppConfig[:db_url] == AppConfig.demo_db_url
-      File.write(AppConfig[:demodb_snapshot_flag], "")
-      ASHTTP.post_form(URI(URI.join(AppConfig[:backend_url], "/system/demo_db_snapshot")), {})
+      File.write(AppConfig[:demodb_snapshot_flag], '')
+      ASHTTP.post_form(URI(URI.join(AppConfig[:backend_url], '/system/demo_db_snapshot')), {})
     end
   end
-
 
   def backup(output_file, do_mysqldump = false)
     output_file = File.absolute_path(output_file, ENV['ORIG_PWD'])
@@ -99,7 +93,7 @@ class ArchivesSpaceBackup
     solr_snapshot_id = "backup-#{$$}-#{Time.now.to_i}"
     begin
       SolrSnapshotter.snapshot(solr_snapshot_id) if AppConfig[:enable_solr]
-    rescue
+    rescue StandardError
       puts "Solr snapshot failed (#{$!}).  Aborting!"
       return 1
     end
@@ -116,39 +110,39 @@ class ArchivesSpaceBackup
         add_whole_directory(solr_snapshot, zipfile) if AppConfig[:enable_solr]
         add_whole_directory(demo_db_backups, zipfile) if Dir.exist?(demo_db_backups)
         add_whole_directory(config_dir, zipfile) if config_dir
-        zipfile.add("mysqldump.sql", mysql_dump) if mysql_dump
+        zipfile.add('mysqldump.sql', mysql_dump) if mysql_dump
       end
     ensure
       mysql_tempfile.close
       mysql_tempfile.delete
-      FileUtils.rm_rf(File.join(AppConfig[:solr_backup_directory],
-                                "solr.#{solr_snapshot_id}")) if AppConfig[:enable_solr]
+      if AppConfig[:enable_solr]
+        FileUtils.rm_rf(File.join(AppConfig[:solr_backup_directory],
+                                  "solr.#{solr_snapshot_id}"))
+      end
     end
 
     0
   end
-
 end
-
 
 def main
   p = Trollop::Parser.new do
-    opt :output, "Output filename (/path/to/somename.zip)", :type => :string
-    opt :mysqldump, "If specified, run mysqldump and include its output in the backup .zip file"
+    opt :output, 'Output filename (/path/to/somename.zip)', type: :string
+    opt :mysqldump, 'If specified, run mysqldump and include its output in the backup .zip file'
   end
 
-  opts = Trollop::with_standard_exception_handling p do
+  opts = Trollop.with_standard_exception_handling p do
     raise Trollop::HelpNeeded if ARGV.empty?
+
     p.parse(ARGV)
   end
 
   if opts[:output].nil?
-    puts "You must specify an output file with the --output option"
+    puts 'You must specify an output file with the --output option'
     return 0
   end
 
   ArchivesSpaceBackup.new.backup(opts[:output], opts[:mysqldump])
 end
-
 
 exit(main || 0)

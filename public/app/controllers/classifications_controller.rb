@@ -1,138 +1,136 @@
-class ClassificationsController <  ApplicationController
-
+class ClassificationsController < ApplicationController
   include ResultInfo
 
   skip_before_action  :verify_authenticity_token
 
-  before_action(:only => [:show, :term]) {
+  before_action(only: [:show, :term]) {
     process_slug_or_id(params)
   }
 
-  IDENTIFIER_SORT_ASC = 'identifier_sort asc, repo_sort asc, title_sort asc'
-  IDENTIFIER_SORT_DESC = 'identifier_sort desc, repo_sort desc, title_sort desc'
+  IDENTIFIER_SORT_ASC = 'identifier_sort asc, repo_sort asc, title_sort asc'.freeze
+  IDENTIFIER_SORT_DESC = 'identifier_sort desc, repo_sort desc, title_sort desc'.freeze
 
-  DEFAULT_CL_TYPES = %w{pui_record_group}
-  DEFAULT_CL_FACET_TYPES = %w{primary_type subjects published_agents repository resource}
+  DEFAULT_CL_TYPES = ['pui_record_group'].freeze
+  DEFAULT_CL_FACET_TYPES = ['primary_type', 'subjects', 'published_agents', 'repository', 'resource'].freeze
   DEFAULT_CL_SEARCH_OPTS = {
     'sort' => IDENTIFIER_SORT_ASC,
     'resolve[]' => ['repository:id', 'resource:id@compact_resource', 'ancestors:id@compact_resource'],
     'facet.mincount' => 1
-  }
+  }.freeze
   DEFAULT_CL_SEARCH_PARAMS = {
-    :q => ['*'],
-    :limit => 'pui_record_group',
-    :op => ['OR'],
-    :field => ['title']
-  }
+    q: ['*'],
+    limit: 'pui_record_group',
+    op: ['OR'],
+    field: ['title']
+  }.freeze
   def index
-     repo_id = params.fetch(:rid, nil)
-    if !params.fetch(:q, nil)
-      DEFAULT_CL_SEARCH_PARAMS.each do |k,v|
+    repo_id = params.fetch(:rid, nil)
+    unless params.fetch(:q, nil)
+      DEFAULT_CL_SEARCH_PARAMS.each do |k, v|
         params[k] = v
       end
     end
-    search_opts = default_search_opts( DEFAULT_CL_SEARCH_OPTS)
+    search_opts = default_search_opts(DEFAULT_CL_SEARCH_OPTS)
     search_opts['fq'] = ["repository:\"/repositories/#{repo_id}\""] if repo_id
 
     @base_search = repo_id ? "repositories/#{repo_id}/classifications?" : '/classifications?'
-    page = Integer(params.fetch(:page, "1"))
+    page = Integer(params.fetch(:page, '1'))
 
     begin
-      set_up_and_run_search( DEFAULT_CL_TYPES, DEFAULT_CL_FACET_TYPES, search_opts, params)
+      set_up_and_run_search(DEFAULT_CL_TYPES, DEFAULT_CL_FACET_TYPES, search_opts, params)
     rescue NoResultsError
       flash[:error] = I18n.t('search_results.no_results')
-      redirect_back(fallback_location: '/') and return
-    rescue Exception => error
+      redirect_back(fallback_location: '/') && return
+    rescue Exception => e
       flash[:error] = I18n.t('errors.unexpected_error')
-      redirect_back(fallback_location: '/') and return
+      redirect_back(fallback_location: '/') && return
     end
 
     if @results['total_hits'] > 1
-      @search[:dates_within] = true if params.fetch(:filter_from_year,'').blank? && params.fetch(:filter_to_year,'').blank?
+      @search[:dates_within] = true if params.fetch(:filter_from_year, '').blank? && params.fetch(:filter_to_year, '').blank?
       @search[:text_within] = true
     end
     @sort_opts = []
     @sort_opts << [
-      I18n.t('search_sorting.sorting', :type => I18n.t("search_sorting.classification_identifier"), :direction => I18n.t("search_sorting.asc")),
+      I18n.t('search_sorting.sorting', type: I18n.t('search_sorting.classification_identifier'), direction: I18n.t('search_sorting.asc')),
       IDENTIFIER_SORT_ASC
     ]
-     @sort_opts << [
-       I18n.t('search_sorting.sorting', :type => I18n.t("search_sorting.classification_identifier"), :direction => I18n.t("search_sorting.desc")),
-       IDENTIFIER_SORT_DESC
-     ]
+    @sort_opts << [
+      I18n.t('search_sorting.sorting', type: I18n.t('search_sorting.classification_identifier'), direction: I18n.t('search_sorting.desc')),
+      IDENTIFIER_SORT_DESC
+    ]
     all_sorts = Search.get_sort_opts
     all_sorts.delete('relevance') unless params[:q].size > 1 || params[:q] != '*'
     all_sorts.keys.each do |type|
-       next if type == 'year_sort'
-       @sort_opts.push(all_sorts[type])
+      next if type == 'year_sort'
+
+      @sort_opts.push(all_sorts[type])
     end
     @page_title = I18n.t('classification._plural')
     @results_type = @page_title
     @no_statement = true
     render 'search/search_results'
-
   end
 
   def search
-      # need at least q[]=WHATEVER&op[]=OR&field[]=title&from_year[]=&to_year[]=&limit=classification
+    # need at least q[]=WHATEVER&op[]=OR&field[]=title&from_year[]=&to_year[]=&limit=classification
     @base_search = '/classifications/search?'
-    page = Integer(params.fetch(:page, "1"))
+    page = Integer(params.fetch(:page, '1'))
     begin
-      set_up_and_run_search( DEFAULT_CL_TYPES, DEFAULT_CL_FACET_TYPES,  DEFAULT_CL_SEARCH_OPTS, params)
+      set_up_and_run_search(DEFAULT_CL_TYPES, DEFAULT_CL_FACET_TYPES, DEFAULT_CL_SEARCH_OPTS, params)
     rescue NoResultsError
       flash[:error] = I18n.t('search_results.no_results')
-      redirect_back(fallback_location: '/') and return
-    rescue Exception => error
+      redirect_back(fallback_location: '/') && return
+    rescue Exception => e
       flash[:error] = I18n.t('errors.unexpected_error')
-      redirect_back(fallback_location: '/') and return
+      redirect_back(fallback_location: '/') && return
     end
     @page_title = I18n.t('classification._plural')
     @results_type = @page_title
-    @search_title = I18n.t('search_results.search_for', {:type => I18n.t('classification._plural'), :term => params.fetch(:q)[0]})
-     render 'search/search_results'
+    @search_title = I18n.t('search_results.search_for', type: I18n.t('classification._plural'), term: params.fetch(:q)[0])
+    render 'search/search_results'
   end
 
-
   def show
-    begin
-      uri = "/repositories/#{params[:rid]}/classifications/#{params[:id]}"
-      tree_root = archivesspace.get_raw_record(uri + '/tree/root') rescue nil
-      @has_children = tree_root && tree_root['child_count'] > 0
+    uri = "/repositories/#{params[:rid]}/classifications/#{params[:id]}"
+    tree_root = begin
+                  archivesspace.get_raw_record(uri + '/tree/root')
+                rescue StandardError
+                  nil
+                end
+    @has_children = tree_root && tree_root['child_count'] > 0
 
-      fetch_and_process(uri)
-      fetch_linked_records(uri)
-    rescue RecordNotFound
-      @type =  I18n.t('classification._singular')
-      @page_title = I18n.t('errors.error_404', :type => @type)
-      @uri = uri
-      @back_url = request.referer || ''
-      render  'shared/not_found', :status => 404
-    end
+    fetch_and_process(uri)
+    fetch_linked_records(uri)
+  rescue RecordNotFound
+    @type = I18n.t('classification._singular')
+    @page_title = I18n.t('errors.error_404', type: @type)
+    @uri = uri
+    @back_url = request.referer || ''
+    render 'shared/not_found', status: 404
   end
 
   def term
-    begin
-      uri = "/repositories/#{params[:rid]}/classification_terms/#{params[:id]}"
-      fetch_and_process(uri)
-      fetch_linked_records(uri)
+    uri = "/repositories/#{params[:rid]}/classification_terms/#{params[:id]}"
+    fetch_and_process(uri)
+    fetch_linked_records(uri)
 
-      # Always show the sidebar for these
-      @has_children = true
+    # Always show the sidebar for these
+    @has_children = true
 
-      render 'classifications/show'
-    rescue RecordNotFound
-      @type =  I18n.t('classification_term._singular')
-      @page_title = I18n.t('errors.error_404', :type => @type)
-     @uri = uri
-      @back_url = request.referer || ''
-      render  'shared/not_found', :status => 404
-    end
+    render 'classifications/show'
+  rescue RecordNotFound
+    @type = I18n.t('classification_term._singular')
+    @page_title = I18n.t('errors.error_404', type: @type)
+    @uri = uri
+    @back_url = request.referer || ''
+    render 'shared/not_found', status: 404
   end
 
   # we use this to get and process both classifications and classification terms
   def fetch_and_process(uri)
     @criteria = {}
-    @criteria['resolve[]']  = ['repository:id', 'resource:id@compact_resource', 'agent_uris:id']
+    @criteria['resolve[]'] = ['repository:id', 'resource:id@compact_resource', 'agent_uris:id']
     @result = archivesspace.get_record(uri, @criteria)
     @context = @result.breadcrumb
   end
@@ -141,14 +139,14 @@ class ClassificationsController <  ApplicationController
     qry = "classification_uris:\"#{uri}\""
     @base_search = "#{uri}?"
     search_opts = default_search_opts(DEFAULT_CL_SEARCH_OPTS)
-    search_opts['fq']=[qry]
+    search_opts['fq'] = [qry]
 
     set_up_search(['pui'], DEFAULT_CL_FACET_TYPES, search_opts, params, qry)
 
-    @base_search= @base_search.sub("q=#{qry}", '')
-    page = Integer(params.fetch(:page, "1"))
+    @base_search = @base_search.sub("q=#{qry}", '')
+    page = Integer(params.fetch(:page, '1'))
 
-    @results =  archivesspace.search(@query, page, @criteria)
+    @results = archivesspace.search(@query, page, @criteria)
 
     if @results['total_hits'] > 0
       process_search_results(@base_search)

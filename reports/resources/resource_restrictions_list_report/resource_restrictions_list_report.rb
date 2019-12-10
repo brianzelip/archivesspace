@@ -17,7 +17,7 @@ class ResourceRestrictionsListReport < AbstractReport
         level_id as level,
         dates,
         extent_number
-        
+
     from resource
 
       natural left outer join
@@ -27,14 +27,14 @@ class ResourceRestrictionsListReport < AbstractReport
           concat(begin, ' - ', end))) separator ', ') as dates
         from date
         group by resource_id) as record_date
-        
+
         natural left outer join
         (select
         resource_id as id,
             sum(number) as extent_number
         from extent
         group by resource_id) as extent_cnt
-        
+
     where resource.restrictions
       and repo_id = #{db.literal(@repo_id)}"
   end

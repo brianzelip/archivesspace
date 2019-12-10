@@ -2,33 +2,31 @@ require 'factory_bot'
 require 'spec/lib/factory_bot_helpers'
 
 FactoryBot.define do
-
   def JSONModel(key)
     JSONModel::JSONModel(key)
   end
 
-  to_create{|instance| instance.save}
+  to_create { |instance| instance.save }
 
-  sequence(:repo_code) {|n| "ASPACE REPO #{n} -- #{rand(1000000)}"}
-  sequence(:username) {|n| "username_#{n}"}
+  sequence(:repo_code) { |n| "ASPACE REPO #{n} -- #{rand(1_000_000)}" }
+  sequence(:username) { |n| "username_#{n}" }
 
-  sequence(:good_markup) { "<p>I'm</p><p>GOOD</p><p>#{ FactoryBot.generate(:alphanumstr)}</p>" }
+  sequence(:good_markup) { "<p>I'm</p><p>GOOD</p><p>#{FactoryBot.generate(:alphanumstr)}</p>" }
   sequence(:whack_markup) { "I'm <p><br/>WACK " + FactoryBot.generate(:alphanumstr) }
-  sequence(:wild_markup) { "<p> I AM \n WILD \n ! \n ! " + FactoryBot.generate(:alphanumstr) + "</p>" }
+  sequence(:wild_markup) { "<p> I AM \n WILD \n ! \n ! " + FactoryBot.generate(:alphanumstr) + '</p>' }
   sequence(:string) { FactoryBot.generate(:alphanumstr) }
-  sequence(:generic_title) { |n| "Title: #{n}"}
-  sequence(:html_title) { |n| "Title: <emph render='italic'>#{n}</emph>"}
-  sequence(:generic_description) {|n| "Description: #{n}"}
-  sequence(:container_type) {|n| 'box'}
+  sequence(:generic_title) { |n| "Title: #{n}" }
+  sequence(:html_title) { |n| "Title: <emph render='italic'>#{n}</emph>" }
+  sequence(:generic_description) { |n| "Description: #{n}" }
+  sequence(:container_type) { |_n| 'box' }
 
   sequence(:phone_number) { (3..5).to_a[rand(3)].times.map { (3..5).to_a[rand(3)].times.map { rand(9) }.join }.join(' ') }
   sequence(:yyyy_mm_dd) { Time.at(rand * Time.now.to_i).to_s.sub(/\s.*/, '') }
   sequence(:hh_mm) { t = Time.now; "#{t.hour}:#{t.min}" }
-  sequence(:barcode) { 20.times.map { rand(2)}.join }
-  sequence(:indicator) { (2+rand(3)).times.map { (2+rand(3)).times.map {rand(9)}.join }.join('-') }
+  sequence(:barcode) { 20.times.map { rand(2) }.join }
+  sequence(:indicator) { rand(2..4).times.map { rand(2..4).times.map { rand(9) }.join }.join('-') }
 
-  sequence(:level) { %w(series subseries item)[rand(3)] }
-
+  sequence(:level) { ['series', 'subseries', 'item'][rand(3)] }
 
   # AS Models
   if defined? ASModel
@@ -59,26 +57,26 @@ FactoryBot.define do
     factory :agent_corporate_entity, class: AgentCorporateEntity do
       json_schema_version { 1 }
       after(:create) do |a|
-        a.add_name_corporate_entity(:rules => generate(:name_rule),
-                                    :primary_name => generate(:generic_name),
-                                    :sort_name => generate(:sort_name),
-                                    :sort_name_auto_generate => 1,
-                                    :is_display_name => 1,
-                                    :authorized => 1,
-                                    :json_schema_version => 1)
-        a.add_agent_contact(:name => generate(:generic_name),
-                            :address_1 => [nil, generate(:alphanumstr)].sample,
-                            :address_2 => [nil, generate(:alphanumstr)].sample,
-                            :address_3 => [nil, generate(:alphanumstr)].sample,
-                            :city => [nil, generate(:alphanumstr)].sample,
-                            :region => [nil, generate(:alphanumstr)].sample,
-                            :country => [nil, generate(:alphanumstr)].sample,
-                            :post_code => [nil, generate(:alphanumstr)].sample,
+        a.add_name_corporate_entity(rules: generate(:name_rule),
+                                    primary_name: generate(:generic_name),
+                                    sort_name: generate(:sort_name),
+                                    sort_name_auto_generate: 1,
+                                    is_display_name: 1,
+                                    authorized: 1,
+                                    json_schema_version: 1)
+        a.add_agent_contact(name: generate(:generic_name),
+                            address_1: [nil, generate(:alphanumstr)].sample,
+                            address_2: [nil, generate(:alphanumstr)].sample,
+                            address_3: [nil, generate(:alphanumstr)].sample,
+                            city: [nil, generate(:alphanumstr)].sample,
+                            region: [nil, generate(:alphanumstr)].sample,
+                            country: [nil, generate(:alphanumstr)].sample,
+                            post_code: [nil, generate(:alphanumstr)].sample,
                             #:telephones => [nil, build(:json_telephone)].sample,
-                            :email => [nil, generate(:alphanumstr)].sample,
-                            :email_signature => [nil, generate(:alphanumstr)].sample,
-                            :note => [nil, generate(:alphanumstr)].sample,
-                            :json_schema_version => 1)
+                            email: [nil, generate(:alphanumstr)].sample,
+                            email_signature: [nil, generate(:alphanumstr)].sample,
+                            note: [nil, generate(:alphanumstr)].sample,
+                            json_schema_version: 1)
       end
     end
 
@@ -89,7 +87,7 @@ FactoryBot.define do
       username { generate(:username) }
       name { generate(:generic_name) }
       agent_record_type { :agent_person }
-      agent_record_id {JSONModel(:agent_person).id_for(create(:json_agent_person).uri)}
+      agent_record_id { JSONModel(:agent_person).id_for(create(:json_agent_person).uri) }
       source { 'local' }
     end
 
@@ -99,7 +97,7 @@ FactoryBot.define do
       id_1 { generate(:alphanumstr) }
       id_2 { generate(:alphanumstr) }
       id_3 { generate(:alphanumstr) }
-      title { "Accession " + generate(:generic_title) }
+      title { 'Accession ' + generate(:generic_title) }
       content_description { generate(:generic_description) }
       condition_description { generate(:generic_description) }
       accession_date { generate(:yyyy_mm_dd) }
@@ -141,7 +139,7 @@ FactoryBot.define do
     id_1 { generate(:alphanumstr) }
     id_2 { generate(:alphanumstr) }
     id_3 { generate(:alphanumstr) }
-    title { "Accession " + generate(:generic_title) }
+    title { 'Accession ' + generate(:generic_title) }
     content_description { generate(:generic_description) }
     condition_description { generate(:generic_description) }
     accession_date { generate(:yyyy_mm_dd) }
@@ -149,9 +147,8 @@ FactoryBot.define do
 
   factory :json_telephone, class: JSONModel(:telephone) do
     number_type { [nil, 'business', 'home', 'cell', 'fax'].sample }
-    number {  generate(:phone_number) }
+    number { generate(:phone_number) }
     ext { [nil, generate(:alphanumstr)].sample }
-
   end
 
   factory :json_agent_contact, class: JSONModel(:agent_contact) do
@@ -174,39 +171,39 @@ FactoryBot.define do
     agent_type { 'agent_corporate_entity' }
     names { [build(:json_name_corporate_entity)] }
     agent_contacts { [build(:json_agent_contact)] }
-    dates_of_existence { [build(:json_date, :label => 'existence')] }
+    dates_of_existence { [build(:json_date, label: 'existence')] }
   end
 
   factory :json_agent_family, class: JSONModel(:agent_family) do
     agent_type { 'agent_family' }
     names { [build(:json_name_family)] }
-    dates_of_existence { [build(:json_date, :label => 'existence')] }
+    dates_of_existence { [build(:json_date, label: 'existence')] }
   end
 
   factory :json_agent_person, class: JSONModel(:agent_person) do
     agent_type { 'agent_person' }
     names { [build(:json_name_person)] }
-    dates_of_existence { [build(:json_date, :label => 'existence')] }
+    dates_of_existence { [build(:json_date, label: 'existence')] }
   end
 
   factory :json_agent_software, class: JSONModel(:agent_software) do
     agent_type { 'agent_software' }
     names { [build(:json_name_software)] }
-    dates_of_existence { [build(:json_date, :label => 'existence')] }
+    dates_of_existence { [build(:json_date, label: 'existence')] }
   end
 
   factory :json_archival_object, class: JSONModel(:archival_object) do
     ref_id { generate(:alphanumstr) }
     level { generate(:level) }
     title { "Archival Object #{generate(:generic_title)}" }
-    resource { {'ref' => create(:json_resource).uri} }
+    resource { { 'ref' => create(:json_resource).uri } }
   end
 
   factory :json_archival_object_nohtml, class: JSONModel(:archival_object) do
     ref_id { generate(:alphanumstr) }
     level { generate(:level) }
     title { "Archival Object #{generate(:generic_title)}" }
-    resource { {'ref' => create(:json_resource_nohtml).uri} }
+    resource { { 'ref' => create(:json_resource_nohtml).uri } }
   end
 
   factory :json_archival_object_normal, class: JSONModel(:archival_object) do
@@ -215,7 +212,7 @@ FactoryBot.define do
     title { "Archival Object #{generate(:generic_title)}" }
     extents { few_or_none(:json_extent) }
     dates { few_or_none(:json_date) }
-    resource { {'ref' => create(:json_resource).uri} }
+    resource { { 'ref' => create(:json_resource).uri } }
   end
 
   factory :json_classification, class: JSONModel(:classification) do
@@ -228,36 +225,36 @@ FactoryBot.define do
     identifier { generate(:alphanumstr) }
     title { "Classification #{generate(:generic_title)}" }
     description { generate(:generic_description) }
-    classification { {'ref' => create(:json_classification).uri} }
+    classification { { 'ref' => create(:json_classification).uri } }
   end
 
   factory :json_note_index, class: JSONModel(:note_index) do
-    type { generate(:note_index_type)}
-    content { [ generate(:alphanumstr), generate(:alphanumstr) ] }
-    items { [ build(:json_note_index_item), build(:json_note_index_item) ] }
+    type { generate(:note_index_type) }
+    content { [generate(:alphanumstr), generate(:alphanumstr)] }
+    items { [build(:json_note_index_item), build(:json_note_index_item)] }
   end
 
   factory :json_note_index_item, class: JSONModel(:note_index_item) do
     value { generate(:alphanumstr) }
-    #reference { generate(:alphanumstr) }
-    #reference_text { generate(:alphanumstr) }
+    # reference { generate(:alphanumstr) }
+    # reference_text { generate(:alphanumstr) }
     type { generate(:note_index_item_type) }
   end
 
   factory :json_note_bibliography, class: JSONModel(:note_bibliography) do
-    label { [ generate(:alphanumstr), nil].sample }
+    label { [generate(:alphanumstr), nil].sample }
     content { [generate(:wild_markup)] }
     items { [generate(:alphanumstr)] }
-    type { [ generate(:note_bibliography_type), nil].sample }
+    type { [generate(:note_bibliography_type), nil].sample }
   end
 
   factory :json_note_bioghist, class: JSONModel(:note_bioghist) do
     label { generate(:alphanumstr) }
-    subnotes { [ build(:json_note_outline), build(:json_note_text) ] }
+    subnotes { [build(:json_note_outline), build(:json_note_text)] }
   end
 
   factory :json_note_outline, class: JSONModel(:note_outline) do
-    levels { [ build(:json_note_outline_level) ] }
+    levels { [build(:json_note_outline_level)] }
   end
 
   factory :json_note_text, class: JSONModel(:note_text) do
@@ -276,7 +273,7 @@ FactoryBot.define do
 
   factory :json_note_definedlist, class: JSONModel(:note_definedlist) do
     title { nil_or_whatever }
-    items { (0..rand(3)).map { {:label => generate(:alphanumstr), :value => generate(:alphanumstr) } } }
+    items { (0..rand(3)).map { { label: generate(:alphanumstr), value: generate(:alphanumstr) } } }
   end
 
   factory :json_note_abstract, class: JSONModel(:note_abstract) do
@@ -285,7 +282,7 @@ FactoryBot.define do
 
   factory :json_note_citation, class: JSONModel(:note_citation) do
     content { (0..rand(3)).map { generate(:good_markup) } }
-    xlink { Hash[%w(actuate arcrole href role show title type).map{|i| [i, i]}] }
+    xlink { Hash[['actuate', 'arcrole', 'href', 'role', 'show', 'title', 'type'].map { |i| [i, i] }] }
   end
 
   factory :json_note_chronology, class: JSONModel(:note_chronology) do
@@ -294,7 +291,7 @@ FactoryBot.define do
   end
 
   factory :json_note_outline_level, class: JSONModel(:note_outline_level) do
-    items { [ generate(:alphanumstr) ] }
+    items { [generate(:alphanumstr)] }
   end
 
   factory :json_top_container, class: JSONModel(:top_container) do
@@ -329,39 +326,36 @@ FactoryBot.define do
   end
 
   factory :json_sub_container, class: JSONModel(:sub_container) do
-    top_container { {:ref => create(:json_top_container).uri} }
+    top_container { { ref: create(:json_top_container).uri } }
     type_2 { sample(JSONModel(:sub_container).schema['properties']['type_2']) }
     indicator_2 { generate(:alphanumstr) }
     type_3 { sample(JSONModel(:sub_container).schema['properties']['type_3']) }
     indicator_3 { generate(:alphanumstr) }
   end
 
-
   factory :json_date, class: JSONModel(:date) do
     date_type { generate(:date_type) }
     label { 'creation' }
     self.begin { generate(:yyyy_mm_dd) }
     self.end { self.begin }
-    self.certainty { 'inferred' }
-    self.era { 'ce' }
-    self.calendar { 'gregorian' }
+    certainty { 'inferred' }
+    era { 'ce' }
+    calendar { 'gregorian' }
     expression { generate(:alphanumstr) }
   end
-
 
   factory :json_date_single, class: JSONModel(:date) do
     date_type { 'single' }
     label { 'creation' }
     self.begin { generate(:yyyy_mm_dd) }
-    self.certainty { 'inferred' }
-    self.era { 'ce' }
-    self.calendar { 'gregorian' }
+    certainty { 'inferred' }
+    era { 'ce' }
+    calendar { 'gregorian' }
     expression { generate(:alphanumstr) }
   end
 
-
   factory :json_deaccession, class: JSONModel(:deaccession) do
-    scope { "whole" }
+    scope { 'whole' }
     description { generate(:generic_description) }
     date { build(:json_date) }
   end
@@ -395,7 +389,7 @@ FactoryBot.define do
   factory :json_digital_object_component, class: JSONModel(:digital_object_component) do
     component_id { generate(:alphanumstr) }
     title { "Digital Object Component #{generate(:generic_title)}" }
-    digital_object { {'ref' => create(:json_digital_object).uri} }
+    digital_object { { 'ref' => create(:json_digital_object).uri } }
     position { rand(0..10) }
     has_unpublished_ancestor { rand(2) == 0 }
   end
@@ -403,7 +397,7 @@ FactoryBot.define do
   factory :json_digital_object_component_pub_ancestor, class: JSONModel(:digital_object_component) do
     component_id { generate(:alphanumstr) }
     title { "Digital Object Component #{generate(:generic_title)}" }
-    digital_object { {'ref' => create(:json_digital_object).uri} }
+    digital_object { { 'ref' => create(:json_digital_object).uri } }
     label { generate(:alphanumstr) }
     display_string { generate(:alphanumstr) }
     file_versions { few_or_none(:json_file_version) }
@@ -414,7 +408,7 @@ FactoryBot.define do
   factory :json_digital_object_component_unpub_ancestor, class: JSONModel(:digital_object_component) do
     component_id { generate(:alphanumstr) }
     title { "Digital Object Component #{generate(:generic_title)}" }
-    digital_object { {'ref' => create(:json_digital_object).uri} }
+    digital_object { { 'ref' => create(:json_digital_object).uri } }
     label { generate(:alphanumstr) }
     display_string { generate(:alphanumstr) }
     file_versions { few_or_none(:json_file_version) }
@@ -425,8 +419,8 @@ FactoryBot.define do
   factory :json_event, class: JSONModel(:event) do
     date { build(:json_date) }
     event_type { generate(:event_type) }
-    linked_agents { [{'ref' => create(:json_agent_person).uri, 'role' => generate(:agent_role)}] }
-    linked_records { [{'ref' => create(:json_accession).uri, 'role' => generate(:record_role)}] }
+    linked_agents { [{ 'ref' => create(:json_agent_person).uri, 'role' => generate(:agent_role) }] }
+    linked_records { [{ 'ref' => create(:json_accession).uri, 'role' => generate(:record_role) }] }
   end
 
   factory :json_extent, class: JSONModel(:extent) do
@@ -494,15 +488,14 @@ FactoryBot.define do
 
   factory :json_instance_digital, class: JSONModel(:instance) do
     instance_type { 'digital_object' }
-    digital_object { {'ref' => create(:json_digital_object).uri } }
+    digital_object { { 'ref' => create(:json_digital_object).uri } }
   end
-
 
   factory :json_location, class: JSONModel(:location) do
     building { generate(:downtown_address) }
     floor { "#{rand(13)}" }
     room { "#{rand(20)}" }
-    area { %w(Back Front).sample }
+    area { ['Back', 'Front'].sample }
     barcode { generate(:barcode) }
     temporary { generate(:temporary_location_type) }
   end
@@ -538,7 +531,7 @@ FactoryBot.define do
     source { generate(:name_source) }
     primary_name { generate(:generic_name) }
     sort_name { generate(:sort_name) }
-    name_order { %w(direct inverted).sample }
+    name_order { ['direct', 'inverted'].sample }
     number { generate(:alphanumstr) }
     sort_name_auto_generate { true }
     dates { generate(:alphanumstr) }
@@ -562,38 +555,38 @@ FactoryBot.define do
   end
 
   factory :json_note_singlepart, class: JSONModel(:note_singlepart) do
-    type { generate(:singlepart_note_type)}
-    content { [ generate(:alphanumstr), generate(:alphanumstr) ] }
+    type { generate(:singlepart_note_type) }
+    content { [generate(:alphanumstr), generate(:alphanumstr)] }
   end
 
   factory :json_note_multipart, class: JSONModel(:note_multipart) do
-    type { generate(:multipart_note_type)}
-    subnotes { [ build(:json_note_text, :publish => true) ] }
+    type { generate(:multipart_note_type) }
+    subnotes { [build(:json_note_text, publish: true)] }
   end
 
   factory :json_note_multipart_gone_wilde, class: JSONModel(:note_multipart) do
-    type { generate(:multipart_note_type)}
-    subnotes { [ build(:json_note_text_gone_wilde, :publish => true) ] }
+    type { generate(:multipart_note_type) }
+    subnotes { [build(:json_note_text_gone_wilde, publish: true)] }
   end
 
   factory :json_note_digital_object, class: JSONModel(:note_digital_object) do
-    type { generate(:digital_object_note_type)}
-    content { [ generate(:string), generate(:string) ] }
+    type { generate(:digital_object_note_type) }
+    content { [generate(:string), generate(:string)] }
   end
 
   factory :json_note_langmaterial, class: JSONModel(:note_langmaterial) do
-    type { generate(:langmaterial_note_type)}
-    content { [ generate(:string), generate(:string) ] }
+    type { generate(:langmaterial_note_type) }
+    content { [generate(:string), generate(:string)] }
   end
 
   factory :json_note_rights_statement, class: JSONModel(:note_rights_statement) do
-    type { generate(:rights_statement_note_type)}
-    content { [ generate(:string), generate(:string) ] }
+    type { generate(:rights_statement_note_type) }
+    content { [generate(:string), generate(:string)] }
   end
 
   factory :json_note_rights_statement_act, class: JSONModel(:note_rights_statement_act) do
-    type { generate(:rights_statement_act_note_type)}
-    content { [ generate(:string), generate(:string) ] }
+    type { generate(:rights_statement_act_note_type) }
+    content { [generate(:string), generate(:string)] }
   end
 
   factory :json_resource, class: JSONModel(:resource) do
@@ -607,13 +600,13 @@ FactoryBot.define do
     ead_id { nil_or_whatever }
     finding_aid_date { generate(:alphanumstr) }
     finding_aid_series_statement { generate(:alphanumstr) }
-    finding_aid_language {  [generate(:finding_aid_language)].sample  }
-    finding_aid_script {  [generate(:finding_aid_script)].sample  }
+    finding_aid_language { [generate(:finding_aid_language)].sample }
+    finding_aid_script { [generate(:finding_aid_script)].sample }
     finding_aid_language_note { nil_or_whatever }
     finding_aid_note { generate(:alphanumstr) }
     ead_location { generate(:alphanumstr) }
-    instances { [ build(:json_instance) ] }
-    revision_statements {  [build(:json_revision_statement)]  }
+    instances { [build(:json_instance)] }
+    revision_statements { [build(:json_revision_statement)] }
   end
 
   factory :json_resource_nohtml, class: JSONModel(:resource) do
@@ -627,13 +620,13 @@ FactoryBot.define do
     ead_id { nil_or_whatever }
     finding_aid_date { generate(:alphanumstr) }
     finding_aid_series_statement { generate(:alphanumstr) }
-    finding_aid_language {  [generate(:finding_aid_language)].sample  }
-    finding_aid_script {  [generate(:finding_aid_script)].sample  }
+    finding_aid_language { [generate(:finding_aid_language)].sample }
+    finding_aid_script { [generate(:finding_aid_script)].sample }
     finding_aid_language_note { nil_or_whatever }
     finding_aid_note { generate(:alphanumstr) }
     ead_location { generate(:alphanumstr) }
-    instances { [ build(:json_instance) ] }
-    revision_statements {  [build(:json_revision_statement)]  }
+    instances { [build(:json_instance)] }
+    revision_statements { [build(:json_revision_statement)] }
   end
 
   factory :json_resource_blank_ead_location, class: JSONModel(:resource) do
@@ -647,13 +640,13 @@ FactoryBot.define do
     ead_id { nil_or_whatever }
     finding_aid_date { generate(:alphanumstr) }
     finding_aid_series_statement { generate(:alphanumstr) }
-    finding_aid_language {  [generate(:finding_aid_language)].sample  }
-    finding_aid_script {  [generate(:finding_aid_script)].sample  }
+    finding_aid_language { [generate(:finding_aid_language)].sample }
+    finding_aid_script { [generate(:finding_aid_script)].sample }
     finding_aid_language_note { nil_or_whatever }
     finding_aid_note { generate(:alphanumstr) }
     ead_location { nil }
-    instances { [ build(:json_instance) ] }
-    revision_statements {  [build(:json_revision_statement)]  }
+    instances { [build(:json_instance)] }
+    revision_statements { [build(:json_revision_statement)] }
   end
 
   factory :json_revision_statement, class: JSONModel(:revision_statement) do
@@ -788,11 +781,11 @@ FactoryBot.define do
   end
 
   factory :json_find_and_replace_job, class: JSONModel(:find_and_replace_job) do
-    find { "/foo/" }
-    replace { "bar" }
-    record_type { "extent" }
-    property { "container_summary" }
-    base_record_uri { "repositories/2/resources/1" }
+    find { '/foo/' }
+    replace { 'bar' }
+    record_type { 'extent' }
+    property { 'container_summary' }
+    base_record_uri { 'repositories/2/resources/1' }
   end
 
   factory :json_accession_job, class: JSONModel(:job) do

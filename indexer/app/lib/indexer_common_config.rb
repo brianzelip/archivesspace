@@ -1,5 +1,4 @@
 class IndexerCommonConfig
-
   def self.record_types
     [
       :resource,
@@ -69,5 +68,4 @@ class IndexerCommonConfig
       'creator'
     ]
   end
-
 end

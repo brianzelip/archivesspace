@@ -1,5 +1,4 @@
 class AssessmentLinkedRecordsSubreport < AbstractSubreport
-
   def initialize(parent_report, assessment_id)
     super(parent_report)
     @assessment_id = assessment_id
@@ -54,5 +53,4 @@ class AssessmentLinkedRecordsSubreport < AbstractSubreport
     ReportUtils.fix_identifier_format(row) unless row[:linked_record_type] == 'Digital Object'
     ReportUtils.fix_id(row)
   end
-
 end

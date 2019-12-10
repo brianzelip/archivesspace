@@ -1,16 +1,15 @@
 class AgentContactSubreport < AbstractSubreport
+  register_subreport('agent_contact', ['agent'])
 
-	register_subreport('agent_contact', ['agent'])
+  def initialize(parent_custom_report, id)
+    super(parent_custom_report)
 
-	def initialize(parent_custom_report, id)
-		super(parent_custom_report)
+    @id_type = parent_custom_report.record_type
+    @id = id
+  end
 
-		@id_type = parent_custom_report.record_type
-		@id = id
-	end
-
-	def query_string
-		"select
+  def query_string
+    "select
 			id,
 			name,
 			salutation_id as salutation,
@@ -26,16 +25,17 @@ class AgentContactSubreport < AbstractSubreport
 			note
 		from agent_contact
 		where #{@id_type}_id = #{db.literal(@id)}"
-	end
+  end
 
-	def fix_row(row)
-		ReportUtils.get_enum_values(row, [:salutation])
-		row[:telephone] = AgentContactTelephoneSubreport.new(
-			self, row[:id]).get_content
-		row.delete(:id)
-	end
+  def fix_row(row)
+    ReportUtils.get_enum_values(row, [:salutation])
+    row[:telephone] = AgentContactTelephoneSubreport.new(
+      self, row[:id]
+    ).get_content
+    row.delete(:id)
+  end
 
-	def self.field_name
-		'agent_contact'
-	end
+  def self.field_name
+    'agent_contact'
+  end
 end

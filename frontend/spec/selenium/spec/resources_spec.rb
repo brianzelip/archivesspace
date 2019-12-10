@@ -246,7 +246,6 @@ describe 'Resources and archival objects' do
     assert(5) { expect(@driver.find_element(:css, '.token-input-token .digital_object').text).to match(/digital_object_title/) }
   end
 
-
   # This guy is causing subsequent tests to fail with a missing locales file error.  Pending it until I have more time to investigate.
   xit 'can have a lot of associated records that do not show in the field but are not lost' do
     subjects = []
@@ -311,9 +310,7 @@ describe 'Resources and archival objects' do
     # agents are weird.
     linked_agents.each_with_index do |a, i|
       assert(5) { expect(@driver.find_element(css: "#resource_linked_agents__#{i}__role_").get_select_value).to eq(a[:role]) }
-      if a.key?(:title)
-        assert(5) { expect(@driver.find_element(css: "#resource_linked_agents__#{i}__title_").attribute('value')).to eq(a[:title]) }
-      end
+      assert(5) { expect(@driver.find_element(css: "#resource_linked_agents__#{i}__title_").attribute('value')).to eq(a[:title]) } if a.key?(:title)
       assert(5) { expect(@driver.find_input_by_name("resource[linked_agents][#{i}][relator]").attribute('value')).to eq(a[:relator]) }
       assert(5) { expect(@driver.find_element(css: "#resource_linked_agents__#{i}_ .linker-wrapper .token-input-token").text).to match(/#{ agents[i][:primary_name] }/) }
     end
@@ -370,7 +367,7 @@ describe 'Resources and archival objects' do
 
     @driver.click_and_wait_until_gone(id: 'createPlusOne')
 
-    %w[January February December]. each do |month|
+    ['January', 'February', 'December']. each do |month|
       # Wait for the new empty form to be populated.  There's a tricky race
       # condition here that I can't quite track down, so here's my blunt
       # instrument fix.
@@ -385,7 +382,7 @@ describe 'Resources and archival objects' do
 
     elements = tree_nodes_at_level(1).map { |li| li.text.strip }
 
-    %w[January February December].each do |month|
+    ['January', 'February', 'December'].each do |month|
       expect(elements.any? { |elt| elt =~ /#{month}/ }).to be_truthy
     end
 
@@ -501,5 +498,4 @@ describe 'Resources and archival objects' do
       @driver.find_element_with_text(:link, /Print Resource to PDF/)
     end
   end
-
 end

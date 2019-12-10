@@ -5,14 +5,11 @@ require_relative 'sruquery'
 require_relative 'sruresultset'
 
 class SRUSearcher
-
   class SRUSearchException < StandardError; end
-
 
   def initialize(base_url)
     @base_url = base_url
   end
-
 
   def default_params
     {
@@ -24,11 +21,9 @@ class SRUSearcher
     }
   end
 
-
   def calculate_start_record(page, records_per_page)
     ((page - 1) * records_per_page) + 1
   end
-
 
   def search(sru_query, page, records_per_page)
     uri = URI(@base_url)
@@ -39,14 +34,12 @@ class SRUSearcher
     uri.query = URI.encode_www_form(params)
 
     HTTPRequest.new.get(uri) do |response|
-      if response.code != '200'
-        raise SRUSearchException.new("Error during SRU search: #{response.body}")
-      end
-      File.open("/tmp/sru.txt", "a+") { |a| a << uri.to_s + "\n" + response.body }
+      raise SRUSearchException, "Error during SRU search: #{response.body}" if response.code != '200'
+
+      File.open('/tmp/sru.txt', 'a+') { |a| a << uri.to_s + "\n" + response.body }
       SRUResultSet.new(response.body, sru_query, page, records_per_page)
     end
   end
-
 
   def results_to_marcxml_file(query)
     page = 1
@@ -54,7 +47,7 @@ class SRUSearcher
 
     tempfile.write("<collection>\n")
 
-    while true
+    loop do
       results = search(query, page, 10)
 
       results.each do |xml|
@@ -71,7 +64,6 @@ class SRUSearcher
     tempfile.flush
     tempfile.rewind
 
-    return tempfile
+    tempfile
   end
-
 end

@@ -1,5 +1,4 @@
 class SubjectListReport < AbstractReport
-
   register_report
 
   def query_string

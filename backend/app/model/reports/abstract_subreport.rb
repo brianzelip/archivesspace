@@ -2,7 +2,6 @@ require_relative '../../lib/reports/report_utils'
 require_relative 'custom_field'
 
 class AbstractSubreport
-
   include CustomField::Mixin
 
   attr_accessor :repo_id
@@ -47,7 +46,7 @@ class AbstractSubreport
   end
 
   def self.code
-    self.name.gsub(/(.)([A-Z])/,'\1_\2').downcase
+    name.gsub(/(.)([A-Z])/, '\1_\2').downcase
   end
 
   def self.field_name

@@ -1,5 +1,4 @@
 class ActiveEdit < Sequel::Model(:active_edit)
-
   # If we haven't seen an update from a client in this amount of time, assume
   # they've stopped editing.
   #
@@ -11,9 +10,9 @@ class ActiveEdit < Sequel::Model(:active_edit)
   def self.update_with(active_edits)
     # Add the new ones
     active_edits['active_edits'].each do |edit|
-      ActiveEdit.create(:uri => edit['uri'],
-                        :operator => edit['user'],
-                        :timestamp => Time.parse(edit['time']))
+      ActiveEdit.create(uri: edit['uri'],
+                        operator: edit['user'],
+                        timestamp: Time.parse(edit['time']))
     end
 
     # Expire the old ones
@@ -24,7 +23,7 @@ class ActiveEdit < Sequel::Model(:active_edit)
 
     # Keep track of when each URI was last edited by each user
     ActiveEdit.order(:timestamp).all.each do |edit|
-      result[edit.uri] ||= {:edited_by => {}}
+      result[edit.uri] ||= { edited_by: {} }
       result[edit.uri][:edited_by][edit.operator] = edit.timestamp
     end
 
@@ -38,14 +37,13 @@ class ActiveEdit < Sequel::Model(:active_edit)
     result
   end
 
-
   def self.lock_versions_for(uris)
     record_groups = {}
 
     uris.each do |uri|
       parsed = JSONModel.parse_reference(uri)
 
-      next if !parsed
+      next unless parsed
 
       model = Kernel.const_get(parsed[:type].to_s.camelize)
 
@@ -55,13 +53,12 @@ class ActiveEdit < Sequel::Model(:active_edit)
 
     result = {}
     record_groups.each do |model, records|
-      model.where(:id => records.keys).
-            select(:id, :lock_version).all.each do |row|
+      model.where(id: records.keys)
+           .select(:id, :lock_version).all.each do |row|
         result[records[row[:id]]] = row[:lock_version]
       end
     end
 
     result
   end
-
 end

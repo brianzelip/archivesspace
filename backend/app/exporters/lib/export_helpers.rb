@@ -2,49 +2,45 @@ module ASpaceExport
   # Convenience methods that will work for resource
   # or archival_object models during serialization
   module ArchivalObjectDescriptionHelpers
-
     def archdesc_note_types
-      %w(accruals appraisal arrangement bioghist accessrestrict legalstatus userestrict custodhist altformavail originalsloc fileplan odd acqinfo otherfindaid phystech prefercite processinfo relatedmaterial scopecontent separatedmaterial)
+      ['accruals', 'appraisal', 'arrangement', 'bioghist', 'accessrestrict', 'legalstatus', 'userestrict', 'custodhist', 'altformavail', 'originalsloc', 'fileplan', 'odd', 'acqinfo', 'otherfindaid', 'phystech', 'prefercite', 'processinfo', 'relatedmaterial', 'scopecontent', 'separatedmaterial']
     end
-
 
     def did_note_types
-      %w(abstract dimensions physdesc langmaterial physloc materialspec physfacet)
+      ['abstract', 'dimensions', 'physdesc', 'langmaterial', 'physloc', 'materialspec', 'physfacet']
     end
-
 
     def bibliographies
-      self.notes.select{|n| n['jsonmodel_type'] == 'note_bibliography'}
+      notes.select { |n| n['jsonmodel_type'] == 'note_bibliography' }
     end
-
 
     def indexes
-      self.notes.select{|n| n['jsonmodel_type'] == 'note_index'}
+      notes.select { |n| n['jsonmodel_type'] == 'note_index' }
     end
-
 
     def index_item_type_map
       {
-        'corporate_entity'=> 'corpname',
-        'genre_form'=> 'genreform',
-        'name'=> 'name',
-        'occupation'=> 'occupation',
-        'person'=> 'persname',
-        'subject'=> 'subject',
-        'family'=> 'famname',
-        'function'=> 'function',
-        'geographic_name'=> 'geogname',
-        'title'=> 'title'
+        'corporate_entity' => 'corpname',
+        'genre_form' => 'genreform',
+        'name' => 'name',
+        'occupation' => 'occupation',
+        'person' => 'persname',
+        'subject' => 'subject',
+        'family' => 'famname',
+        'function' => 'function',
+        'geographic_name' => 'geogname',
+        'title' => 'title'
       }
     end
 
     def controlaccess_linked_agents
       unless @controlaccess_linked_agents
         results = []
-        linked = self.linked_agents || []
-        linked.each_with_index do |link, i|
+        linked = linked_agents || []
+        linked.each_with_index do |link, _i|
           next if link['role'] == 'creator' || (link['_resolved']['publish'] == false && !@include_unpublished)
-          role = link['relator'] ? link['relator'] : (link['role'] == 'source' ? 'fmo' : nil)
+
+          role = link['relator'] || (link['role'] == 'source' ? 'fmo' : nil)
 
           agent = link['_resolved'].dup
           sort_name = agent['display_name']['sort_name']
@@ -53,15 +49,15 @@ module ASpaceExport
           authfilenumber = agent['display_name']['authority_id']
           content = sort_name.dup
 
-          if link['terms'].length > 0
-            content << " -- "
-            content << link['terms'].map{|t| t['term']}.join(' -- ')
+          unless link['terms'].empty?
+            content << ' -- '
+            content << link['terms'].map { |t| t['term'] }.join(' -- ')
           end
 
           node_name = case agent['agent_type']
-                      when 'agent_person'; 'persname'
-                      when 'agent_family'; 'famname'
-                      when 'agent_corporate_entity'; 'corpname'
+                      when 'agent_person' then 'persname'
+                      when 'agent_family' then 'famname'
+                      when 'agent_corporate_entity' then 'corpname'
                       end
 
           atts = {}
@@ -71,7 +67,7 @@ module ASpaceExport
           atts[:authfilenumber] = authfilenumber if authfilenumber
           atts[:audience] = 'internal' if link['_resolved']['publish'] == false
 
-          results << {:node_name => node_name, :atts => atts, :content => content}
+          results << { node_name: node_name, atts: atts, content: content }
         end
 
         @controlaccess_linked_agents = results
@@ -80,33 +76,31 @@ module ASpaceExport
       @controlaccess_linked_agents
     end
 
-
     def controlaccess_subjects
       unless @controlaccess_subjects
         results = []
-        linked = self.subjects || []
+        linked = subjects || []
         linked.each do |link|
           subject = link['_resolved']
 
           node_name = case subject['terms'][0]['term_type']
-                      when 'function'; 'function'
-                      when 'genre_form', 'style_period';  'genreform'
-                      when 'geographic', 'cultural_context'; 'geogname'
-                      when 'occupation';  'occupation'
-                      when 'topical'; 'subject'
-                      when 'uniform_title'; 'title'
-                      else; nil
+                      when 'function' then 'function'
+                      when 'genre_form', 'style_period' then 'genreform'
+                      when 'geographic', 'cultural_context' then 'geogname'
+                      when 'occupation' then 'occupation'
+                      when 'topical' then 'subject'
+                      when 'uniform_title' then 'title'
                       end
 
           next unless node_name
 
-          content = subject['terms'].map{|t| t['term']}.join(' -- ')
+          content = subject['terms'].map { |t| t['term'] }.join(' -- ')
 
           atts = {}
           atts['source'] = subject['source'] if subject['source']
           atts['authfilenumber'] = subject['authority_id'] if subject['authority_id']
 
-          results << {:node_name => node_name, :atts => atts, :content => content}
+          results << { node_name: node_name, atts: atts, content: content }
         end
 
         @controlaccess_subjects = results
@@ -115,25 +109,24 @@ module ASpaceExport
       @controlaccess_subjects
     end
 
-
     def archdesc_dates
       unless @archdesc_dates
         results = []
         dates = self.dates || []
         dates.each do |date|
-          normal = ""
+          normal = ''
           unless date['begin'].nil?
             normal = "#{date['begin']}/"
-            normal_suffix = (date['date_type'] == 'single' || date['end'].nil? || date['end'] == date['begin']) ? date['begin'] : date['end']
-            normal += normal_suffix ? normal_suffix : ""
+            normal_suffix = date['date_type'] == 'single' || date['end'].nil? || date['end'] == date['begin'] ? date['begin'] : date['end']
+            normal += normal_suffix || ''
           end
-          type = ( date['date_type'] == 'inclusive' ) ? 'inclusive' :  ( ( date['date_type'] == 'single') ? nil : 'bulk')
+          type = date['date_type'] == 'inclusive' ? 'inclusive' : (date['date_type'] == 'single' ? nil : 'bulk')
           content = if date['expression']
-                    date['expression']
-                  elsif date['end'].nil? || date['end'] == date['begin']
-                    date['begin']
-                  else
-                    "#{date['begin']}-#{date['end']}"
+                      date['expression']
+                    elsif date['end'].nil? || date['end'] == date['begin']
+                      date['begin']
+                    else
+                      "#{date['begin']}-#{date['end']}"
                   end
 
           atts = {}
@@ -143,7 +136,7 @@ module ASpaceExport
           atts[:era] = date['era'] if date['era']
           atts[:calendar] = date['calendar'] if date['calendar']
 
-          results << {:content => content, :atts => atts}
+          results << { content: content, atts: atts }
         end
 
         @archdesc_dates = results
@@ -152,7 +145,6 @@ module ASpaceExport
       @archdesc_dates
     end
   end
-
 
   module LazyChildEnumerations
     def children_indexes
@@ -167,13 +159,13 @@ module ASpaceExport
     PREFETCH_SIZE = 20
 
     def ensure_prefetched(index)
-      unless @prefetched_ids && @prefetched_ids.cover?(index)
+      unless @prefetched_ids&.cover?(index)
         new_start = (index / PREFETCH_SIZE) * PREFETCH_SIZE
         new_end = [new_start + PREFETCH_SIZE,
                    @children.count].min
 
         @prefetched_ids = Range.new(new_start, new_end, true)
-        @prefetched_records = @child_class.prefetch(@prefetched_ids.map {|index| @children[index]}, @repo_id)
+        @prefetched_records = @child_class.prefetch(@prefetched_ids.map { |index| @children[index] }, @repo_id)
       end
     end
 
@@ -188,9 +180,7 @@ module ASpaceExport
     end
   end
 
-
   module ExportModelHelpers
-
     def extract_date_string(date)
       if date['expression']
         date['expression']
@@ -201,19 +191,16 @@ module ASpaceExport
       end
     end
 
-
     def extract_note_content(note)
       if note['content']
-        Array(note['content']).join(" ")
+        Array(note['content']).join(' ')
       else
-        get_subnotes_by_type(note, 'note_text').map {|sn| sn['content']}.join(" ").gsub(/\n +/, "\n")
+        get_subnotes_by_type(note, 'note_text').map { |sn| sn['content'] }.join(' ').gsub(/\n +/, "\n")
       end
     end
 
-
     def get_subnotes_by_type(obj, note_type)
-      obj['subnotes'].select {|sn| sn['jsonmodel_type'] == note_type}
+      obj['subnotes'].select { |sn| sn['jsonmodel_type'] == note_type }
     end
-
   end
 end

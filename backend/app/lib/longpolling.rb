@@ -1,7 +1,4 @@
-require 'thread'
-
 class LongPolling
-
   def initialize(ms_to_keep)
     @lock = Mutex.new
     @waiting_list = ConditionVariable.new
@@ -9,7 +6,6 @@ class LongPolling
     @updates = []
     @ms_to_keep = ms_to_keep
   end
-
 
   def shutdown
     @lock.synchronize do
@@ -23,13 +19,12 @@ class LongPolling
     end
   end
 
-
   def record_update(values)
     @lock.synchronize do
       @sequence += 1
       now = (Time.now.to_f * 1000).to_i
-      @updates << values.merge(:sequence => @sequence,
-                               :timestamp => now)
+      @updates << values.merge(sequence: @sequence,
+                               timestamp: now)
 
       expire_older_than(now - @ms_to_keep)
 
@@ -38,13 +33,11 @@ class LongPolling
     end
   end
 
-
   def updates_since(seq)
     @lock.synchronize do
       updates_after(seq)
     end
   end
-
 
   def blocking_updates_since(seq)
     @lock.synchronize do
@@ -60,16 +53,13 @@ class LongPolling
     end
   end
 
-
   private
 
   def updates_after(seq)
-    @updates.drop_while {|entry| entry[:sequence] <= seq}
+    @updates.drop_while { |entry| entry[:sequence] <= seq }
   end
-
 
   def expire_older_than(timestamp)
-    @updates = @updates.reject {|elt| elt[:timestamp] <= timestamp}
+    @updates = @updates.reject { |elt| elt[:timestamp] <= timestamp }
   end
-
 end

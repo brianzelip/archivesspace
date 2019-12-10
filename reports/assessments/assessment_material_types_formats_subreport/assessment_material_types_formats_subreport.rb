@@ -1,7 +1,6 @@
 class AssessmentMaterialTypesFormatsSubreport < AbstractSubreport
-
   register_subreport('formats', ['assessment'],
-    :translation => 'assessment._frontend.formats')
+                     translation: 'assessment._frontend.formats')
 
   def initialize(parent_report, assessment_id)
     super(parent_report)
@@ -23,5 +22,4 @@ class AssessmentMaterialTypesFormatsSubreport < AbstractSubreport
   def self.field_name
     'formats'
   end
-
 end

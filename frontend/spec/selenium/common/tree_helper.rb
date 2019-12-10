@@ -20,9 +20,7 @@ module TreeHelperMethods
   end
 
   def tree_drag_and_drop(source, target, where_to_drop)
-    unless ['Add Items Before', 'Add Items as Children', 'Add Items After'].include?(where_to_drop)
-      raise 'Need to specify valid place to drop: "' + where_to_drop + '" not supported'
-    end
+    raise 'Need to specify valid place to drop: "' + where_to_drop + '" not supported' unless ['Add Items Before', 'Add Items as Children', 'Add Items After'].include?(where_to_drop)
 
     source_tree_id = source.attribute('id')
     target_tree_id = target.attribute('id')

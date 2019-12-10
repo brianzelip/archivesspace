@@ -34,23 +34,19 @@
 # Mark & Payten
 #
 
-
 require 'zlib'
 
 class AssetPathRewriter
-
   def rewrite(prefix, base_dir)
     base_dir = File.absolute_path(base_dir)
 
-    unless prefix.end_with?('/')
-      prefix = "#{prefix}/"
-    end
+    prefix = "#{prefix}/" unless prefix.end_with?('/')
 
     if Dir.exist?(base_dir)
       success = false
 
       1000.times do
-        if File.basename(base_dir) == "webapp"
+        if File.basename(base_dir) == 'webapp'
           success = true
           break
         elsif base_dir == File.dirname(base_dir)
@@ -63,9 +59,9 @@ class AssetPathRewriter
       return unless success
 
       rewrite_files = []
-      rewrite_files += Dir.glob(File.join(base_dir, "assets", "*.css"))
-      rewrite_files += Dir.glob(File.join(base_dir, "assets", "themes", "**", "*.css"))
-      rewrite_files += Dir.glob(File.join(base_dir, "assets", "archivesspace", "**", "*.css"))
+      rewrite_files += Dir.glob(File.join(base_dir, 'assets', '*.css'))
+      rewrite_files += Dir.glob(File.join(base_dir, 'assets', 'themes', '**', '*.css'))
+      rewrite_files += Dir.glob(File.join(base_dir, 'assets', 'archivesspace', '**', '*.css'))
 
       rewrite_files.each do |file|
         rewrite_for_prefix(file, prefix)
@@ -80,7 +76,7 @@ class AssetPathRewriter
     css.gsub!(%r{url\(/assets/}, "url(#{prefix}assets/")
     css.gsub!(%r{url\("/assets/}, "url(\"#{prefix}assets/")
     css.gsub!(%r{url\('/assets/}, "url('#{prefix}assets/")
-    File.open(path, "w") do |fh|
+    File.open(path, 'w') do |fh|
       fh.write(css)
     end
 

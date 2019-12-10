@@ -1,12 +1,11 @@
 class ExtentCalculatorController < ApplicationController
-
-  set_access_control  "view_repository" => [:report]
+  set_access_control 'view_repository' => [:report]
 
   def report
     if params['record_uri']
-      results = JSONModel::HTTP::get_json("/extent_calculator", {'record_uri' => params['record_uri']})
+      results = JSONModel::HTTP.get_json('/extent_calculator', 'record_uri' => params['record_uri'])
 
-      extent = if params['referrer'] && params['referrer'].match('/edit(\#.*)?\Z')
+      extent = if params['referrer']&.match('/edit(\#.*)?\Z')
                  extent = JSONModel(:extent).new
                  extent.number = results['total_extent']
                  if results['units']
@@ -21,12 +20,9 @@ class ExtentCalculatorController < ApplicationController
                  extent
                end
 
-      render_aspace_partial :partial => "extent_calculator/show_calculation", :locals => {:results => results, :extent => extent}
+      render_aspace_partial partial: 'extent_calculator/show_calculation', locals: { results: results, extent: extent }
     else
-      render_aspace_partial :partial => "extent_calculator/no_object"
+      render_aspace_partial partial: 'extent_calculator/no_object'
     end
-
   end
-
 end
-

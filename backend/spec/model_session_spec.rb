@@ -1,37 +1,34 @@
 require 'spec_helper'
 
 describe 'Session model' do
-
-  it "stores simple strings" do
+  it 'stores simple strings' do
     mysession = Session.new
     id = mysession.id
 
-    mysession["hello"] = "world"
+    mysession['hello'] = 'world'
     mysession.save
 
     samesession = Session.find(id)
-    expect(samesession["hello"]).to eq("world")
+    expect(samesession['hello']).to eq('world')
   end
 
-
-  it "handles multiple sessions" do
+  it 'handles multiple sessions' do
     session_data = {}
 
     10.times do |i|
       s = Session.new
-      s["data"] = "Session data #{i}"
+      s['data'] = "Session data #{i}"
       session_data[s.id] = "Session data #{i}"
       s.save
     end
 
     session_data.each do |session_id, stored_data|
       s = Session.find(session_id)
-      expect(s["data"]).to eq stored_data
+      expect(s['data']).to eq stored_data
     end
   end
 
-
-  it "becomes young again when touched" do
+  it 'becomes young again when touched' do
     first_time = Time.at(0)
     next_time = Time.at(10)
 
@@ -46,14 +43,13 @@ describe 'Session model' do
     expect((next_age - first_age).abs).to eq(10)
   end
 
-
-  it "can be expired" do
+  it 'can be expired' do
     s = Session.new
     Session.expire(s.id)
     expect(Session.find(s.id)).to be_nil
   end
 
-  it "expires expirable sessions after :session_expire_after_seconds" do
+  it 'expires expirable sessions after :session_expire_after_seconds' do
     short_session = Session.new
     long_session = Session.new
 
@@ -73,7 +69,7 @@ describe 'Session model' do
     expect(Session.find(long_session.id)).not_to be_nil
   end
 
-  it "expires non-expirable sessions after :session_nonexpirable_force_expire_after_seconds" do
+  it 'expires non-expirable sessions after :session_nonexpirable_force_expire_after_seconds' do
     long_session = Session.new
 
     long_session[:expirable] = false
@@ -88,5 +84,4 @@ describe 'Session model' do
     Session.expire_old_sessions
     expect(Session.find(long_session.id)).to be_nil
   end
-
 end

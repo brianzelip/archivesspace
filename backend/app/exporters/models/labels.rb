@@ -2,9 +2,8 @@ class LabelModel < ASpaceExport::ExportModel
   model_for :labels
 
   @ao = Class.new do
-
     def initialize(tree)
-      obj = URIResolver.resolve_references( ArchivalObject.to_jsonmodel(tree['id']),
+      obj = URIResolver.resolve_references(ArchivalObject.to_jsonmodel(tree['id']),
                                            ['top_container', 'top_container::container_profile',
                                             'top_container::container_locations'])
       @json = JSONModel::JSONModel(:archival_object).new(obj)
@@ -12,18 +11,14 @@ class LabelModel < ASpaceExport::ExportModel
     end
 
     def method_missing(meth)
-      if @json.respond_to?(meth)
-        @json.send(meth)
-      else
-        nil
-      end
+      @json.send(meth) if @json.respond_to?(meth)
     end
 
     def children
       return nil unless @tree['children']
+
       @tree['children'].map { |subtree| self.class.new(subtree) }
     end
-
   end
 
   attr_reader :file
@@ -35,71 +30,54 @@ class LabelModel < ASpaceExport::ExportModel
     @file = ASUtils.tempfile('labels_')
     append(headers)
 
-    generate_label_rows(self.children)
+    generate_label_rows(children)
   end
-
 
   def append(row)
     CSV.open(@file, 'a', col_sep: "\t") { |csv| csv << row }
   end
 
-
   def full_row(row)
-    [self.repo_name, self.title, self.identifier] + row
+    [repo_name, title, identifier] + row
   end
-
 
   def headers
-    %w(
-      Repository\ Name Resource\ Title  Resource\ Identifier Series\ Archival\ Object\ Title
-      Archival\ Object\ Title Container\ Profile Top\ Container Top\ Container\ Barcode
-      SubContainer\ 1 SubContainer\ 2 Current\ Location
-    )
+    ['Repository Name', 'Resource Title', 'Resource Identifier', 'Series Archival Object Title', 'Archival Object Title', 'Container Profile', 'Top Container', 'Top Container Barcode', 'SubContainer 1', 'SubContainer 2', 'Current Location']
   end
-
 
   def stream
     File.open(@file).each # enumerator for stream response
   end
 
-
   def self.from_aspace_object(obj, tree)
-    labler = self.new(obj, tree)
+    labler = new(obj, tree)
 
     labler
   end
-
 
   def self.from_resource(obj, tree)
-    labler = self.from_aspace_object(obj, tree)
+    labler = from_aspace_object(obj, tree)
 
     labler
   end
 
-
   def method_missing(meth)
-    if @json.respond_to?(meth)
-      @json.send(meth)
-    else
-      nil
-    end
+    @json.send(meth) if @json.respond_to?(meth)
   end
 
   def identifier
-    @identifier ||= [:id_0, :id_1, :id_2, :id_3].map {|i| self.send(i) }.reject {|i| i.nil? }.join("-")
+    @identifier ||= [:id_0, :id_1, :id_2, :id_3].map { |i| send(i) }.reject { |i| i.nil? }.join('-')
 
     @identifier
   end
 
-
   def repo_name
-    if self.repository && self.repository.has_key?('_resolved')
-      self.repository['_resolved']['name']
+    if repository&.has_key?('_resolved')
+      repository['_resolved']['name']
     else
-      "Unknown"
+      'Unknown'
     end
   end
-
 
   def children
     return nil unless @tree.children
@@ -109,30 +87,31 @@ class LabelModel < ASpaceExport::ExportModel
     @tree.children.map { |subtree| ao_class.new(subtree) }
   end
 
-
   # this is a convenience method to either return either the value from a hash
   # from an array of keys or a blank string ( if it does not exist )
-  def value_or_blank(hash, keys = [] )
+  def value_or_blank(hash, keys = [])
     keys.reduce(hash) do |memo, k|
       if memo.is_a?(Hash) && memo[k]
         memo[k]
       else
-        ""
+        ''
       end
     end
   end
 
   def generate_label_rows(objects)
     @top_containers ||= []
-    @series ||= ""
+    @series ||= ''
 
     objects.each do |obj|
       @series = obj.display_string if obj.level == 'series'
       obj.instances.each do |instance|
         next unless (sub = instance['sub_container'])
+
         # output each unique container per series (a container may be used in multiple series)
         digest = Digest::SHA1.hexdigest(@series + sub['top_container']['ref'])
         next if @top_containers.include?(digest)
+
         @top_containers << digest
 
         # We get the Series ( the ancestor AO with the level == 'series' ) and
@@ -144,27 +123,25 @@ class LabelModel < ASpaceExport::ExportModel
 
         # this will give us:
         #  "#{name} [#{depth}d, #{height}h, #{width}w #{dimension_units}] extent measured by #{extent_dimension}"
-        container_row << value_or_blank( top, %w( container_profile _resolved display_string ))
+        container_row << value_or_blank(top, ['container_profile', '_resolved', 'display_string'])
 
-        container_row << "#{value_or_blank( top, %w( type ))}: #{value_or_blank( top, %w( indicator ))}"
+        container_row << "#{value_or_blank(top, ['type'])}: #{value_or_blank(top, ['indicator'])}"
 
-        container_row << value_or_blank(top, %w( barcode ))
+        container_row << value_or_blank(top, ['barcode'])
 
         # these get the grandchild SubContainers of the Top Container
         # e.g. Carton: 1 and Folder: 71
-        container_row << [ value_or_blank( sub, %w( type_2 )), value_or_blank( sub, %w( indicator_2 ) ) ]
-          .reject { |v| v.empty? }.join(":")
-        container_row << [ value_or_blank( sub, %w( type_3 )), value_or_blank( sub, %w( indicator_3 ) ) ]
-          .reject { |v| v.empty? }.join(":")
+        container_row << [value_or_blank(sub, ['type_2']), value_or_blank(sub, ['indicator_2'])]
+                         .reject { |v| v.empty? }.join(':')
+        container_row << [value_or_blank(sub, ['type_3']), value_or_blank(sub, ['indicator_3'])]
+                         .reject { |v| v.empty? }.join(':')
 
-
-        current_location = top["container_locations"].find { |loc| loc["status"] === 'current'  } || {}
-        container_row << value_or_blank( current_location, %w( _resolved title  ) )
+        current_location = top['container_locations'].find { |loc| loc['status'] === 'current' } || {}
+        container_row << value_or_blank(current_location, ['_resolved', 'title'])
 
         append(full_row(container_row))
       end
       generate_label_rows(obj.children)
-
     end
   end
 end

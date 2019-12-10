@@ -1,7 +1,6 @@
 require 'db/migrations/utils'
 
 Sequel.migration do
-
   up do
     # add reference identifier field to event
     alter_table(:event) do
@@ -16,10 +15,10 @@ Sequel.migration do
 
     # add event request enum values
     enums = {
-      "event_event_type" => ["request"],
-      "event_outcome" => ["cancelled", "fulfilled", "pending"],
-      "linked_agent_event_roles" => ["requester"],
-      "linked_event_archival_record_roles" => ["context", "requested"],
+      'event_event_type' => ['request'],
+      'event_outcome' => ['cancelled', 'fulfilled', 'pending'],
+      'linked_agent_event_roles' => ['requester'],
+      'linked_event_archival_record_roles' => ['context', 'requested']
     }
 
     enums.each do |enumeration_name, values|
@@ -58,5 +57,4 @@ Sequel.migration do
       end
     end
   end
-
 end

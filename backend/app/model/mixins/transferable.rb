@@ -1,11 +1,10 @@
 module Transferable
-
   def transfer_to_repository(repository, transfer_group = [])
     events_to_clone = []
     assessments_to_clone = []
     containers_to_clone = {}
 
-    graph = self.object_graph
+    graph = object_graph
 
     ## Digital object instances will trigger their linked digital objects to
     ## transfer too, as long as those digital objects aren't linked to by other
@@ -21,16 +20,15 @@ module Transferable
 
       # The list of digital objects our transferee links to
       linked_digital_objects = do_instance_relationship
-                               .filter(:id => graph.ids_for(do_instance_relationship))
+                               .filter(id: graph.ids_for(do_instance_relationship))
                                .select(:digital_object_id)
-                               .map {|row| row[:digital_object_id]}
+                               .map { |row| row[:digital_object_id] }
 
       # The list of instance IDs that link to those digital objects (which may or
       # may not be connected to our transferee)
       instances_referencing_digital_objects = do_instance_relationship
                                               .find_by_participant_ids(DigitalObject, linked_digital_objects)
-                                              .map {|r| r.instance_id}
-
+                                              .map { |r| r.instance_id }
 
       linked_instances_outside_transfer_set = (instances_referencing_digital_objects - instance_ids)
 
@@ -38,7 +36,7 @@ module Transferable
         # Our record to be transferred is the only thing referencing the digital
         # objects it links to.  We can safely migrate them as well.
 
-        DigitalObject.any_repo.filter(:id => linked_digital_objects).each do |digital_object|
+        DigitalObject.any_repo.filter(id: linked_digital_objects).each do |digital_object|
           digital_object.transfer_to_repository(repository, transfer_group + [self])
         end
       else
@@ -51,12 +49,12 @@ module Transferable
 
           model
             .eager_graph(:instance)
-            .filter(:instance__id => linked_instances_outside_transfer_set)
+            .filter(instance__id: linked_instances_outside_transfer_set)
             .select(Sequel.qualify(model.table_name, :id))
             .each do |row|
-            exception.add_conflict(model.my_jsonmodel.uri_for(row[:id], :repo_id => self.class.active_repository),
-                                   {:json_property => 'instances',
-                                    :message => "DIGITAL_OBJECT_IN_USE"})
+            exception.add_conflict(model.my_jsonmodel.uri_for(row[:id], repo_id: self.class.active_repository),
+                                   json_property: 'instances',
+                                   message: 'DIGITAL_OBJECT_IN_USE')
           end
         end
 
@@ -75,9 +73,9 @@ module Transferable
         event.transfer_to_repository(repository, transfer_group + [self])
       else
         event_json = Event.to_jsonmodel(event)
-        event_role = event_json.linked_records.find {|link| link['ref'] == self.uri}['role']
+        event_role = event_json.linked_records.find { |link| link['ref'] == uri }['role']
 
-        events_to_clone << {:event => event_json, :role => event_role}
+        events_to_clone << { event: event_json, role: event_role }
       end
     end
 
@@ -94,7 +92,7 @@ module Transferable
       else
         assessment_json = Assessment.to_jsonmodel(assessment)
 
-        assessments_to_clone << {:assessment => assessment_json}
+        assessments_to_clone << { assessment: assessment_json }
       end
     end
 
@@ -111,16 +109,16 @@ module Transferable
       # Find relationships that are in our set of IDs that haven't been
       # transferred yet
       db[:top_container_link_rlshp]
-        .join(:top_container, :id => :top_container_id)
-        .filter(:top_container_link_rlshp__id => all_ids)
-        .filter(:top_container__repo_id => self.class.active_repository)
+        .join(:top_container, id: :top_container_id)
+        .filter(top_container_link_rlshp__id: all_ids)
+        .filter(top_container__repo_id: self.class.active_repository)
         .each do |tc_rel|
         # lets get all the top_containers outside this graph
         number_of_tc_links = db[:top_container_link_rlshp]
-                             .join(:top_container, :id => :top_container_id)
-                             .filter(:top_container__repo_id => self.class.active_repository)
-                             .filter(:top_container_id => tc_rel[:top_container_id])
-                             .exclude(:top_container_link_rlshp__id => all_ids)
+                             .join(:top_container, id: :top_container_id)
+                             .filter(top_container__repo_id: self.class.active_repository)
+                             .filter(top_container_id: tc_rel[:top_container_id])
+                             .exclude(top_container_link_rlshp__id: all_ids)
                              .count
 
         if number_of_tc_links < 1
@@ -128,7 +126,7 @@ module Transferable
           top_container = TopContainer.this_repo.filter[tc_rel[:top_container_id]]
 
           if top_container
-            if top_container.barcode && TopContainer.any_repo[:barcode => top_container.barcode, :repo_id => repository.id]
+            if top_container.barcode && TopContainer.any_repo[barcode: top_container.barcode, repo_id: repository.id]
               # There's already a top container with our barcode in the target
               # repository.  Not sure if merging them is the right strategy or
               # not, so throwing an error for now
@@ -157,59 +155,55 @@ module Transferable
       hash = TopContainer.to_jsonmodel(tc_to_clone).to_hash(:trusted)
 
       # we make the TC in the new repo context
-      RequestContext.open(:repo_id => repository.id) do
+      RequestContext.open(repo_id: repository.id) do
         tc = nil
 
         # but first lets check if this exists already by barcode
-        if hash["barcode"]
-          tc = TopContainer.for_barcode(hash["barcode"])
-        end
+        tc = TopContainer.for_barcode(hash['barcode']) if hash['barcode']
 
         # not found, we make the clone
-        unless tc
-          tc = TopContainer.create_from_json(JSONModel(:top_container).from_hash(hash),
-                                             :repo_id => repository.id)
-        end
+        tc ||= TopContainer.create_from_json(JSONModel(:top_container).from_hash(hash),
+                                             repo_id: repository.id)
 
         # now we linke the clone to all the sub_containers
         sces.each do |sc|
           # the record is broken now, so we have to shuck it in the backdoor
           DB.open do |db|
-            db[:top_container_link_rlshp].insert(:top_container_id => tc.id,
-                                                 :system_mtime => Time.now,
-                                                 :user_mtime => Time.now,
-                                                 :sub_container_id => sc)
+            db[:top_container_link_rlshp].insert(top_container_id: tc.id,
+                                                 system_mtime: Time.now,
+                                                 user_mtime: Time.now,
+                                                 sub_container_id: sc)
           end
         end
       end
     end
 
     ## Clone any required events and assessments in the new repository
-    RequestContext.open(:repo_id => repository.id) do
+    RequestContext.open(repo_id: repository.id) do
       # Events
       events_to_clone.each do |to_clone|
-        event = to_clone[:event].to_hash(:trusted).
-                merge('linked_records' => [{
-                                             'ref' => self.uri,
-                                             'role' => to_clone[:role]
-                                           }])
+        event = to_clone[:event].to_hash(:trusted)
+                                .merge('linked_records' => [{
+                                         'ref' => uri,
+                                         'role' => to_clone[:role]
+                                       }])
 
         Event.create_from_json(JSONModel(:event).from_hash(event),
-                               :repo_id => repository.id)
+                               repo_id: repository.id)
       end
 
       # Assessments
       assessments_to_clone.each do |to_clone|
-        assessment = to_clone[:assessment].to_hash(:trusted).
-                       merge('records' => [{
-                                             'ref' => self.uri,
-                                           }])
+        assessment = to_clone[:assessment].to_hash(:trusted)
+                                          .merge('records' => [{
+                                                   'ref' => uri
+                                                 }])
 
         # Note: we use JSONModel#new here and not from_hash because we want to
         # keep the readonly attribute (like attribute labels).  The clone needs
         # access to those for the sake of cross-repository attribute matching.
         Assessment.clone_from_json(JSONModel(:assessment).new(assessment),
-                                   :repo_id => repository.id)
+                                   repo_id: repository.id)
       end
     end
   end

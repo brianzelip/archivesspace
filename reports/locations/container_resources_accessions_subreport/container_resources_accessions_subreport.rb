@@ -1,31 +1,30 @@
 class ContainerResourcesAccessionsSubreport < AbstractSubreport
-
   def initialize(parent_report, container_id)
     super(parent_report)
     @container_id = container_id
   end
 
   def query_string
-    "select distinct 
+    "select distinct
       'resource' as linked_record_type,
         resource.identifier as identifier,
-        resource.title as record_title 
+        resource.title as record_title
     from
       (select sub_container_id as id
-        from top_container_link_rlshp 
+        from top_container_link_rlshp
         where top_container_id = #{db.literal(@container_id)}) as sub_ids
-        
+
         join sub_container on sub_ids.id = sub_container.id
-        
+
         join instance on sub_container.instance_id = instance.id
-        
+
         left outer join archival_object
         on instance.archival_object_id = archival_object.id
-      
+
         join resource
         on resource.id = instance.resource_id
           or resource.id = archival_object.root_record_id
-                
+
     union
 
     select

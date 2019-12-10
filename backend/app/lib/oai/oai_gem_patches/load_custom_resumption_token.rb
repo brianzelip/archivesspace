@@ -10,7 +10,7 @@ module OAI::Provider::Response
           ArchivesSpaceResumptionToken.extract_format(options[:resumption_token])
         end
 
-      raise OAI::FormatException.new unless provider.format_supported?(format)
+      raise OAI::FormatException unless provider.format_supported?(format)
 
       format
     end

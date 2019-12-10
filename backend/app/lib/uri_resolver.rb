@@ -23,7 +23,6 @@
 # of refs with double colons, like "resource::linked_agent".
 
 module URIResolver
-
   include JSONModel
 
   # Additional `ignored` argugment to account for callers using the old API
@@ -59,7 +58,6 @@ module URIResolver
   end
 
   class URIResolverImplementation
-
     include JSONModel
 
     def initialize(properties_to_resolve)
@@ -81,14 +79,12 @@ module URIResolver
       if active_repository_id && \
          parsed[:repository] && \
          JSONModel.parse_reference(parsed[:repository])[:id] != active_repository_id
-        raise ReferenceError.new("Inter-repository links are not allowed in this operation! (Bad link: '#{uri}'; Active repo: '#/repositories/#{active_repository_id}')")
+        raise ReferenceError, "Inter-repository links are not allowed in this operation! (Bad link: '#{uri}'; Active repo: '#/repositories/#{active_repository_id}')"
       end
 
       resolver = get_resolver_for_type(parsed[:type])
 
-      if resolver && !resolver.record_exists?(uri)
-        raise ReferenceError.new("Reference does not exist! (Reference: '#{uri}')")
-      end
+      raise ReferenceError, "Reference does not exist! (Reference: '#{uri}')" if resolver && !resolver.record_exists?(uri)
     end
 
     # Walk 'value', find all refs, resolve them
@@ -105,7 +101,7 @@ module URIResolver
       end
 
       # Any JSONModels can become vanilla hashes
-      records = records.map {|value|
+      records = records.map { |value|
         if value.is_a?(JSONModelType)
           value.to_hash(:trusted)
         else
@@ -120,14 +116,14 @@ module URIResolver
       # With each iteration, we try to group together resolve requests for
       # common record types to get as much bang for our SQL buck as possible.
       depth = 1
-      while true
-        properties_for_current_depth = @properties_to_resolve.select {|property| property.length == depth}
+      loop do
+        properties_for_current_depth = @properties_to_resolve.select { |property| property.length == depth }
 
         break if properties_for_current_depth.empty?
 
         refs_to_resolve = find_matching_refs(records, properties_for_current_depth)
 
-        resolved = fetch_records_by_uri(refs_to_resolve.map {|ref| ref['ref']})
+        resolved = fetch_records_by_uri(refs_to_resolve.map { |ref| ref['ref'] })
 
         refs_to_resolve.each do |ref|
           uri = ref['ref']
@@ -140,7 +136,6 @@ module URIResolver
       # Return the same type we were given
       was_wrapped ? records[0] : records
     end
-
 
     private
 
@@ -160,13 +155,11 @@ module URIResolver
           matches = [record]
 
           property.each do |key|
-            matches = matches.map {|match| find_key_recursively(key, match)}.flatten(1)
+            matches = matches.map { |match| find_key_recursively(key, match) }.flatten(1)
           end
 
           matches.flatten.each do |match|
-            if is_ref?(match)
-              result << match
-            end
+            result << match if is_ref?(match)
           end
         end
       end
@@ -227,7 +220,7 @@ module URIResolver
     #
     def find_key_recursively(key, record)
       if record.is_a?(Array)
-        record.map {|elt| find_key_recursively(key, elt)}.flatten(1)
+        record.map { |elt| find_key_recursively(key, elt) }.flatten(1)
       elsif record.is_a?(Hash)
         [record[key]].compact + find_key_recursively(key, record.values)
       else
@@ -238,10 +231,10 @@ module URIResolver
     def fetch_records_by_uri(record_uris)
       result = {}
 
-      record_uris.group_by {|uri|
-        parsed_uri = JSONModel.parse_reference(uri) or raise "Invalid URI: #{uri}"
+      record_uris.group_by { |uri|
+        (parsed_uri = JSONModel.parse_reference(uri)) || raise("Invalid URI: #{uri}")
         [parsed_uri[:repository], parsed_uri[:type]]
-      }.each do |(repo_uri, record_type), uris|
+      }.each do |(_repo_uri, record_type), uris|
         resolver = get_resolver_for_type(record_type)
 
         resolver.resolve(uris).each do |uri, json|
@@ -252,11 +245,9 @@ module URIResolver
       result
     end
 
-
     def is_ref?(val)
       val.is_a?(Hash) && val.has_key?('ref')
     end
-
 
     def get_resolver_for_type(record_type)
       self.class.resolvers.each do |resolver|
@@ -272,14 +263,12 @@ module URIResolver
     # Split them into their parts ['a', 'b', 'c'] and yield all prefixes like
     # [['a'], ['a', 'b'], ['a', 'b', 'c']]
     def parse_properties(properties)
-      properties.map {|property|
+      properties.map { |property|
         parts = property.split('::')
-        (1..parts.length).map {|i| parts.take(i)}
+        (1..parts.length).map { |i| parts.take(i) }
       }.flatten(1).uniq
     end
-
   end
-
 
   class ResolverType
     # Given a JSONModel type symbol (like :archival_object, :accession or
@@ -287,28 +276,26 @@ module URIResolver
     # that type.
     #
     # Returns nil if this resolver isn't applicable to that type.
-    def self.handler_for(record_type)
-      raise NotImplementedError.new("This method must be overriden by the implementing class")
+    def self.handler_for(_record_type)
+      raise NotImplementedError, 'This method must be overriden by the implementing class'
     end
 
     # Given a list of record URI strings (like
     # "/repositories/2/archival_objects/123"), return an Enumerator yielding
     # |record_uri_string, record_json|
-    def resolve(uris)
-      raise NotImplementedError.new("This method must be overriden by the implementing class")
+    def resolve(_uris)
+      raise NotImplementedError, 'This method must be overriden by the implementing class'
     end
 
     # True if a record (identified by URI) actually exists in the database
-    def record_exists?(uri)
-      raise NotImplementedError.new("This method must be overriden by the implementing class")
+    def record_exists?(_uri)
+      raise NotImplementedError, 'This method must be overriden by the implementing class'
     end
   end
-
 
   # A resolver for all standard ArchivesSpace record types (accession, resource,
   # archival_object, digital_object, etc.)
   class ASModelResolver < ResolverType
-
     def self.handler_for(jsonmodel_type)
       model = find_model_by_jsonmodel_type(jsonmodel_type)
       new(model) if model
@@ -329,11 +316,11 @@ module URIResolver
 
       Enumerator.new do |yielder|
         ids_by_repo.each do |repo_id, parsed_repo_uris|
-          ids = parsed_repo_uris.map {|parsed| parsed[:id]}
+          ids = parsed_repo_uris.map { |parsed| parsed[:id] }
 
           # Set our active repo just in case any of the models rely on it
-          RequestContext.open(:repo_id => repo_id) do
-            @model.sequel_to_jsonmodel(@model.any_repo.filter(:id => ids).all).each do |json|
+          RequestContext.open(repo_id: repo_id) do
+            @model.sequel_to_jsonmodel(@model.any_repo.filter(id: ids).all).each do |json|
               yielder << [json.uri, json.to_hash(:trusted)]
             end
           end
@@ -370,18 +357,16 @@ module URIResolver
     end
 
     def self.find_model_by_jsonmodel_type(type)
-      ASModel.all_models.find {|model|
+      ASModel.all_models.find { |model|
         jsonmodel = model.my_jsonmodel(true)
         jsonmodel && jsonmodel.record_type == type
       }
     end
   end
 
-
   # A resolver for the record tree types (resource, digital object &
   # classification trees)
   class TreeResolver < ResolverType
-
     def self.handler_for(jsonmodel_type)
       model = model_for_tree(jsonmodel_type)
       new(model) if model
@@ -400,7 +385,7 @@ module URIResolver
       end
     end
 
-    def record_exists?(uri)
+    def record_exists?(_uri)
       # Trees have historically been given a free pass here, and it seems that
       # the current unit tests are relying on this.  I guess it's never caused a
       # problem, but this could conceivably do the same check as the regular
@@ -414,12 +399,11 @@ module URIResolver
       if type.to_s.end_with?('_tree')
         base_model_type = type.to_s.gsub(/_tree$/, '')
 
-        ASModel.all_models.find {|model|
+        ASModel.all_models.find { |model|
           jsonmodel = model.my_jsonmodel(true)
           jsonmodel && jsonmodel.record_type == base_model_type
         }
       end
     end
   end
-
 end

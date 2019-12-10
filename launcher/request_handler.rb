@@ -3,12 +3,11 @@ require 'ashttp'
 require 'nokogiri'
 
 module RequestHandler
-
   attr_reader :token
 
   def login(user, password)
     url = URI("#{AppConfig[:backend_url]}/users/#{user}/login")
-    @token = post(url, { "password" => password })["session"]
+    @token = post(url, 'password' => password)['session']
     token
   end
 
@@ -30,9 +29,8 @@ module RequestHandler
     req['X-ArchivesSpace-Session'] = @token
     ASHTTP.start_uri(url) do |http|
       response = http.request(req)
-      if response.code =~ /^4/
-        raise "Request error for #{url}: #{response.message}"
-      end
+      raise "Request error for #{url}: #{response.message}" if response.code =~ /^4/
+
       if format == :json
         JSON.parse response.body
       elsif format == :xml
@@ -42,5 +40,4 @@ module RequestHandler
       end
     end
   end
-
 end

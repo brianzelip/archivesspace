@@ -1,57 +1,57 @@
 {
-  :schema => {
-    "$schema" => "http://www.archivesspace.org/archivesspace.json",
-    "version" => 1,
-    "type" => "object",
-    "uri" => "/repositories/:repo_id/jobs",
-    "properties" => {
+  schema: {
+    '$schema' => 'http://www.archivesspace.org/archivesspace.json',
+    'version' => 1,
+    'type' => 'object',
+    'uri' => '/repositories/:repo_id/jobs',
+    'properties' => {
 
-      "uri" => {"type" => "string", "required" => false},
+      'uri' => { 'type' => 'string', 'required' => false },
 
-      "job_type" => {
-        "type" => "string",
-        "readonly" => true
-      },
-   
-      "job" => {
-        "type" => "object"
-      },
-   
-      "job_params" => { 
-        "type" => "string",
-      }, 
-
-      "time_submitted" => {
-        "type" => "date-time",
-        "readonly" => true
+      'job_type' => {
+        'type' => 'string',
+        'readonly' => true
       },
 
-      "time_started" => {
-        "type" => "date-time",
-        "readonly" => true
+      'job' => {
+        'type' => 'object'
       },
 
-      "time_finished" => {
-        "type" => "date-time",
-        "readonly" => true
+      'job_params' => {
+        'type' => 'string'
       },
 
-      "owner" => {
-        "type" => "string",
-        "readonly" => true
+      'time_submitted' => {
+        'type' => 'date-time',
+        'readonly' => true
       },
 
-      "status" => {
-        "type" => "string",
-        "enum" => ["running", "completed", "canceled", "queued", "failed"],
-        "default" => "queued",
-        "readonly" => true
+      'time_started' => {
+        'type' => 'date-time',
+        'readonly' => true
       },
 
-      "queue_position" => {
-        "type" => "number",
-        "readonly" => true
+      'time_finished' => {
+        'type' => 'date-time',
+        'readonly' => true
+      },
+
+      'owner' => {
+        'type' => 'string',
+        'readonly' => true
+      },
+
+      'status' => {
+        'type' => 'string',
+        'enum' => ['running', 'completed', 'canceled', 'queued', 'failed'],
+        'default' => 'queued',
+        'readonly' => true
+      },
+
+      'queue_position' => {
+        'type' => 'number',
+        'readonly' => true
       }
-    },
-  },
+    }
+  }
 }

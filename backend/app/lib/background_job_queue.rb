@@ -1,26 +1,23 @@
 # Work through the list of import jobs in the database and run the next job in
 # the queue.
 
-require 'thread'
 require 'atomic'
 
 require_relative 'job_runner'
 
 # load job runners
-Dir.glob(File.join(File.dirname(__FILE__), "job_runners", "*.rb")).sort.each do |file|
+Dir.glob(File.join(File.dirname(__FILE__), 'job_runners', '*.rb')).sort.each do |file|
   require file
 end
 
 # and also from plugins
 ASUtils.find_local_directories('backend').each do |prefix|
-  Dir.glob(File.join(prefix, "job_runners", "*.rb")).sort.each do |file|
+  Dir.glob(File.join(prefix, 'job_runners', '*.rb')).sort.each do |file|
     require File.absolute_path(file)
   end
 end
 
-
 class BackgroundJobQueue
-
   JOB_TIMEOUT_SECONDS = AppConfig[:job_timeout_seconds].to_i
 
   def get_next_job
@@ -35,11 +32,11 @@ class BackgroundJobQueue
       end
     rescue Sequel::NoExistingObject
       Log.debug("Another thread cancelled unwatched job #{job.id}, nothing to do on #{Thread.current[:name]}")
-    rescue => e
+    rescue StandardError => e
       Log.error("Error trying to cancel unwatched jobs on #{Thread.current[:name]}: #{e.class} #{$!} #{$@}")
     end
 
-    DB.open do |db|
+    DB.open do |_db|
       Job.queued_jobs.each do |job|
         runner = JobRunner.registered_runner_for(job.type)
 
@@ -63,7 +60,6 @@ class BackgroundJobQueue
           job.start!
 
           return job
-
         rescue Sequel::NoExistingObject
           # Another thread handled this job.
           Log.info("Another thread is handling job #{job.id}, skipping on #{Thread.current[:name]}")
@@ -74,23 +70,22 @@ class BackgroundJobQueue
     false
   end
 
-
   def run_pending_job
     job = get_next_job
 
-    return if !job
+    return unless job
 
     finished = Atomic.new(false)
     job_canceled = Atomic.new(false)
     job_thread_name = Thread.current[:name]
 
     watchdog_thread = Thread.new do
-      while !finished.value
-        DB.open do |db|
+      until finished.value
+        DB.open do |_db|
           Log.debug("Running job #{job.id} on #{job_thread_name}")
           job = job.class.any_repo[job.id]
 
-          if job.status === "canceled"
+          if job.status === 'canceled'
             # Notify the running job that we've been manually canceled
             Log.info("Received cancel request for job #{job.id} on #{job_thread_name}")
             job_canceled.value = true
@@ -145,29 +140,26 @@ class BackgroundJobQueue
           runner.success!
         end
       end
-    rescue => e
+    rescue StandardError => e
       Log.error("Job #{job.id} on #{job_thread_name} failed: #{e.class} #{$!} #{$@}")
       # If anything went wrong, make sure the watchdog thread still stops.
       finished.value = true
       watchdog_thread.join
 
-      unless job.success?
-        job.finish!(:failed)
-      end
+      job.finish!(:failed) unless job.success?
     end
 
     Log.debug("Completed job #{job.id} on #{job_thread_name}")
   end
 
-
   def start_background_thread(thread_number)
     Thread.new do
       Thread.current[:name] = "background job thread #{thread_number} (#{Thread.current.object_id})"
       Log.info("Starting #{Thread.current[:name]}")
-      while true
+      loop do
         begin
           run_pending_job
-        rescue => e
+        rescue StandardError => e
           Log.error("Error in #{Thread.current[:name]}: #{e.class} #{$!} #{$@}")
         end
         sleep AppConfig[:job_poll_seconds].to_i
@@ -175,13 +167,11 @@ class BackgroundJobQueue
     end
   end
 
-
   def start_background_threads
     AppConfig[:job_thread_count].to_i.times do |i|
-      start_background_thread(i+1)
+      start_background_thread(i + 1)
     end
   end
-
 
   def self.init
     # cancel jobs left in a running state from a previous run
@@ -189,13 +179,11 @@ class BackgroundJobQueue
       Job.running_jobs_untouched_since(Time.now - JOB_TIMEOUT_SECONDS).each do |job|
         job.finish!(:canceled)
       end
-    rescue => e
+    rescue StandardError => e
       Log.error("Error trying to cancel old jobs: #{e.class} #{$!} #{$@}")
     end
-    
 
     queue = BackgroundJobQueue.new
     queue.start_background_threads
   end
-
 end

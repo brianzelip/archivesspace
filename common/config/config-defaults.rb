@@ -21,49 +21,48 @@ AppConfig[:db_max_connections] = proc { 20 + (AppConfig[:indexer_thread_count] *
 
 # The ArchivesSpace backend listens on port 8089 by default.  You can set it to
 # something else below.
-AppConfig[:backend_url] = "http://localhost:8089"
+AppConfig[:backend_url] = 'http://localhost:8089'
 
 # The ArchivesSpace staff interface listens on port 8080 by default.  You can
 # set it to something else below.
-AppConfig[:frontend_url] = "http://localhost:8080"
+AppConfig[:frontend_url] = 'http://localhost:8080'
 
 # The ArchivesSpace public interface listens on port 8081 by default.  You can
 # set it to something else below.
-AppConfig[:public_url] = "http://localhost:8081"
+AppConfig[:public_url] = 'http://localhost:8081'
 
 # The ArchivesSpace OAI server listens on port 8082 by default.  You can
 # set it to something else below.
-AppConfig[:oai_url] = "http://localhost:8082"
+AppConfig[:oai_url] = 'http://localhost:8082'
 
 # The ArchivesSpace Solr index listens on port 8090 by default.  You can
 # set it to something else below.
-AppConfig[:solr_url] = "http://localhost:8090"
+AppConfig[:solr_url] = 'http://localhost:8090'
 
 # The ArchivesSpace indexer listens on port 8091 by default.  You can
 # set it to something else below.
-AppConfig[:indexer_url] = "http://localhost:8091"
+AppConfig[:indexer_url] = 'http://localhost:8091'
 
 # The ArchivesSpace API documentation listens on port 8888 by default.  You can
 # set it to something else below.
-AppConfig[:docs_url] = "http://localhost:8888"
+AppConfig[:docs_url] = 'http://localhost:8888'
 
 # Logging. By default, this will be output on the screen while the archivesspace
 # command is running. When running as a daemon/service, this is put into a
 # file in logs/archivesspace.out. You can change this file by changing the log
 # value to a filepath that archivesspace has write access to.
-AppConfig[:frontend_log] = "default"
+AppConfig[:frontend_log] = 'default'
 # Log level for the frontend, values: (everything) debug, info, warn, error, fatal (severe only)
-AppConfig[:frontend_log_level] = "debug"
+AppConfig[:frontend_log_level] = 'debug'
 # Log level for the backend, values: (everything) debug, info, warn, error, fatal (severe only)
-AppConfig[:backend_log] = "default"
-AppConfig[:backend_log_level] = "debug"
+AppConfig[:backend_log] = 'default'
+AppConfig[:backend_log_level] = 'debug'
 
-AppConfig[:pui_log] = "default"
-AppConfig[:pui_log_level] = "debug"
+AppConfig[:pui_log] = 'default'
+AppConfig[:pui_log_level] = 'debug'
 
-AppConfig[:indexer_log] = "default"
-AppConfig[:indexer_log_level] = "debug"
-
+AppConfig[:indexer_log] = 'default'
+AppConfig[:indexer_log_level] = 'debug'
 
 # Set to true to log all SQL statements.  Note that this will have a performance
 # impact!
@@ -73,9 +72,9 @@ AppConfig[:mysql_binlog] = false
 
 # By default, Solr backups will run at midnight.  See https://crontab.guru/ for
 # information about the schedule syntax.
-AppConfig[:solr_backup_schedule] = "0 0 * * *"
+AppConfig[:solr_backup_schedule] = '0 0 * * *'
 AppConfig[:solr_backup_number_to_keep] = 1
-AppConfig[:solr_backup_directory] = proc { File.join(AppConfig[:data_directory], "solr_backups") }
+AppConfig[:solr_backup_directory] = proc { File.join(AppConfig[:data_directory], 'solr_backups') }
 # add default solr params, i.e. use AND for search: AppConfig[:solr_params] = { "q.op" => "AND" }
 # Another example below sets the boost query value (bq) to boost the relevancy for the query string in the title,
 # sets the phrase fields parameter (pf) to boost the relevancy for the title when the query terms are in close proximity to
@@ -88,7 +87,7 @@ AppConfig[:solr_backup_directory] = proc { File.join(AppConfig[:data_directory],
 # For more information about solr parameters, please consult the solr documentation
 # here: https://lucene.apache.org/solr/
 # Configuring search operator to be AND by default - ANW-427
-AppConfig[:solr_params] = { "q.op" => "AND" }
+AppConfig[:solr_params] = { 'q.op' => 'AND' }
 
 # Set the application's language (see the .yml files in
 # https://github.com/archivesspace/archivesspace/tree/master/common/locales for
@@ -96,7 +95,7 @@ AppConfig[:solr_params] = { "q.op" => "AND" }
 AppConfig[:locale] = :en
 
 # Plug-ins to load. They will load in the order specified
-AppConfig[:plugins] = ['local',  'lcnaf']
+AppConfig[:plugins] = ['local', 'lcnaf']
 
 # The number of concurrent threads available to run background jobs
 # Resist the urge to set this to a big number as it will affect performance
@@ -112,7 +111,6 @@ AppConfig[:oai_proxy_url] = 'http://your-public-oai-url.example.com'
 AppConfig[:oai_admin_email] = 'admin@example.com'
 AppConfig[:oai_record_prefix] = 'oai:archivesspace'
 AppConfig[:oai_repository_name] = 'ArchivesSpace OAI Provider'
-
 
 # In addition to the sets based on level of description, you can define OAI Sets
 # based on repository codes and/or sponsors as follows
@@ -136,7 +134,7 @@ AppConfig[:oai_ead_options] = {}
 ## Other less commonly changed settings are below
 ##
 
-AppConfig[:default_admin_password] = "admin"
+AppConfig[:default_admin_password] = 'admin'
 
 # NOTE: If you run ArchivesSpace using the standard scripts (archivesspace.sh,
 # archivesspace.bat or as a Windows service), the value of :data_directory is
@@ -144,11 +142,11 @@ AppConfig[:default_admin_password] = "admin"
 # distribution.  You don't need to change this value unless you specifically
 # want ArchivesSpace to put its data files elsewhere.
 #
-AppConfig[:data_directory] = File.join(Dir.home, "ArchivesSpace")
+AppConfig[:data_directory] = File.join(Dir.home, 'ArchivesSpace')
 
-AppConfig[:backup_directory] = proc { File.join(AppConfig[:data_directory], "demo_db_backups") }
-AppConfig[:solr_index_directory] = proc { File.join(AppConfig[:data_directory], "solr_index") }
-AppConfig[:solr_home_directory] = proc { File.join(AppConfig[:data_directory], "solr_home") }
+AppConfig[:backup_directory] = proc { File.join(AppConfig[:data_directory], 'demo_db_backups') }
+AppConfig[:solr_index_directory] = proc { File.join(AppConfig[:data_directory], 'solr_index') }
+AppConfig[:solr_home_directory] = proc { File.join(AppConfig[:data_directory], 'solr_home') }
 AppConfig[:solr_indexing_frequency_seconds] = 30
 AppConfig[:solr_facet_limit] = 100
 
@@ -163,7 +161,7 @@ AppConfig[:abstract_note_length] = 500
 #
 # Change this if you're running more than one instance of ArchivesSpace on the
 # same hostname (i.e. multiple instances on different ports)
-AppConfig[:cookie_prefix] = "archivesspace"
+AppConfig[:cookie_prefix] = 'archivesspace'
 
 # The periodic indexer can run using multiple threads to take advantage of
 # multiple CPU cores.
@@ -197,8 +195,7 @@ AppConfig[:allow_other_unmapped] = false
 
 AppConfig[:db_url_redacted] = proc { AppConfig[:db_url].gsub(/(user|password)=(.*?)(&|$)/, '\1=[REDACTED]\3') }
 
-
-AppConfig[:demo_db_backup_schedule] = "0 4 * * *"
+AppConfig[:demo_db_backup_schedule] = '0 4 * * *'
 
 AppConfig[:allow_unsupported_database] = false
 AppConfig[:allow_non_utf8_mysql_database] = false
@@ -213,8 +210,8 @@ AppConfig[:frontend_proxy_url] = proc { AppConfig[:frontend_url] }
 AppConfig[:public_proxy_url] = proc { AppConfig[:public_url] }
 
 # Don't override _prefix or _proxy_prefix unless you know what you're doing
-AppConfig[:frontend_proxy_prefix] = proc { "#{URI(AppConfig[:frontend_proxy_url]).path}/".gsub(%r{/+$}, "/") }
-AppConfig[:public_proxy_prefix] = proc { "#{URI(AppConfig[:public_proxy_url]).path}/".gsub(%r{/+$}, "/") }
+AppConfig[:frontend_proxy_prefix] = proc { "#{URI(AppConfig[:frontend_proxy_url]).path}/".gsub(%r{/+$}, '/') }
+AppConfig[:public_proxy_prefix] = proc { "#{URI(AppConfig[:public_proxy_url]).path}/".gsub(%r{/+$}, '/') }
 
 # Setting any of the four keys below to false will prevent the associated
 # applications from starting. Temporarily disabling the frontend and public
@@ -238,8 +235,7 @@ AppConfig[:enable_oai] = true
 # in the data directory. This is not turned on by default.
 #
 AppConfig[:use_jetty_shutdown_handler] = false
-AppConfig[:jetty_shutdown_path] = "/xkcd"
-
+AppConfig[:jetty_shutdown_path] = '/xkcd'
 
 # If you have multiple instances of the backend running behind a load
 # balancer, list the URL of each backend instance here.  This is used by the
@@ -251,71 +247,69 @@ AppConfig[:jetty_shutdown_path] = "/xkcd"
 #
 AppConfig[:backend_instance_urls] = proc { [AppConfig[:backend_url]] }
 
-AppConfig[:frontend_theme] = "default"
-AppConfig[:public_theme] = "default"
+AppConfig[:frontend_theme] = 'default'
+AppConfig[:public_theme] = 'default'
 
 # Sessions marked as expirable will timeout after this number of seconds of inactivity
 AppConfig[:session_expire_after_seconds] = 3600
 
 # Sessions marked as non-expirable will eventually expire too, but after a longer period.
-AppConfig[:session_nonexpirable_force_expire_after_seconds] = 604800
+AppConfig[:session_nonexpirable_force_expire_after_seconds] = 604_800
 
-AppConfig[:search_username] = "search_indexer"
+AppConfig[:search_username] = 'search_indexer'
 
-AppConfig[:public_username] = "public_anonymous"
+AppConfig[:public_username] = 'public_anonymous'
 
-AppConfig[:staff_username] = "staff_system"
+AppConfig[:staff_username] = 'staff_system'
 
 AppConfig[:authentication_sources] = []
 
-AppConfig[:realtime_index_backlog_ms] = 60000
+AppConfig[:realtime_index_backlog_ms] = 60_000
 
-AppConfig[:notifications_backlog_ms] = 60000
+AppConfig[:notifications_backlog_ms] = 60_000
 AppConfig[:notifications_poll_frequency_ms] = 1000
 
 AppConfig[:max_usernames_per_source] = 50
 
-AppConfig[:demodb_snapshot_flag] = proc { File.join(AppConfig[:data_directory], "create_demodb_snapshot.txt") }
+AppConfig[:demodb_snapshot_flag] = proc { File.join(AppConfig[:data_directory], 'create_demodb_snapshot.txt') }
 
 # Report Configuration
 # :report_page_layout uses valid values for the  CSS3 @page directive's
 # size property: http://www.w3.org/TR/css3-page/#page-size-prop
-AppConfig[:report_page_layout] = "letter"
+AppConfig[:report_page_layout] = 'letter'
 AppConfig[:report_pdf_font_paths] = proc { ["#{AppConfig[:backend_url]}/reports/static/fonts/dejavu/DejaVuSans.ttf"] }
-AppConfig[:report_pdf_font_family] = "\"DejaVu Sans\", sans-serif"
+AppConfig[:report_pdf_font_family] = '"DejaVu Sans", sans-serif'
 
 # Path to system Java -- required when creating PDFs on Windows
-AppConfig[:path_to_java] = "java"
+AppConfig[:path_to_java] = 'java'
 
 # By default, the plugins directory will be in your ASpace Home.
 # If you want to override that, update this with an absolute
 # path
-AppConfig[:plugins_directory] = "plugins"
+AppConfig[:plugins_directory] = 'plugins'
 
 # URL to direct the feedback link
 # You can remove this from the footer by making the value blank.
-AppConfig[:feedback_url] = "http://archivesspace.org/feedback"
+AppConfig[:feedback_url] = 'http://archivesspace.org/feedback'
 
 # Allow an unauthenticated user to create an account
 AppConfig[:allow_user_registration] = true
 
 # Help Configuration
 AppConfig[:help_enabled] = true
-AppConfig[:help_url] = "http://docs.archivesspace.org"
-AppConfig[:help_topic_prefix] = "/Default_CSH.htm#"
+AppConfig[:help_url] = 'http://docs.archivesspace.org'
+AppConfig[:help_topic_prefix] = '/Default_CSH.htm#'
 
-
-AppConfig[:shared_storage] = proc { File.join(AppConfig[:data_directory], "shared") }
+AppConfig[:shared_storage] = proc { File.join(AppConfig[:data_directory], 'shared') }
 
 # formerly known as :import_job_path
-AppConfig[:job_file_path] = proc { AppConfig.has_key?(:import_job_path) ? AppConfig[:import_job_path] : File.join(AppConfig[:shared_storage], "job_files") }
+AppConfig[:job_file_path] = proc { AppConfig.has_key?(:import_job_path) ? AppConfig[:import_job_path] : File.join(AppConfig[:shared_storage], 'job_files') }
 
 # this too
 AppConfig[:job_poll_seconds] = proc { AppConfig.has_key?(:import_poll_seconds) ? AppConfig[:import_poll_seconds] : 5 }
 
 # and this
 AppConfig[:job_timeout_seconds] = proc { AppConfig.has_key?(:import_timeout_seconds) ? AppConfig[:import_timeout_seconds] : 300 }
-
 
 # By default, only allow jobs to be cancelled if we're running against MySQL (since we can rollback)
 AppConfig[:jobs_cancelable] = proc { (AppConfig[:db_url] != AppConfig.demo_db_url).to_s }
@@ -332,7 +326,7 @@ AppConfig[:ignore_schema_info_check] = false
 # To use this, set an OS environment variable of ASPACE_DEMO = true
 # This is the configuration variable to point to some demo data for use in testing,
 # teaching, etc.
-AppConfig[:demo_data_url] = ""
+AppConfig[:demo_data_url] = ''
 
 # Expose external ids in the frontend
 AppConfig[:show_external_ids] = false
@@ -376,49 +370,49 @@ AppConfig[:jetty_request_buffer_size_bytes] = 64 * 1024
 # Note - any changes to record_inheritance config will require a reindex of pui
 # records to take affect. To do this remove files from indexer_pui_state
 AppConfig[:record_inheritance] = {
-  :archival_object => {
-    :inherited_fields => [
-                          {
-                            :property => 'title',
-                            :inherit_directly => true
-                          },
-                          {
-                            :property => 'component_id',
-                            :inherit_directly => false
-                          },
-                          {
-                            :property => 'lang_materials',
-                            :inherit_directly => false
-                          },
-                          {
-                            :property => 'dates',
-                            :inherit_directly => true
-                          },
-                          {
-                            :property => 'extents',
-                            :inherit_directly => false
-                          },
-                          {
-                            :property => 'linked_agents',
-                            :inherit_if => proc {|json| json.select {|j| j['role'] == 'creator'} },
-                            :inherit_directly => false
-                          },
-                          {
-                            :property => 'notes',
-                            :inherit_if => proc {|json| json.select {|j| j['type'] == 'accessrestrict'} },
-                            :inherit_directly => true
-                          },
-                          {
-                            :property => 'notes',
-                            :inherit_if => proc {|json| json.select {|j| j['type'] == 'scopecontent'} },
-                            :inherit_directly => false
-                          },
-                          {
-                            :property => 'notes',
-                            :inherit_if => proc {|json| json.select {|j| j['type'] == 'langmaterial'} },
-                            :inherit_directly => false
-                          },
-                         ]
+  archival_object: {
+    inherited_fields: [
+      {
+        property: 'title',
+        inherit_directly: true
+      },
+      {
+        property: 'component_id',
+        inherit_directly: false
+      },
+      {
+        property: 'lang_materials',
+        inherit_directly: false
+      },
+      {
+        property: 'dates',
+        inherit_directly: true
+      },
+      {
+        property: 'extents',
+        inherit_directly: false
+      },
+      {
+        property: 'linked_agents',
+        inherit_if: proc { |json| json.select { |j| j['role'] == 'creator' } },
+        inherit_directly: false
+      },
+      {
+        property: 'notes',
+        inherit_if: proc { |json| json.select { |j| j['type'] == 'accessrestrict' } },
+        inherit_directly: true
+      },
+      {
+        property: 'notes',
+        inherit_if: proc { |json| json.select { |j| j['type'] == 'scopecontent' } },
+        inherit_directly: false
+      },
+      {
+        property: 'notes',
+        inherit_if: proc { |json| json.select { |j| j['type'] == 'langmaterial' } },
+        inherit_directly: false
+      }
+    ]
   }
 }
 
@@ -426,20 +420,20 @@ AppConfig[:record_inheritance] = {
 # The values for :include_level and :identifier_delimiter shown here are the defaults
 # If :include_level is set to true then level values (eg Series) will be included in _composite_identifier
 # The :identifier_delimiter is used when joining the four part identifier for resources
-#AppConfig[:record_inheritance][:archival_object][:composite_identifiers] = {
+# AppConfig[:record_inheritance][:archival_object][:composite_identifiers] = {
 #  :include_level => false,
 #  :identifier_delimiter => ' '
-#}
+# }
 
 # To configure additional elements to be inherited use this pattern in your config
-#AppConfig[:record_inheritance][:archival_object][:inherited_fields] <<
+# AppConfig[:record_inheritance][:archival_object][:inherited_fields] <<
 #  {
 #    :property => 'linked_agents',
 #    :inherit_if => proc {|json| json.select {|j| j['role'] == 'subject'} },
 #    :inherit_directly => true
 #  }
 # ... or use this pattern to add many new elements at once
-#AppConfig[:record_inheritance][:archival_object][:inherited_fields].concat(
+# AppConfig[:record_inheritance][:archival_object][:inherited_fields].concat(
 #  [
 #    {
 #      :property => 'subjects',
@@ -517,7 +511,7 @@ AppConfig[:pui_hide][:container_inventory] = false
 # Whether to display linked decaccessions
 AppConfig[:pui_display_deaccessions] = true
 
-#The number of characters to truncate before showing the 'Read More' link on notes
+# The number of characters to truncate before showing the 'Read More' link on notes
 AppConfig[:pui_readmore_max_characters] = 450
 
 # Enable / disable PUI resource/archival object page actions
@@ -554,9 +548,9 @@ AppConfig[:pui_email_enabled] = false
 # 'pui_email_override' for testing, this email will be the to-address for all sent emails
 # AppConfig[:pui_email_override] = 'testing@example.com'
 # 'pui_request_email_fallback_to_address' the 'to' email address for repositories that don't define their own email
-#AppConfig[:pui_request_email_fallback_to_address] = 'testing@example.com'
+# AppConfig[:pui_request_email_fallback_to_address] = 'testing@example.com'
 # 'pui_request_email_fallback_from_address' the 'from' email address for repositories that don't define their own email
-#AppConfig[:pui_request_email_fallback_from_address] = 'testing@example.com'
+# AppConfig[:pui_request_email_fallback_from_address] = 'testing@example.com'
 
 # use the repository record email address for requests (overrides config email)
 AppConfig[:pui_request_use_repo_email] = false
@@ -567,11 +561,11 @@ AppConfig[:pui_request_use_repo_email] = false
 #   location: '/usr/sbin/sendmail',
 #   arguments: '-i'
 # }
-#AppConfig[:pui_email_perform_deliveries] = true
-#AppConfig[:pui_email_raise_delivery_errors] = true
+# AppConfig[:pui_email_perform_deliveries] = true
+# AppConfig[:pui_email_raise_delivery_errors] = true
 # Example SMTP configuration:
-#AppConfig[:pui_email_delivery_method] = :smtp
-#AppConfig[:pui_email_smtp_settings] = {
+# AppConfig[:pui_email_delivery_method] = :smtp
+# AppConfig[:pui_email_smtp_settings] = {
 #      address:              'smtp.gmail.com',
 #      port:                 587,
 #      domain:               'gmail.com',
@@ -579,9 +573,9 @@ AppConfig[:pui_request_use_repo_email] = false
 #      password:             '<password>',
 #      authentication:       'plain',
 #      enable_starttls_auto: true,
-#}
-#AppConfig[:pui_email_perform_deliveries] = true
-#AppConfig[:pui_email_raise_delivery_errors] = true
+# }
+# AppConfig[:pui_email_perform_deliveries] = true
+# AppConfig[:pui_email_raise_delivery_errors] = true
 
 # Add page actions via the configuration
 AppConfig[:pui_page_custom_actions] = []
@@ -653,8 +647,8 @@ AppConfig[:show_source_in_subject_listing] = false
 AppConfig[:arks_enabled] = false
 
 # If you are planning on using ARKs, change this to a valid, registered NAAN.
-# Institutional NAAN value to use in ARK URLs. 
-AppConfig[:ark_naan] = "99999"
+# Institutional NAAN value to use in ARK URLs.
+AppConfig[:ark_naan] = '99999'
 
 # URL prefix to use in ARK URLs.
 # In most cases this will be the same as the PUI URL.

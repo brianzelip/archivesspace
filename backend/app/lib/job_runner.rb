@@ -1,5 +1,4 @@
 class JobRunner
-
   class JobRunnerNotFound < StandardError; end
   class JobRunnerError < StandardError; end
   class BackgroundJobError < StandardError; end
@@ -40,23 +39,20 @@ class JobRunner
   # :hidden and :run_concurrently default to false.
   # :create_permissions and :cancel_permissions default to an empty array
 
-
   # Implement this in your subclass
   #
   # This is the method that does the actual work
   def run
-    raise JobRunnerError.new("#{self.class} must implement the #run method")
+    raise JobRunnerError, "#{self.class} must implement the #run method"
   end
 
-
   # Nothing below here needs to be implemented in your subclass
-
 
   def self.register_for_job_type(type, opts = {})
     @@runners ||= {}
     if !opts.fetch(:allow_reregister, false) && @@runners.has_key?(type)
-      raise JobRunnerError.new("Attempting to register #{self} for job type #{type} " +
-                               "- already handled by #{@@runners[type]}")
+      raise JobRunnerError, "Attempting to register #{self} for job type #{type} " +
+                            "- already handled by #{@@runners[type]}"
     end
 
     @@runners[type] = RegisteredRunner.new(type,
@@ -67,42 +63,36 @@ class JobRunner
                                            [opts.fetch(:cancel_permissions, [])].flatten)
   end
 
-
   def self.for(job)
     type = ASUtils.json_parse(job[:job_blob])['jsonmodel_type']
 
-    unless @@runners.has_key?(type)
-      raise JobRunnerNotFound.new("No suitable runner found for #{type}")
-    end
+    raise JobRunnerNotFound, "No suitable runner found for #{type}" unless @@runners.has_key?(type)
 
     @@runners[type].runner.new(job)
   end
 
-
   def self.registered_runner_for(type)
-    @@runners.fetch(type) { raise NotFoundException.new("No runner found for #{type}") }
+    @@runners.fetch(type) { raise NotFoundException, "No runner found for #{type}" }
   end
-
 
   def self.registered_job_types
-    Hash[ @@runners.reject{|k,v| v[:hidden] }.map { |k, v| [k, {:create_permissions => v.create_permissions,
-                                                                :cancel_permissions => v.cancel_permissions}] } ]
+    Hash[ @@runners.reject { |_k, v| v[:hidden] }.map { |k, v|
+            [k, { create_permissions: v.create_permissions,
+                  cancel_permissions: v.cancel_permissions }]
+          } ]
   end
-
 
   def initialize(job)
     @job = job
-    RequestContext.open(:repo_id => @job.repo_id) do
+    RequestContext.open(repo_id: @job.repo_id) do
       @json = Job.to_jsonmodel(job)
     end
   end
-
 
   def add_success_hook(&block)
     @success_hooks ||= []
     @success_hooks << block
   end
-
 
   def success!
     Array(@success_hooks).each do |hook|
@@ -110,14 +100,11 @@ class JobRunner
     end
   end
 
-
   def canceled?
     @job_canceled.value
   end
 
-
   def cancelation_signaler(canceled)
     @job_canceled = canceled
   end
-
 end

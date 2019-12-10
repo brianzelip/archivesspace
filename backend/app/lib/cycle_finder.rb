@@ -1,5 +1,4 @@
 class CycleFinder
-
   # Expects an instance of a DependencySet representing a dependency graph like:
   #
   #  {
@@ -33,13 +32,12 @@ class CycleFinder
 
   private
 
-
   # Find all cycles in our graph beginning from `start_node`.
   def find_cycles(start_node)
-    work_queue = [{:action => :check_node, :path => Path.new(start_node)}]
+    work_queue = [{ action: :check_node, path: Path.new(start_node) }]
     cycles_found = []
 
-    while !work_queue.empty?
+    until work_queue.empty?
       task = work_queue.shift
 
       if task[:action] == :whitelist_node
@@ -50,7 +48,7 @@ class CycleFinder
       end
 
       # Otherwise, we're being asked to check a node
-      task[:action] == :check_node or raise "Not sure what to do with #{task}"
+      (task[:action] == :check_node) || raise("Not sure what to do with #{task}")
 
       path_to_check = task[:path]
 
@@ -66,12 +64,12 @@ class CycleFinder
       # Once this node's dependencies have been checked, we can whitelist this
       # node to avoid further checking.  Since we're doing a depth-first search,
       # we add the whitelist action first.
-      work_queue.unshift({:action => :whitelist_node, :node => path_to_check.node})
+      work_queue.unshift(action: :whitelist_node, node: path_to_check.node)
 
       # Add this node's dependencies to our list of nodes to check
       Array(@graph[path_to_check.node]).each do |dependency|
-        work_queue.unshift({:action => :check_node,
-                            :path => path_to_check.next_node(dependency)})
+        work_queue.unshift(action: :check_node,
+                           path: path_to_check.next_node(dependency))
       end
     end
 
@@ -97,5 +95,4 @@ class CycleFinder
       self.class.new(new_node, ancestors + [node])
     end
   end
-
 end

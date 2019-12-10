@@ -40,7 +40,6 @@
 # database updates, since we can update all matching records with one UPDATE per
 # model, rather than one UPDATE per record.
 
-
 ## The Implementation
 ##
 # Calculating the object graph for a record is kicked off by calling its
@@ -53,20 +52,16 @@
 # .calculate_object_graph call by extracting the IDs of child records and adding
 # them to the object graph.
 
-
 require 'set'
 
 module ObjectGraph
-
   def self.included(base)
     base.extend(ClassMethods)
   end
 
-
   class ObjectGraph
-
     def initialize(hash = {})
-      @graph = Hash[hash.map {|model, ids|
+      @graph = Hash[hash.map { |model, ids|
                       [model, Set.new(ids)]
                     }]
     end
@@ -74,6 +69,7 @@ module ObjectGraph
     def add_objects(model, *ids)
       flat_ids = ids.flatten
       return if flat_ids.empty?
+
       @graph[model] ||= Set.new
       @graph[model].merge(flat_ids)
 
@@ -99,7 +95,7 @@ module ObjectGraph
         end
       else
         Enumerator.new do |y|
-          @graph.map {|model, ids|
+          @graph.map { |model, ids|
             y << [model, ids.to_a]
           }
         end
@@ -109,14 +105,12 @@ module ObjectGraph
     def models
       @graph.keys
     end
-
   end
 
-
   def object_graph(opts = {})
-    graph = ObjectGraph.new(self.class => [self.id])
+    graph = ObjectGraph.new(self.class => [id])
 
-    while true
+    loop do
       version = graph.version
 
       graph.models.each do |model|
@@ -129,32 +123,28 @@ module ObjectGraph
     graph
   end
 
-
   module ClassMethods
-
-    def calculate_object_graph(object_graph, opts = {})
-
+    def calculate_object_graph(object_graph, _opts = {})
       object_graph.models.each do |model|
         next unless model.respond_to?(:nested_records)
+
         model.nested_records.each do |nr|
-          association =  nr[:association]
+          association = nr[:association]
 
-          if association[:type] != :many_to_many
-            nested_model = Kernel.const_get(association[:class_name])
+          next unless association[:type] != :many_to_many
 
-            ids = nested_model.filter(association[:key] => object_graph.ids_for(model)).
-                               select(:id).map {|row|
-              row[:id]
-            }
+          nested_model = Kernel.const_get(association[:class_name])
 
-            object_graph.add_objects(nested_model, ids)
-          end
+          ids = nested_model.filter(association[:key] => object_graph.ids_for(model))
+                            .select(:id).map { |row|
+            row[:id]
+          }
+
+          object_graph.add_objects(nested_model, ids)
         end
       end
 
       object_graph
     end
-
   end
-
 end

@@ -1,7 +1,6 @@
 class AssessmentConservationIssuesSubreport < AbstractSubreport
-
   register_subreport('conservation_issues', ['assessment'],
-    :translation => 'assessment._frontend.conservation_issues')
+                     translation: 'assessment._frontend.conservation_issues')
 
   def initialize(parent_report, assessment_id)
     super(parent_report)
@@ -23,5 +22,4 @@ class AssessmentConservationIssuesSubreport < AbstractSubreport
   def self.field_name
     'conservation_issues'
   end
-
 end

@@ -1,4 +1,4 @@
-require "exceptions"
+require 'exceptions'
 
 class BadParamsException < StandardError
   attr_accessor :params
@@ -8,18 +8,14 @@ class BadParamsException < StandardError
   end
 end
 
-
 class NotFoundException < StandardError
 end
-
 
 class ReadOnlyException < StandardError
 end
 
-
 class UserNotFoundException < StandardError
 end
-
 
 class InvalidUsernameException < StandardError
 end
@@ -27,18 +23,14 @@ end
 class SequenceError < StandardError
 end
 
-
 class ReferenceError < StandardError
 end
-
 
 class RetryTransaction < Sequel::DatabaseError
 end
 
-
 class MergeRequestFailed < StandardError
 end
-
 
 class BatchDeleteFailed < StandardError
   attr_accessor :errors
@@ -47,7 +39,6 @@ class BatchDeleteFailed < StandardError
     @errors = errors
   end
 end
-
 
 class TransferConstraintError < StandardError
   attr_accessor :conflicts
@@ -65,14 +56,12 @@ class TransferConstraintError < StandardError
   end
 end
 
-
 class RepositoryNotEmpty < StandardError
 end
 
-
 class ImportCanceled < StandardError
   def to_s
-    "The import was canceled"
+    'The import was canceled'
   end
 end
 
@@ -87,12 +76,12 @@ class ImportException < StandardError
   end
 
   def to_hash
-    hsh = {'record_title' => nil, 'record_type' => nil, 'error_class' => self.class.name, 'errors' => []}
-    hsh['record_title'] = @invalid_object[:title] ? @invalid_object[:title] : "unknown or untitled"
-    hsh['record_type'] = @invalid_object.jsonmodel_type ? @invalid_object.jsonmodel_type : "unknown type"
+    hsh = { 'record_title' => nil, 'record_type' => nil, 'error_class' => self.class.name, 'errors' => [] }
+    hsh['record_title'] = @invalid_object[:title] || 'unknown or untitled'
+    hsh['record_type'] = @invalid_object.jsonmodel_type || 'unknown type'
 
     if @error.respond_to?(:errors)
-      @error.errors.each {|e| hsh['errors'] << e}
+      @error.errors.each { |e| hsh['errors'] << e }
     else
       hsh['errors'] = @error.inspect
     end
@@ -100,102 +89,95 @@ class ImportException < StandardError
   end
 
   def to_s
-    "#<:ImportException: #{{:invalid_object => @invalid_object, :error => @error}.inspect}>"
+    "#<:ImportException: #{{ invalid_object: @invalid_object, error: @error }.inspect}>"
   end
 end
 
-
-
-
 module Exceptions
-
   module ResponseMappings
-
     def self.included(base)
       base.instance_eval do
-
         error ImportException do
-          json_response({:error => request.env['sinatra.error'].to_hash}, 400)
+          json_response({ error: request.env['sinatra.error'].to_hash }, 400)
         end
 
         error RepositoryNotEmpty do
-          json_response({:error => "Repository not empty"}, 409)
+          json_response({ error: 'Repository not empty' }, 409)
         end
 
         error Sinatra::NotFound do
-          json_response({:error => request.env['sinatra.error']}, 404)
+          json_response({ error: request.env['sinatra.error'] }, 404)
         end
 
         error NotFoundException do
-          json_response({:error => request.env['sinatra.error']}, 404)
+          json_response({ error: request.env['sinatra.error'] }, 404)
         end
 
         error BadParamsException do
-          json_response({:error => request.env['sinatra.error'].params}, 400)
+          json_response({ error: request.env['sinatra.error'].params }, 400)
         end
 
         error UserNotFoundException do
-          json_response({:error => {"member_usernames" => [request.env['sinatra.error']]}}, 400)
+          json_response({ error: { 'member_usernames' => [request.env['sinatra.error']] } }, 400)
         end
 
         error BatchDeleteFailed do
           Log.exception(request.env['sinatra.error'])
-          json_response({:error => {"failures" => request.env['sinatra.error'].errors}}, 403)
+          json_response({ error: { 'failures' => request.env['sinatra.error'].errors } }, 403)
         end
 
         error TransferConstraintError do
           Log.exception(request.env['sinatra.error'])
-          json_response({:error => request.env['sinatra.error'].conflicts}, 409)
+          json_response({ error: request.env['sinatra.error'].conflicts }, 409)
         end
 
         error JSONModel::ValidationException do
           json_response({
-                          :error => request.env['sinatra.error'].errors,
-                          :warning => request.env['sinatra.error'].warnings,
-                          :invalid_object => request.env['sinatra.error'].invalid_object.inspect
+                          error: request.env['sinatra.error'].errors,
+                          warning: request.env['sinatra.error'].warnings,
+                          invalid_object: request.env['sinatra.error'].invalid_object.inspect
                         }, 400)
         end
 
         error ConflictException do
-          json_response({:error => request.env['sinatra.error'].conflicts}, 409)
+          json_response({ error: request.env['sinatra.error'].conflicts }, 409)
         end
 
         error AccessDeniedException do
-          json_response({:error => "Access denied"}, 403)
+          json_response({ error: 'Access denied' }, 403)
         end
 
         error InvalidUsernameException do
-          json_response({:error => "Invalid username"}, 400)
+          json_response({ error: 'Invalid username' }, 400)
         end
 
         error Sequel::ValidationFailed do
-          json_response({:error => request.env['sinatra.error'].errors}, 400)
+          json_response({ error: request.env['sinatra.error'].errors }, 400)
         end
 
         error ReferenceError do
           Log.exception(request.env['sinatra.error'])
-          json_response({:error => request.env['sinatra.error']}, 400)
+          json_response({ error: request.env['sinatra.error'] }, 400)
         end
 
         error MergeRequestFailed do
           Log.exception(request.env['sinatra.error'])
-          json_response({:error => request.env['sinatra.error']}, 400)
+          json_response({ error: request.env['sinatra.error'] }, 400)
         end
 
         error Sequel::DatabaseError do
           Log.exception(request.env['sinatra.error'])
-          json_response({:error => {:db_error => ["Database integrity constraint conflict: #{request.env['sinatra.error']}"]}}, 400)
+          json_response({ error: { db_error: ["Database integrity constraint conflict: #{request.env['sinatra.error']}"] } }, 400)
         end
 
         error Sequel::Plugins::OptimisticLocking::Error do
-          json_response({:error => "The record you tried to update has been modified since you fetched it."}, 409)
+          json_response({ error: 'The record you tried to update has been modified since you fetched it.' }, 409)
         end
 
         error JSON::ParserError do
           Log.exception(request.env['sinatra.error'])
-          json_response({:error => "Had some trouble parsing your request: #{request.env['sinatra.error']}"}, 400)
+          json_response({ error: "Had some trouble parsing your request: #{request.env['sinatra.error']}" }, 400)
         end
-
 
         # Overriding Sinatra's default behaviour here
         define_method(:handle_exception!) do |ex|
@@ -217,12 +199,10 @@ module Exceptions
             Log.error('Unhandled exception!')
             Log.exception(request.env['sinatra.error'])
 
-            json_response({:error => ex.message}, 500)
+            json_response({ error: ex.message }, 500)
           end
         end
       end
     end
-
   end
-
 end

@@ -1,27 +1,20 @@
 require_relative 'converter'
 class AccessionConverter < Converter
-
   require_relative 'lib/csv_converter'
   include ASpaceImport::CSVConvert
 
-
-  def self.import_types(show_hidden = false)
+  def self.import_types(_show_hidden = false)
     [
-     {
-       :name => "accession_csv",
-       :description => "Import Accession records from a CSV file"
-     }
+      {
+        name: 'accession_csv',
+        description: 'Import Accession records from a CSV file'
+      }
     ]
   end
 
   def self.instance_for(type, input_file)
-    if type == "accession_csv"
-      self.new(input_file)
-    else
-      nil
-    end
+    new(input_file) if type == 'accession_csv'
   end
-
 
   def self.configure
     {
@@ -173,195 +166,185 @@ class AccessionConverter < Converter
       :cataloged_event_date => event_template('cataloged'),
 
       :agent => {
-        :record_type => Proc.new {|data|
-          @agent_type = data['agent_type']
-          },
-        :on_row_complete => Proc.new {|cache, agent|
-          accession = cache.find {|obj| obj.class.record_type == 'accession' }
+        record_type: proc { |data|
+                       @agent_type = data['agent_type']
+                     },
+        on_row_complete: proc { |cache, agent|
+                           accession = cache.find { |obj| obj.class.record_type == 'accession' }
 
-          if accession
-            accession.linked_agents[0]['ref'] = agent.uri
-          else
-            cache.reject! {|obj| obj.key == agent.key}
-          end
-          },
+                           if accession
+                             accession.linked_agents[0]['ref'] = agent.uri
+                           else
+                             cache.reject! { |obj| obj.key == agent.key }
+                           end
+                         }
 
       },
 
       :agent_contact => {
-        :on_row_complete => Proc.new {|cache, this|
-          agent = cache.find {|obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/}
+        on_row_complete: proc { |cache, this|
+          agent = cache.find { |obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/ }
           agent.agent_contacts << this
         }
       },
 
       :agent_name => {
-        :record_type => Proc.new {|data|
-            @agent_type.sub(/agent_/, 'name_')
+        record_type: proc { |_data|
+          @agent_type.sub(/agent_/, 'name_')
         },
-        :on_create => Proc.new {|data, obj|
-          if @agent_type =~ /family/
-            obj.family_name = data['primary_name']
-          end
+        on_create: proc { |data, obj|
+          obj.family_name = data['primary_name'] if @agent_type =~ /family/
         },
-        :on_row_complete => Proc.new {|cache, this|
-          agent = cache.find {|obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/}
+        on_row_complete: proc { |cache, this|
+          agent = cache.find { |obj| obj.class.record_type =~ /^agent_(perso|corpo|famil)/ }
           agent.names << this
         }
       },
 
       :accession => {
-        :on_create => Proc.new {|data, obj|
-            if data['agent_role']
-              if data['agent_relator']
-                obj.linked_agents << {'role' => data['agent_role'], 'relator' => data['agent_relator']}
-              else
-                obj.linked_agents << {'role' => data['agent_role']}
-              end
-            end
+        on_create: proc { |data, obj|
+          if data['agent_role']
+            obj.linked_agents << if data['agent_relator']
+                                   { 'role' => data['agent_role'], 'relator' => data['agent_relator'] }
+                                 else
+                                   { 'role' => data['agent_role'] }
+                                 end
+          end
         },
-        :on_row_complete => Proc.new { |queue, accession|
-          queue.select {|obj| obj.class.record_type == 'event'}.each do |event|
-            event.linked_records << {'role' => 'source', 'ref' => accession.uri}
+        on_row_complete: proc { |queue, accession|
+          queue.select { |obj| obj.class.record_type == 'event' }.each do |event|
+            event.linked_records << { 'role' => 'source', 'ref' => accession.uri }
           end
         }
       },
 
       :note_bioghist => {
-        :on_create => Proc.new {|data, obj|
-          obj.subnotes = [{'jsonmodel_type' => 'note_text', 'content' => data['content']}]
+        on_create: proc { |data, obj|
+          obj.subnotes = [{ 'jsonmodel_type' => 'note_text', 'content' => data['content'] }]
         },
-        :on_row_complete => Proc.new {|cache, this|
-          agent = cache.find {|obj| obj.class.record_type =~ /^agent_(perso|fami|corpo)/}
+        on_row_complete: proc { |cache, this|
+          agent = cache.find { |obj| obj.class.record_type =~ /^agent_(perso|fami|corpo)/ }
           agent.notes << this
         }
       },
 
       :note_citation => {
-        :on_row_complete => Proc.new {|cache, this|
-          note_biogist = cache.find {|obj| obj.class.record_type == 'note_bioghist'}
+        on_row_complete: proc { |cache, this|
+          note_biogist = cache.find { |obj| obj.class.record_type == 'note_bioghist' }
           note_biogist.subnotes << this
         }
       },
 
       :subject => {
-        :on_create => Proc.new {|data, obj|
-          obj.terms = [{:term => data['term'], :term_type => data['term_type'], :vocabulary => '/vocabularies/1'}]
+        on_create: proc { |data, obj|
+          obj.terms = [{ term: data['term'], term_type: data['term_type'], vocabulary: '/vocabularies/1' }]
           obj.vocabulary = '/vocabularies/1'
         },
-        :on_row_complete => Proc.new {|cache, this|
-          digital_object = cache.find {|obj| obj.class.record_type == 'accession'}
-          digital_object.subjects << {'ref' => this.uri}
+        on_row_complete: proc { |cache, this|
+          digital_object = cache.find { |obj| obj.class.record_type == 'accession' }
+          digital_object.subjects << { 'ref' => this.uri }
         }
       },
 
       :date_1 => {
-        :record_type => :date,
-        :defaults => date_defaults,
-        :on_row_complete => Proc.new { |queue, date|
-          queue.select {|obj| obj.class.record_type == 'accession'}.each do |accession|
+        record_type: :date,
+        defaults: date_defaults,
+        on_row_complete: proc { |queue, date|
+          queue.select { |obj| obj.class.record_type == 'accession' }.each do |accession|
             accession.dates << date
           end
         }
 
-
       },
 
       :date_2 => {
-        :record_type => :date,
-        :defaults => date_defaults,
-        :on_row_complete => Proc.new { |queue, date|
-          queue.select {|obj| obj.class.record_type == 'accession'}.each do |accession|
+        record_type: :date,
+        defaults: date_defaults,
+        on_row_complete: proc { |queue, date|
+          queue.select { |obj| obj.class.record_type == 'accession' }.each do |accession|
             accession.dates << date
           end
         }
       },
 
       :extent => {
-        :defaults => {:portion => 'whole'},
-        :on_row_complete => Proc.new { |queue, extent|
-          queue.select {|obj| obj.class.record_type == 'accession'}.each do |accession|
+        defaults: { portion: 'whole' },
+        on_row_complete: proc { |queue, extent|
+          queue.select { |obj| obj.class.record_type == 'accession' }.each do |accession|
             accession.extents << extent
           end
         }
       },
 
       :collection_management => {
-        :on_row_complete => Proc.new { |queue, cm|
-          queue.select {|obj| obj.class.record_type == 'accession'}.each do |accession|
+        on_row_complete: proc { |queue, cm|
+          queue.select { |obj| obj.class.record_type == 'accession' }.each do |accession|
             accession.collection_management = cm
           end
         }
       },
 
       :user_defined => {
-        :on_row_complete => Proc.new { |queue, user_defined|
-          queue.select {|obj| obj.class.record_type == 'accession'}.each do |accession|
+        on_row_complete: proc { |queue, user_defined|
+          queue.select { |obj| obj.class.record_type == 'accession' }.each do |accession|
             accession.user_defined = user_defined
           end
         }
       },
 
-
       :acknowledgement_sent_event_date => event_template('acknowledgement_sent'),
       :cataloging_event_date => event_template('cataloging'),
       :agreement_sent_event_date => event_template('agreement_sent'),
-      :processed_event_date => event_template('processed'),
+      :processed_event_date => event_template('processed')
 
     }
-
   end
-
 
   private
 
   def self.event_template(event_type)
     {
-      :record_type => Proc.new {|data|
+      record_type: proc { |data|
         data['boolean'] ? :date : nil
       },
-      :defaults => date_defaults,
-      :on_create => Proc.new {|data, obj|
+      defaults: date_defaults,
+      on_create: proc { |data, obj|
         obj.expression = 'unknown' unless data['expression']
       },
-      :on_row_complete => Proc.new { |queue, date|
-        accession = queue.find {|obj| obj.class.record_type == 'accession'}
+      on_row_complete: proc { |queue, date|
+        accession = queue.find { |obj| obj.class.record_type == 'accession' }
         event = ASpaceImport::JSONModel(:event).new
         queue << event
         event.event_type = event_type
         # Not sure how best to handle this, assuming for now that the built-in ASpace agent exists:
-        event.linked_agents << {'role' => 'executing_program', 'ref' => '/agents/software/1'}
+        event.linked_agents << { 'role' => 'executing_program', 'ref' => '/agents/software/1' }
         event.date = date
-        event.linked_records << {'role' => 'source', 'ref' => accession.uri}
+        event.linked_records << { 'role' => 'source', 'ref' => accession.uri }
       }
     }
   end
 
-
   def self.date_defaults
     {
-      :label => 'other',
-      :date_type => 'inclusive'
+      label: 'other',
+      date_type: 'inclusive'
     }
   end
 
-
   def self.date_flip
-
-    @date_flip ||= Proc.new {|val| val.sub(/^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/, '\2/\1/\3')}
+    @date_flip ||= proc { |val| val.sub(%r{^([0-9]{1,2})/([0-9]{1,2})/([0-9]{4})$}, '\2/\1/\3') }
 
     @date_flip
   end
 
   # need to resue the agent type
   def self.agent_type
-    @agent_type ||= "agent_family"
+    @agent_type ||= 'agent_family'
     @agent_type
   end
 
-
   def self.normalize_boolean
-    @normalize_boolean ||= Proc.new {|val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? true : false }
+    @normalize_boolean ||= proc { |val| val.to_s.upcase.match(/\A(1|T|Y|YES|TRUE)\Z/) ? true : false }
     @normalize_boolean
   end
 end

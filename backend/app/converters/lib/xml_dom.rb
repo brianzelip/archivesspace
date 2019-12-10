@@ -7,29 +7,23 @@ require 'saxerator'
 module ASpaceImport
   module XML
     module DOM
-
       module ClassMethods
         def configure
           @config ||= Config.new
           yield @config
         end
 
-
         def config
           @config
         end
-
 
         def make(type)
           yield ASpaceImport::JSONModel(type).new
         end
 
-
-        def mix(hash1, hash2, hash3=nil)
-          if hash3
-            hash2 = mix(hash2, hash3)
-          end
-          hash1.merge(hash2) do |key, one, two|
+        def mix(hash1, hash2, hash3 = nil)
+          hash2 = mix(hash2, hash3) if hash3
+          hash1.merge(hash2) do |_key, one, two|
             if one.is_a?(Hash) && two.is_a?(Hash)
               mix(one, two)
             elsif one.is_a?(Proc) && two.is_a?(Proc)
@@ -43,19 +37,15 @@ module ASpaceImport
         end
       end
 
-
       def self.included(base)
         base.extend(ClassMethods)
       end
-
 
       def config
         self.class.config
       end
 
-
       def run
-
         if config.doc_frag_nodes.empty?
           @doc = Nokogiri::XML::Document.parse(IO.read(@input_file))
           @doc.remove_namespaces!
@@ -82,7 +72,6 @@ module ASpaceImport
         end
       end
 
-
       def object(path, defn)
         @context ||= [@doc]
         @context.last.xpath(path).each do |node|
@@ -92,21 +81,14 @@ module ASpaceImport
           defn[:map].each do |key, defn|
             process_field(obj, key, defn)
           end
-          if defn[:defaults]
-            defn[:defaults].each do |key, val|
-              if obj[key].nil?
-                obj[key] = val
-              end
-            end
+          defn[:defaults]&.each do |key, val|
+            obj[key] = val if obj[key].nil?
           end
           yield obj if block_given?
           @context.pop
         end
-        if @context.length == 1
-          @batch.flush
-        end
+        @batch.flush if @context.length == 1
       end
-
 
       def process_field(obj, key, value)
         raise "Received a non-string mapping: #{key}" unless key.is_a?(String)
@@ -137,9 +119,7 @@ module ASpaceImport
               value[:rel].call(obj, sub_obj)
             else
               property_def = obj.class.schema['properties'][value[:rel].to_s]
-              if property_def.nil?
-                raise Converter::ConverterMappingError.new("The converter maps '#{key}' to a bad target (property '#{value[:rel]}' on record_type '#{obj.jsonmodel_type}').")
-              end
+              raise Converter::ConverterMappingError, "The converter maps '#{key}' to a bad target (property '#{value[:rel]}' on record_type '#{obj.jsonmodel_type}')." if property_def.nil?
 
               property_type = ASpaceImport::Utils.get_property_type(property_def)
               filtered_value = ASpaceImport::Utils.value_filter(property_type[0]).call(sub_obj)
@@ -148,10 +128,9 @@ module ASpaceImport
           end
 
         else
-          raise Converter::ConverterMappingError.new("Bad types in mapping: (#{key.class.name}) => (#{value.class.name})")
+          raise Converter::ConverterMappingError, "Bad types in mapping: (#{key.class.name}) => (#{value.class.name})"
         end
       end
-
 
       class Config
         attr_reader :mappings

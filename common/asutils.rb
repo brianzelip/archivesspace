@@ -1,4 +1,3 @@
-
 require 'java'
 require 'tmpdir'
 require 'tempfile'
@@ -25,18 +24,17 @@ module ASUtils
 
   def self.as_array(thing)
     return [] if thing.nil?
+
     thing.is_a?(Array) ? thing : [thing]
   end
 
   def self.jsonmodels_to_hashes(elt)
-    if elt.is_a?(JSONModelType)
-      elt = elt.to_hash(:raw)
-    end
+    elt = elt.to_hash(:raw) if elt.is_a?(JSONModelType)
 
     if elt.is_a?(Hash)
-      Hash[elt.map { |k, v| [k, self.jsonmodels_to_hashes(v)] }]
+      Hash[elt.map { |k, v| [k, jsonmodels_to_hashes(v)] }]
     elsif elt.is_a?(Array)
-      elt.map { |v| self.jsonmodels_to_hashes(v) }
+      elt.map { |v| jsonmodels_to_hashes(v) }
     else
       elt
     end
@@ -75,7 +73,7 @@ module ASUtils
     dir = Dir.tmpdir
     file = Dir::Tmpname.make_tmpname("#{base}_#{java.lang.System.currentTimeMillis}", nil)
 
-    return File.join(dir, file)
+    File.join(dir, file)
   end
 
   def self.to_json(obj, opts = {})
@@ -115,7 +113,7 @@ module ASUtils
       if AppConfig.changed?(:plugins_directory)
         AppConfig[:plugins_directory]
       else
-        File.join( *[ self.find_base_directory, 'plugins'])
+        File.join(find_base_directory, 'plugins')
       end
     Array(plugins).map do |plugin|
       File.join(*[base_directory, plugin, base].compact)
@@ -123,14 +121,14 @@ module ASUtils
   end
 
   def self.find_locales_directories(base = nil)
-    [File.join(*[self.find_base_directory('common'), 'locales', base].compact)]
+    [File.join(*[find_base_directory('common'), 'locales', base].compact)]
   end
 
   def self.extract_nested_strings(coll)
     if coll.is_a?(Hash)
-      coll.values.map { |v| self.extract_nested_strings(v) }.flatten.compact
+      coll.values.map { |v| extract_nested_strings(v) }.flatten.compact
     elsif coll.is_a?(Array)
-      coll.map { |v| self.extract_nested_strings(v) }.flatten.compact
+      coll.map { |v| extract_nested_strings(v) }.flatten.compact
     else
       coll
     end
@@ -170,7 +168,7 @@ ERRMSG
     diagnostics = get_diagnostics(exception)
     tmp = File.join(Dir.tmpdir, "aspace_diagnostic_#{Time.now.to_i}.txt")
     File.open(tmp, 'w') { |fh| fh.write(JSON.pretty_generate(diagnostics)) }
-    $stderr.puts diagnostic_trace_msg(tmp)
+    warn diagnostic_trace_msg(tmp)
     raise exception if exception
   end
 
@@ -179,7 +177,7 @@ ERRMSG
     target = hash1.dup
     hash2.each_key do |key|
       if hash2[key].is_a?(Hash) && hash1[key].is_a?(Hash)
-        target[key] = self.deep_merge(target[key], hash2[key])
+        target[key] = deep_merge(target[key], hash2[key])
         next
       end
       target[key] = hash2[key]
@@ -191,12 +189,12 @@ ERRMSG
   def self.deep_merge_concat(hash1, hash2)
     target = hash1.dup
     hash2.keys.each do |key|
-      if hash2[key].is_a? Hash and hash1[key].is_a? Hash
-        target[key] = self.deep_merge_concat(target[key], hash2[key])
+      if hash2[key].is_a?(Hash) && hash1[key].is_a?(Hash)
+        target[key] = deep_merge_concat(target[key], hash2[key])
         next
       end
-      if hash2[key].is_a? Array and hash1[key].is_a? Array
-        
+      if hash2[key].is_a?(Array) && hash1[key].is_a?(Array)
+
         if hash1[key] === []
           target[key] = hash2[key]
         elsif hash2[key] === []
@@ -204,36 +202,36 @@ ERRMSG
         else
           target_array = []
           target[key].zip(hash2[key]).each do |target_a, hash2_a|
-            if target_a.nil?
-              target_array << hash2_a
-            elsif hash2_a.nil?
-              target_array << target_a
-            else  
-              target_array << self.deep_merge_concat(target_a, hash2_a)
-            end
+            target_array << if target_a.nil?
+                              hash2_a
+                            elsif hash2_a.nil?
+                              target_a
+                            else
+                              deep_merge_concat(target_a, hash2_a)
+                            end
           end
           target[key] = target_array
         end
         next
       end
-      if hash1[key] === true and key != "is_display_name" and key != "authorized"
-        hash1[key] = "true"
-      elsif hash1[key] === false and key != "is_display_name" and key != "authorized"
-        hash1[key] = "false"        
+      if (hash1[key] === true) && (key != 'is_display_name') && (key != 'authorized')
+        hash1[key] = 'true'
+      elsif (hash1[key] === false) && (key != 'is_display_name') && (key != 'authorized')
+        hash1[key] = 'false'
       end
-      if hash2[key] === true and key != "is_display_name" and key != "authorized"
-        hash2[key] = "1"
-      elsif hash2[key] === false and key != "is_display_name" and key != "authorized"
-        hash2[key] = "0"        
+      if (hash2[key] === true) && (key != 'is_display_name') && (key != 'authorized')
+        hash2[key] = '1'
+      elsif (hash2[key] === false) && (key != 'is_display_name') && (key != 'authorized')
+        hash2[key] = '0'
       end
       if hash1[key].is_a? String
         if hash1[key] == hash2[key]
           target[key] = hash2[key]
         else
-          if key == "jsonmodel_type" and hash1[key].include?("note") and hash2[key].include?("note")
-            raise "Required Note Types must not conflict with Default Note Types"
-          elsif key == "jsonmodel_type" and hash1[key].include?("relationship") and hash2[key].include?("relationship")
-            raise "Required Relationship Types must not conflict with Default Relationship Types"
+          if (key == 'jsonmodel_type') && hash1[key].include?('note') && hash2[key].include?('note')
+            raise 'Required Note Types must not conflict with Default Note Types'
+          elsif (key == 'jsonmodel_type') && hash1[key].include?('relationship') && hash2[key].include?('relationship')
+            raise 'Required Relationship Types must not conflict with Default Relationship Types'
           else
             target[key] = hash1[key] + '_' + hash2[key]
           end
@@ -274,15 +272,11 @@ ERRMSG
   def self.search_nested(elt, keys, ignore_keys = [], &block)
     if elt.respond_to?(:key?)
       keys.each do |key|
-        if elt.key?(key)
-          block.call(key, elt.fetch(key))
-        end
+        block.call(key, elt.fetch(key)) if elt.key?(key)
       end
 
       elt.each.each do |next_key, value|
-        unless ignore_keys.include?(next_key)
-          search_nested(value, keys, ignore_keys, &block)
-        end
+        search_nested(value, keys, ignore_keys, &block) unless ignore_keys.include?(next_key)
       end
     elsif elt.respond_to?(:each)
       elt.each do |value|
@@ -302,9 +296,7 @@ ERRMSG
     elsif obj.respond_to?(:each_pair)
       result = {}
       obj.each_pair do |k, v|
-        if !block.call(k)
-          result[k] = recursive_reject_key(v, &block)
-        end
+        result[k] = recursive_reject_key(v, &block) unless block.call(k)
       end
       result
     elsif obj.respond_to?(:map)

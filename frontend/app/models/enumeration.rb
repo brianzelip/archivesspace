@@ -4,8 +4,8 @@ class Enumeration
 
   def initialize(hash = {})
     if hash
-      @enum_name = hash["enum_name"]
-      @enum_value = hash["enum_value"]
+      @enum_name = hash['enum_name']
+      @enum_value = hash['enum_value']
     end
   end
 end

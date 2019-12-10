@@ -1,18 +1,15 @@
 module CrudHelpers
-
   def handle_update(model, id, json, opts = {})
     obj = model.get_or_die(id)
     obj.update_from_json(json, opts)
     updated_response(obj, json)
   end
 
-
   def handle_create(model, json, opts = {})
     obj = model.create_from_json(json, opts)
 
     created_response(obj, json)
   end
-
 
   def handle_delete(model, id)
     obj = model.get_or_die(id)
@@ -21,22 +18,18 @@ module CrudHelpers
     deleted_response(id)
   end
 
-
   def self.scoped_dataset(model, where_clause)
-    dataset = (model.model_scope == :repository) ? model.this_repo : model
+    dataset = model.model_scope == :repository ? model.this_repo : model
 
     if where_clause.is_a?(Hash) && where_clause.has_key?(:exclude)
       dataset = dataset.exclude(where_clause[:exclude])
       where_clause.delete(:exclude)
     end
 
-    if !where_clause.is_a?(Hash) || !where_clause.empty?
-      dataset = dataset.filter(where_clause)
-    end
+    dataset = dataset.filter(where_clause) if !where_clause.is_a?(Hash) || !where_clause.empty?
 
     dataset
   end
-
 
   def handle_unlimited_listing(model, where = {})
     dataset = CrudHelpers.scoped_dataset(model, where)
@@ -44,9 +37,7 @@ module CrudHelpers
     listing_response(dataset, model)
   end
 
-
   def handle_listing(model, pagination_data, where = {}, order = nil)
-
     dataset = CrudHelpers.scoped_dataset(model, where)
 
     modified_since_time = Time.at(pagination_data[:modified_since])
@@ -61,48 +52,40 @@ module CrudHelpers
 
     elsif pagination_data[:all_ids]
       # Return a JSON array containing all IDs for the matching records
-      json_response(dataset.select(:id).map {|rec| rec[:id]})
+      json_response(dataset.select(:id).map { |rec| rec[:id] })
 
     elsif pagination_data[:id_set]
       # Return the requested set of IDs
-      listing_response(dataset.filter(:id => pagination_data[:id_set]), model)
+      listing_response(dataset.filter(id: pagination_data[:id_set]), model)
     end
   end
-
 
   def self.with_record_conflict_reporting(model, json)
-    begin
-      yield
-    rescue Sequel::ValidationFailed => e
-      if e.errors && e.errors.any? {|key, errors| errors[0].end_with?("must be unique")}
-        existing_record = model.find_matching(json)
+    yield
+  rescue Sequel::ValidationFailed => e
+    if e.errors&.any? { |_key, errors| errors[0].end_with?('must be unique') }
+      existing_record = model.find_matching(json)
 
-        if existing_record
-          e.errors[:conflicting_record] = [existing_record.uri]
-        end
-      end
-
-      raise $!
+      e.errors[:conflicting_record] = [existing_record.uri] if existing_record
     end
-  end
 
+    raise $!
+  end
 
   def with_record_conflict_reporting(model, json)
-    CrudHelpers::with_record_conflict_reporting(model, json) do
+    CrudHelpers.with_record_conflict_reporting(model, json) do
       yield
     end
   end
-
 
   private
 
   def listing_response(dataset, model)
-
     objs = dataset.respond_to?(:all) ? dataset.all : dataset
 
-    opts = {:calculate_linked_repositories => current_user.can?(:index_system)}
+    opts = { calculate_linked_repositories: current_user.can?(:index_system) }
 
-    jsons = model.sequel_to_jsonmodel(objs, opts).map {|json|
+    jsons = model.sequel_to_jsonmodel(objs, opts).map { |json|
       if json.is_a?(JSONModelType)
         json.to_hash(:trusted)
       else
@@ -112,19 +95,18 @@ module CrudHelpers
 
     results = resolve_references(jsons, params[:resolve])
 
-    if dataset.respond_to? (:page_range)
-      response = {
-        :first_page => dataset.page_range.first,
-        :last_page => dataset.page_range.last,
-        :this_page => dataset.current_page,
-        :total => dataset.pagination_record_count,
-        :results => results
-      }
-    else
-      response = results
-    end
+    response = if dataset.respond_to? :page_range
+                 {
+                   first_page: dataset.page_range.first,
+                   last_page: dataset.page_range.last,
+                   this_page: dataset.current_page,
+                   total: dataset.pagination_record_count,
+                   results: results
+                 }
+               else
+                 results
+               end
 
     json_response(response)
   end
-
 end

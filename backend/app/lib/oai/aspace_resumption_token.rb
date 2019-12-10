@@ -1,22 +1,21 @@
 class ArchivesSpaceResumptionToken
-
-  PRODUCING_RECORDS_STATE = 'producing_records'
-  PRODUCING_DELETES_STATE = 'producing_deletes'
+  PRODUCING_RECORDS_STATE = 'producing_records'.freeze
+  PRODUCING_DELETES_STATE = 'producing_deletes'.freeze
 
   def initialize(options, available_record_types)
-    @options = Hash[options.map {|k, v| [k.to_s, v]}]
+    @options = Hash[options.map { |k, v| [k.to_s, v] }]
 
     @options['state'] ||= PRODUCING_RECORDS_STATE
     @options['last_delete_id'] ||= 0
 
     unless @options.has_key?('remaining_types')
-      types_for_format = available_record_types.fetch(format) { raise OAI::FormatException.new }
-      @options['remaining_types'] = Hash[types_for_format.record_types.map {|type| [type.to_s, 0]}]
+      types_for_format = available_record_types.fetch(format) { raise OAI::FormatException }
+      @options['remaining_types'] = Hash[types_for_format.record_types.map { |type| [type.to_s, 0] }]
     end
   end
 
   def self.extract_format(token)
-    self.parse(token, {}).format
+    parse(token, {}).format
   end
 
   def state
@@ -52,7 +51,7 @@ class ArchivesSpaceResumptionToken
   end
 
   def remaining_types
-    @options.fetch('remaining_types').sort_by {|type, _| type}
+    @options.fetch('remaining_types').sort_by { |type, _| type }
   end
 
   def update_depleted(types)
@@ -81,20 +80,19 @@ class ArchivesSpaceResumptionToken
   end
 
   def self.parse(token, available_record_types)
-    new(ASUtils.json_parse(Base64::urlsafe_decode64(token)), available_record_types)
+    new(ASUtils.json_parse(Base64.urlsafe_decode64(token)), available_record_types)
   end
 
   def serialize
     issue_time = (Time.now.to_f * 1000).to_i
 
-    Base64::urlsafe_encode64(@options.merge('issue_time' => issue_time).to_json)
+    Base64.urlsafe_encode64(@options.merge('issue_time' => issue_time).to_json)
   end
 
   def to_xml
     xml = Builder::XmlMarkup.new
-    xml.resumptionToken(self.serialize)
+    xml.resumptionToken(serialize)
 
     xml.target!
   end
-
 end

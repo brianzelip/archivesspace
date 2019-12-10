@@ -11,16 +11,16 @@ Warbler::Config.new do |config|
   config.features = []
 
   # Application directories to be included in the webapp.
-  config.dirs = %w(app config lib log vendor tmp .bundle)
+  config.dirs = ['app', 'config', 'lib', 'log', 'vendor', 'tmp', '.bundle']
 
   # Additional files/directories to include, above those in config.dirs
   #
   # config.ru is needed here because Rails looks for it when trying to determine
   # its root directory.
-  config.includes = FileList["Gemfile", "Gemfile.lock", "config.ru"]
+  config.includes = FileList['Gemfile', 'Gemfile.lock', 'config.ru']
 
   # Additional files/directories to exclude
-  config.excludes = FileList[".bundle/install.log"]
+  config.excludes = FileList['.bundle/install.log']
 
   # Additional Java .jar files to include.  Note that if .jar files are placed
   # in lib (and not otherwise excluded) then they need not be mentioned here.
@@ -28,7 +28,7 @@ Warbler::Config.new do |config|
   # own versions if you directly set the value
   # config.java_libs += FileList["lib/java/*.jar"]
 
-  config.java_libs.reject! {|jar| jar =~ /jruby-(complete|core|stdlib|rack)/}
+  config.java_libs.reject! { |jar| jar =~ /jruby-(complete|core|stdlib|rack)/ }
 
   # Loose Java classes and miscellaneous files to be included.
   # config.java_classes = FileList["target/classes/**.*"]
@@ -47,7 +47,7 @@ Warbler::Config.new do |config|
 
   # An array of Bundler groups to avoid including in the war file.
   # Defaults to ["development", "test"].
-  config.bundle_without = ["development", "test"]
+  config.bundle_without = ['development', 'test']
 
   # Other gems to be included. If you don't use Bundler or a gemspec
   # file, you need to tell Warbler which gems your application needs
@@ -75,7 +75,6 @@ Warbler::Config.new do |config|
 
   # Don't bundle the JRuby jars twice--Warbler will make sure we get it.
   config.gem_excludes = [/jruby-(core|stdlib).*jar/]
-
 
   # Pathmaps for controlling how application files are copied into the archive
   # config.pathmaps.application = ["WEB-INF/%p"]

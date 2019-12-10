@@ -1,24 +1,23 @@
 require 'spec_helper'
 
 describe 'Touch Records mixin' do
-
-  let(:resource) { create_resource({title: generate(:generic_title)}) }
-  let(:digital_object) { create_digital_object({title: generate(:generic_title)}) }
+  let(:resource) { create_resource(title: generate(:generic_title)) }
+  let(:digital_object) { create_digital_object(title: generate(:generic_title)) }
 
   def gimme_ao(uri)
-    create_archival_object({
+    create_archival_object(
       'resource' => {
         'ref' => uri
       }
-    })
+    )
   end
 
   def gimme_doc(uri)
-    create_digital_object_component({
+    create_digital_object_component(
       'digital_object' => {
         'ref' => uri
       }
-    })
+    )
   end
 
   it 'can update resource system_mtime value when related ao created' do
@@ -67,5 +66,4 @@ describe 'Touch Records mixin' do
     expect(doc.system_mtime).not_to eq(doc_mt)
     expect(digital_object.system_mtime.utc.round).to be >= doc.system_mtime.utc.round
   end
-
 end

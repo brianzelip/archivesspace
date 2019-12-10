@@ -1,25 +1,23 @@
 require 'spec_helper'
 
-describe "Conflicting record handling" do
-
-  describe "Subjects" do
+describe 'Conflicting record handling' do
+  describe 'Subjects' do
     before(:each) do
-      vocab = JSONModel(:vocabulary).from_hash("name" => "Cool Vocab",
-                                               "ref_id" => "coolid"
-                                              )
+      vocab = JSONModel(:vocabulary).from_hash('name' => 'Cool Vocab',
+                                               'ref_id' => 'coolid')
       vocab.save
       @vocab_id = vocab.id
     end
 
     let (:subject_properties) do
       {
-        :terms => [build(:json_term, "term" => "1981 Heroes")],
-        :vocabulary => JSONModel(:vocabulary).uri_for(@vocab_id),
-        :source => "local"
+        terms: [build(:json_term, 'term' => '1981 Heroes')],
+        vocabulary: JSONModel(:vocabulary).uri_for(@vocab_id),
+        source: 'local'
       }
     end
 
-    it "reports conflicting records on create" do
+    it 'reports conflicting records on create' do
       subject = create(:json_subject, subject_properties)
 
       exception = begin
@@ -33,10 +31,9 @@ describe "Conflicting record handling" do
       expect(exception.errors['conflicting_record']).to eq([subject.uri])
     end
 
-
-    it "reports conflicting records on update" do
+    it 'reports conflicting records on update' do
       subject_a = create(:json_subject, subject_properties)
-      subject_b = create(:json_subject, subject_properties.merge(:terms => [build(:json_term, "term" => "Non-conflicting")]))
+      subject_b = create(:json_subject, subject_properties.merge(terms: [build(:json_term, 'term' => 'Non-conflicting')]))
 
       exception = begin
                     subject_b[:terms] = subject_properties[:terms]
@@ -51,20 +48,19 @@ describe "Conflicting record handling" do
     end
   end
 
-
-  describe "Agents" do
+  describe 'Agents' do
     before(:each) do
     end
 
     let (:subject_properties) do
       {
-        :terms => [build(:json_term, "term" => "1981 Heroes")],
-        :vocabulary => JSONModel(:vocabulary).uri_for(@vocab_id),
-        :source => "local"
+        terms: [build(:json_term, 'term' => '1981 Heroes')],
+        vocabulary: JSONModel(:vocabulary).uri_for(@vocab_id),
+        source: 'local'
       }
     end
 
-    it "reports conflicting records on create" do
+    it 'reports conflicting records on create' do
       AgentManager.registered_agents.each do |agent_type|
         jsonmodel = agent_type.fetch(:jsonmodel)
         agent_a = build(:"json_#{jsonmodel}")
@@ -84,8 +80,7 @@ describe "Conflicting record handling" do
       end
     end
 
-
-    it "reports conflicting records on update" do
+    it 'reports conflicting records on update' do
       AgentManager.registered_agents.each do |agent_type|
         jsonmodel = agent_type.fetch(:jsonmodel)
         agent_archetype = build(:"json_#{jsonmodel}")
@@ -105,6 +100,4 @@ describe "Conflicting record handling" do
       end
     end
   end
-
-
 end

@@ -34,29 +34,24 @@ require_relative 'relationships'
 #    direction you're traversing the relationship in.
 
 module DirectionalRelationships
-
   def self.included(base)
     base.include(Relationships)
     base.extend(ClassMethods)
   end
-
 
   def update_from_json(json, opts = {}, apply_nested_records = true)
     self.class.prepare_directional_relationship_for_storage(json)
     super
   end
 
-
   module ClassMethods
-
     attr_reader :directional_relationships
 
     def define_directional_relationship(opts)
-      self.define_relationship(opts)
+      define_relationship(opts)
       @directional_relationships ||= []
       @directional_relationships << opts
     end
-
 
     def prepare_directional_relationship_for_storage(json)
       Array(directional_relationships).each do |rel|
@@ -75,7 +70,6 @@ module DirectionalRelationships
       end
     end
 
-
     def prepare_directional_relationship_for_display(json)
       Array(directional_relationships).each do |rel|
         property = rel[:json_property]
@@ -83,50 +77,44 @@ module DirectionalRelationships
         ASUtils.wrap(json[property]).each do |relationship|
           ref = JSONModel.parse_reference(json.uri)
 
-          if (relationship['relationship_target_record_type'] == ref[:type] &&
-              relationship['relationship_target_id'] == ref[:id].to_i)
-            # This means we're looking at the relationship from the other side.
-            #
-            # For example, if the relationship is "A is a parent of B", then we
-            # want:
-            #
-            #   * 'GET A' to yield  {relator => 'is_parent_of', ref => 'B'}
-            #   * 'GET B' to yield  {relator => 'is_child_of', ref => 'A'}
-            #
-            # So we want to invert the relator for this case.
+          next unless relationship['relationship_target_record_type'] == ref[:type] &&
+                      relationship['relationship_target_id'] == ref[:id].to_i
 
-            relator_values = JSONModel.enum_values(JSONModel(relationship['jsonmodel_type'].intern).schema['properties']['relator']['dynamic_enum'])
-            relator_values -= ['other_unmapped'] # grumble.
+          # This means we're looking at the relationship from the other side.
+          #
+          # For example, if the relationship is "A is a parent of B", then we
+          # want:
+          #
+          #   * 'GET A' to yield  {relator => 'is_parent_of', ref => 'B'}
+          #   * 'GET B' to yield  {relator => 'is_child_of', ref => 'A'}
+          #
+          # So we want to invert the relator for this case.
 
-            if relator_values.length == 2
-              # When there are two possible values we assume they're inverses
-              # Set the relator to whatever the inverse of the current one is.
-              relationship['relator'] = (relator_values - [relationship['relator']]).first
-            end
-          end
+          relator_values = JSONModel.enum_values(JSONModel(relationship['jsonmodel_type'].intern).schema['properties']['relator']['dynamic_enum'])
+          relator_values -= ['other_unmapped'] # grumble.
+
+          next unless relator_values.length == 2
+
+          # When there are two possible values we assume they're inverses
+          # Set the relator to whatever the inverse of the current one is.
+          relationship['relator'] = (relator_values - [relationship['relator']]).first
         end
       end
     end
-
-
 
     def create_from_json(json, opts = {})
       prepare_directional_relationship_for_storage(json)
       super
     end
 
-
     def sequel_to_jsonmodel(objs, opts = {})
       jsons = super
 
-      jsons.zip(objs).each do |json, obj|
+      jsons.zip(objs).each do |json, _obj|
         prepare_directional_relationship_for_display(json)
       end
 
       jsons
     end
-
   end
-
-
 end

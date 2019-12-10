@@ -3,13 +3,12 @@ require_relative 'mappers/oai_dcterms'
 require_relative 'mappers/oai_mods'
 
 class ArchivesSpaceOAIRecord
-
   attr_reader :sequel_record, :jsonmodel_record
 
   def initialize(sequel_record, jsonmodel_record)
     @jsonmodel_record = jsonmodel_record
 
-    JSONModel::set_publish_flags!(@jsonmodel_record)
+    JSONModel.set_publish_flags!(@jsonmodel_record)
     @sequel_record = sequel_record
   end
 
@@ -18,24 +17,24 @@ class ArchivesSpaceOAIRecord
   end
 
   def to_oai_ead
-    raise OAI::FormatException.new unless @jsonmodel_record['jsonmodel_type'] == 'resource'
+    raise OAI::FormatException unless @jsonmodel_record['jsonmodel_type'] == 'resource'
 
-    RequestContext.open(:repo_id => @sequel_record.repo_id) do
+    RequestContext.open(repo_id: @sequel_record.repo_id) do
       ead = ASpaceExport.model(:ead).from_resource(@jsonmodel_record, @sequel_record.tree(:all, mode = :sparse), AppConfig[:oai_ead_options])
 
       record = []
-      ASpaceExport::stream(ead).each do |chunk|
+      ASpaceExport.stream(ead).each do |chunk|
         record << chunk
       end
 
-      remove_xml_declaration(record.join(""))
+      remove_xml_declaration(record.join(''))
     end
   end
 
   def to_oai_marc
-    RequestContext.open(:repo_id => @sequel_record.repo_id) do
+    RequestContext.open(repo_id: @sequel_record.repo_id) do
       marc = ASpaceExport.model(:marc21).from_resource(@jsonmodel_record)
-      remove_xml_declaration(ASpaceExport::serialize(marc))
+      remove_xml_declaration(ASpaceExport.serialize(marc))
     end
   end
 
@@ -60,10 +59,9 @@ class ArchivesSpaceOAIRecord
   def remove_xml_declaration(s)
     if s.start_with?('<?xml ')
       # Discard the declaration
-      s[s.index("?>") + 2..-1]
+      s[s.index('?>') + 2..-1]
     else
       s
     end
   end
-
 end

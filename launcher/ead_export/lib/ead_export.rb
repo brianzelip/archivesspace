@@ -5,7 +5,6 @@ require 'tempfile'
 require 'zip/zip'
 
 class ArchivesSpaceEadExporter
-
   include RequestHandler
   attr_reader :repo_id
 
@@ -15,7 +14,7 @@ class ArchivesSpaceEadExporter
   end
 
   def export(id)
-    params = "include_unpublished=false&include_daos=true&numbered_cs=true"
+    params = 'include_unpublished=false&include_daos=true&numbered_cs=true'
     url = URI("#{AppConfig[:backend_url]}/repositories/#{repo_id}/resource_descriptions/#{id}.xml?#{params}")
     get(url, :xml)
   end
@@ -24,12 +23,11 @@ class ArchivesSpaceEadExporter
     url = URI("#{AppConfig[:backend_url]}/repositories/#{repo_id}/resources?all_ids=true")
     get(url)
   end
-
 end
 
 def main
   if ARGV.length != 3
-    puts "Usage: export.rb <username> <password> <repository_id>"
+    puts 'Usage: export.rb <username> <password> <repository_id>'
     exit
   end
   user, password, repository_id = *ARGV
@@ -46,10 +44,10 @@ def main
 
     ids.each do |id|
       ead = exporter.export id
-      unitid = ead.css("did unitid").first
+      unitid = ead.css('did unitid').first
       next if unitid.nil? # unpublished
 
-      unitid = unitid.text.gsub(/(\/|\s)/, '_')
+      unitid = unitid.text.gsub(%r{(/|\s)}, '_')
       ead_filename = "#{id}-#{unitid}.xml"
       tmp = Tempfile.new(ead_filename)
       tmp.write ead.to_s
@@ -66,4 +64,3 @@ def main
 end
 
 main
-

@@ -29,7 +29,6 @@ class OpenSearchResultSet
     @page = (@start_index / @items_per_page) + 1
   end
 
-
   def process_entry(entry)
     e = {}
 
@@ -38,7 +37,7 @@ class OpenSearchResultSet
       when 'atom:title'
         e['title'] = seg[2]
       when 'atom:id'
-        e['lccn'] = seg[2].sub(/.*names\//, '')
+        e['lccn'] = seg[2].sub(%r{.*names/}, '')
       when 'atom:link'
         e['uri'] = seg[1]['href'] unless seg[1]['type']
       end
@@ -51,29 +50,23 @@ class OpenSearchResultSet
     [@start_index.to_i + @items_per_page.to_i - 1, @total_results.to_i].min
   end
 
-
   def at_start?
     @start_index.to_i < 2
   end
-
 
   def at_end?
     last_record_index == @total_results.to_i
   end
 
-
-
-  def to_json
-    ASUtils.to_json(:records => @entries,
-                    :first_record_index => @start_index.to_i,
-                    :last_record_index => last_record_index,
-                    :at_start => at_start?,
-                    :at_end => at_end?,
-                    :page => @page,
-                    :query => @query,
-                    :hit_count => @total_results.to_i,
-                    :records_per_page => @items_per_page.to_i
-                    )
+  def to_json(*_args)
+    ASUtils.to_json(records: @entries,
+                    first_record_index: @start_index.to_i,
+                    last_record_index: last_record_index,
+                    at_start: at_start?,
+                    at_end: at_end?,
+                    page: @page,
+                    query: @query,
+                    hit_count: @total_results.to_i,
+                    records_per_page: @items_per_page.to_i)
   end
-
 end

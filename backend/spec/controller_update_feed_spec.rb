@@ -1,12 +1,11 @@
 require 'spec_helper'
 
 describe 'Update feed controller' do
-
-  it "blocks requests until an updated record shows up" do
+  it 'blocks requests until an updated record shows up' do
     RealtimeIndexing.reset!
 
     consumer = Thread.new do
-      as_test_user("admin") do
+      as_test_user('admin') do
         get '/update-feed'
         JSON(last_response.body)
       end
@@ -20,9 +19,7 @@ describe 'Update feed controller' do
     expect(consumer.value.first['record']['title']).to eq(created_accession.title)
   end
 
-
-  it "provides a feed of deleted records" do
-
+  it 'provides a feed of deleted records' do
     acc1 = create(:json_accession)
     acc1.delete
     sleep 1
@@ -31,7 +28,7 @@ describe 'Update feed controller' do
     acc2 = create(:json_accession)
     acc2.delete
 
-    resp = as_test_user("admin") do
+    resp = as_test_user('admin') do
       get "/delete-feed?page=1&modified_since=#{atime.to_i}"
       JSON(last_response.body)
     end
@@ -40,13 +37,11 @@ describe 'Update feed controller' do
     expect(resp['results'].first).to eq(acc2.uri)
   end
 
-
-  it "requires special permission" do
+  it 'requires special permission' do
     as_anonymous_user do
       get '/update-feed'
       expect(last_response).not_to be_ok
       expect(last_response.status).to eq(403)
     end
   end
-
 end

@@ -1,7 +1,6 @@
 require 'jsonmodel'
 
 class AdvancedQueryBuilder
-
   attr_reader :query
 
   RangeValue = Struct.new(:from, :to)
@@ -16,7 +15,8 @@ class AdvancedQueryBuilder
     elsif value.is_a? RangeValue
       push_range('AND', field_or_subquery, value, 'range', literal, negated)
     else
-      raise "Missing value" if value.nil?
+      raise 'Missing value' if value.nil?
+
       push_term('AND', field_or_subquery, value, type, literal, negated)
     end
 
@@ -29,7 +29,8 @@ class AdvancedQueryBuilder
     elsif value.is_a? RangeValue
       push_range('AND', field_or_subquery, value, 'range', literal, negated)
     else
-      raise "Missing value" unless value
+      raise 'Missing value' unless value
+
       push_term('OR', field_or_subquery, value, type, literal, negated)
     end
 
@@ -42,7 +43,7 @@ class AdvancedQueryBuilder
   alias_method :empty, :empty?
 
   def build
-    JSONModel::JSONModel(:advanced_query).from_hash({"query" => build_query(@query)})
+    JSONModel::JSONModel(:advanced_query).from_hash('query' => build_query(@query))
   end
 
   def self.from_json_filter_terms(array_of_json)
@@ -57,28 +58,26 @@ class AdvancedQueryBuilder
   end
 
   def self.build_query_from_form(queries)
-
     query = if queries.length > 1
-      stack = queries.reverse.clone
+              stack = queries.reverse.clone
 
-      while stack.length > 1
-        a = stack.pop
-        b = stack.pop
+              while stack.length > 1
+                a = stack.pop
+                b = stack.pop
 
-        stack.push(JSONModel::JSONModel(:boolean_query).from_hash({
-                                                         :op => b["op"],
-                                                         :subqueries => [as_field_query(a), as_field_query(b)]
-                                                       }))
-      end
+                stack.push(JSONModel::JSONModel(:boolean_query).from_hash(
+                             op: b['op'],
+                             subqueries: [as_field_query(a), as_field_query(b)]
+                           ))
+              end
 
-      stack.pop
-    else
-      as_field_query(queries[0])
+              stack.pop
+            else
+              as_field_query(queries[0])
     end
 
-    JSONModel::JSONModel(:advanced_query).from_hash({"query" => query})
+    JSONModel::JSONModel(:advanced_query).from_hash('query' => query)
   end
-
 
   private
 
@@ -87,7 +86,7 @@ class AdvancedQueryBuilder
       'operator' => operator,
       'type' => 'boolean_query',
       'arg1' => subquery.query,
-      'arg2' => @query,
+      'arg2' => @query
     }
 
     @query = new_query
@@ -102,14 +101,13 @@ class AdvancedQueryBuilder
         'value' => value,
         'type' => type,
         'negated' => negated,
-        'literal' => literal,
+        'literal' => literal
       },
-      'arg2' => @query,
+      'arg2' => @query
     }
 
     @query = new_query
   end
-
 
   def push_range(operator, field, range, type = 'range', literal = false, negated = false)
     new_query = {
@@ -121,9 +119,9 @@ class AdvancedQueryBuilder
         'to' => range.to,
         'type' => type,
         'negated' => negated,
-        'literal' => literal,
+        'literal' => literal
       },
-      'arg2' => @query,
+      'arg2' => @query
     }
 
     @query = new_query
@@ -131,45 +129,41 @@ class AdvancedQueryBuilder
 
   def build_query(query)
     if query['type'] == 'boolean_query'
-      subqueries = [query['arg1'], query['arg2']].compact.map {|subquery|
+      subqueries = [query['arg1'], query['arg2']].compact.map { |subquery|
         build_query(subquery)
       }
 
-      JSONModel::JSONModel(:boolean_query).from_hash({
-                                            'op' => query['operator'],
-                                            'subqueries' => subqueries
-                                          })
+      JSONModel::JSONModel(:boolean_query).from_hash(
+        'op' => query['operator'],
+        'subqueries' => subqueries
+      )
     else
       self.class.as_field_query(query)
     end
   end
 
   def self.as_field_query(query_data)
-    raise "keys should be strings only" if query_data.kind_of?(Hash) && query_data.any?{ |k,_| k.is_a? Symbol }
-    if query_data.kind_of?(JSONModelType)
+    raise 'keys should be strings only' if query_data.is_a?(Hash) && query_data.any? { |k, _| k.is_a? Symbol }
+
+    if query_data.is_a?(JSONModelType)
       query_data
-    elsif query_data['type'] == "date"
+    elsif query_data['type'] == 'date'
       JSONModel::JSONModel(:date_field_query).from_hash(query_data)
-    elsif query_data['type'] == "boolean"
+    elsif query_data['type'] == 'boolean'
       JSONModel::JSONModel(:boolean_field_query).from_hash(query_data)
-    elsif query_data['type'] == "range"
+    elsif query_data['type'] == 'range'
       JSONModel::JSONModel(:range_query).from_hash(query_data)
     else
-      if query_data["type"] == "enum" && query_data["value"].blank?
-        query_data["comparator"] = "empty"
-      end
+      query_data['comparator'] = 'empty' if query_data['type'] == 'enum' && query_data['value'].blank?
 
       # Looks like sometimes the value is set to a Boolean, but :field_query
       # schema insists this should be a String.
-      query_data["value"] = query_data["value"].to_s
+      query_data['value'] = query_data['value'].to_s
       query = JSONModel::JSONModel(:field_query).from_hash(query_data)
 
-      if query_data['type'] == "enum"
-        query.literal = true
-      end
+      query.literal = true if query_data['type'] == 'enum'
 
       query
     end
   end
-
 end

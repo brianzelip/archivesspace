@@ -12,17 +12,18 @@ module ReportUtils
 
   def self.fix_boolean_fields(row, fields)
     fields.each do |field|
-      next if row[field] == nil
+      next if row[field].nil?
+
       row[field] = row[field] == 0 || row[field] == '0' ? 'No' : 'Yes'
     end
   end
 
   def self.fix_identifier_format(row, field_name = :identifier)
-    if row[field_name]
-      identifiers = row[field_name].split(',,,')
-    else
-      identifiers = []
-    end
+    identifiers = if row[field_name]
+                    row[field_name].split(',,,')
+                  else
+                    []
+                  end
 
     result = []
 
@@ -63,11 +64,12 @@ module ReportUtils
   def self.get_enum_values(row, fields)
     fields.each do |field|
       next unless row[field]
-      if row[field].is_a?(Integer)
-        values = [row[field]]
-      else
-        values = row[field].split(', ')
-      end
+
+      values = if row[field].is_a?(Integer)
+                 [row[field]]
+               else
+                 row[field].split(', ')
+               end
 
       results = []
 
@@ -76,7 +78,7 @@ module ReportUtils
           enum_value = EnumerationValue.get_or_die(value)
           enumeration = enum_value.enumeration.name
           results.push(I18n.t("enumerations.#{enumeration}.#{enum_value.value}",
-            :default => enum_value.value))
+                              default: enum_value.value))
         rescue Exception => e
           results.push("Missing enum value: #{value}")
         end
@@ -106,8 +108,10 @@ module ReportUtils
   def self.local_times(row, fields)
     fields.each do |field|
       next unless row[field]
+
       row[field] = row[field].localtime.strftime(
-        '%Y-%m-%d %H:%M:%S')
+        '%Y-%m-%d %H:%M:%S'
+      )
     end
   end
 
@@ -119,5 +123,4 @@ module ReportUtils
     row[:record_id] = normalize_label(row[:linked_record_type].to_s) + '_' + row[:record_id].to_s
     row.delete(:linked_record_type)
   end
-
 end

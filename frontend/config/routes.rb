@@ -1,5 +1,4 @@
 ArchivesSpace::Application.routes.draw do
-
   scope AppConfig[:frontend_proxy_prefix] do
     match 'jobs/:id/cancel' => 'jobs#cancel', :via => [:post]
     match 'jobs/:id/log' => 'jobs#log', :via => [:get]
@@ -8,13 +7,13 @@ ArchivesSpace::Application.routes.draw do
     match 'jobs/:job_id/file/:id' => 'jobs#download_file', :via => [:get]
     resources :jobs
 
-    match 'login' => "session#login", :via => :post
-    match 'login' => "session#login_inline", :via => :get
-    match 'logout' => "session#logout", :via => :get
-    match 'select_user' => "session#select_user", :via => :get
-    match 'become_user' => "session#become_user", :via => :post
-    match 'check_session' => "session#check_session", :via => :get
-    match 'has_session' => "session#has_session", :via => :get
+    match 'login' => 'session#login', :via => :post
+    match 'login' => 'session#login_inline', :via => :get
+    match 'logout' => 'session#logout', :via => :get
+    match 'select_user' => 'session#select_user', :via => :get
+    match 'become_user' => 'session#become_user', :via => :post
+    match 'check_session' => 'session#check_session', :via => :get
+    match 'has_session' => 'session#has_session', :via => :get
 
     match 'repositories/select' => 'repositories#select', :via => [:post]
     match 'repositories/:id/transfer' => 'repositories#transfer', :via => [:get]
@@ -206,8 +205,6 @@ ArchivesSpace::Application.routes.draw do
 
     match 'enumerations/:id/enumeration_value/:enumeration_value_id' => 'enumerations#update_value', :via => [:post]
 
-
-
     match 'reports' => 'reports#index', :via => [:get]
     match 'reports/download' => 'reports#download', :via => [:post]
 
@@ -225,7 +222,7 @@ ArchivesSpace::Application.routes.draw do
     match 'schema/:resource_type/properties' => 'utils#list_properties', :via => [:get]
 
     match 'shortcuts' => 'utils#shortcuts', :via => [:get]
-    match 'notes/note_order' => 'utils#note_order', :via =>[:get]
+    match 'notes/note_order' => 'utils#note_order', :via => [:get]
 
     resources :preferences
     match 'preferences/:id' => 'preferences#update', :via => [:post]
@@ -263,7 +260,6 @@ ArchivesSpace::Application.routes.draw do
     match('space_calculator' => 'space_calculator#show', :via => [:get])
     match('space_calculator' => 'space_calculator#calculate', :via => [:post])
 
-
     match 'assessments/embedded_search' => 'assessments#embedded_search', :via => [:get]
     resources :assessments
     match 'assessments/:id' => 'assessments#update', :via => [:post]
@@ -278,31 +274,24 @@ ArchivesSpace::Application.routes.draw do
     # match('custom_report_templates/:id/delete' => 'custom_report_templates#delete', :via => [:post])
     # match('custom_report_templates/:id' => 'custom_report_templates#update', :via => [:post])
 
-
-
     if Plugins.system_menu_items?
       scope '/plugins' do
         Plugins.system_menu_items.each do |plugin|
-          unless Plugins.config_for(plugin)['no_automatic_routes']
-            resources plugin.intern
-          end
+          resources plugin.intern unless Plugins.config_for(plugin)['no_automatic_routes']
         end
       end
     end
     if Plugins.repository_menu_items?
       scope '/plugins' do
         Plugins.repository_menu_items.each do |plugin|
-          unless Plugins.config_for(plugin)['no_automatic_routes']
-            resources plugin.intern
-          end
+          resources plugin.intern unless Plugins.config_for(plugin)['no_automatic_routes']
         end
       end
     end
 
-    match "system_info" => "system_info#show", :via => [ :get ]
-    match "system_info/log" => "system_info#stream_log", :via => [:get]
+    match 'system_info' => 'system_info#show', :via => [:get]
+    match 'system_info/log' => 'system_info#stream_log', :via => [:get]
 
-    root :to => 'welcome#index'
-
+    root to: 'welcome#index'
   end
 end

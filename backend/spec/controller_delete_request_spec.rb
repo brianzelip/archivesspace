@@ -1,24 +1,21 @@
 require 'spec_helper'
 
 describe 'Delete request controller' do
-
   def perform_delete(record_uris)
-    uri = "/batch_delete"
+    uri = '/batch_delete'
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
 
-    JSONModel::HTTP.post_json(url, {:record_uris => record_uris})
+    JSONModel::HTTP.post_json(url, record_uris: record_uris)
   end
 
-
-  it "can delete multiple archival records" do
+  it 'can delete multiple archival records' do
     record_1 = create(:json_resource)
     record_2 = create(:json_archival_object)
     record_3 = create(:json_accession)
     record_4 = create(:json_digital_object)
     record_5 = create(:json_digital_object_component)
 
-
-    uri = "/batch_delete"
+    uri = '/batch_delete'
     url = URI("#{JSONModel::HTTP.backend_url}#{uri}")
 
     response = perform_delete([record_1.uri, record_2.uri, record_3.uri, record_4.uri, record_5.uri])
@@ -45,9 +42,8 @@ describe 'Delete request controller' do
     }.to raise_error(RecordNotFound)
   end
 
-
-  it "throws an exception when one of the uris does not exist" do
-    a_404_uri = "/idontexist"
+  it 'throws an exception when one of the uris does not exist' do
+    a_404_uri = '/idontexist'
 
     response = perform_delete([a_404_uri])
 
@@ -55,7 +51,6 @@ describe 'Delete request controller' do
 
     response_json = ASUtils.json_parse(response.body)
 
-    expect(response_json["error"]["failures"][0]["uri"]).to eq(a_404_uri)
+    expect(response_json['error']['failures'][0]['uri']).to eq(a_404_uri)
   end
-
 end

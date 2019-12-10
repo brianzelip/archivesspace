@@ -10,12 +10,11 @@ require_relative '../backend/app/lib/username.rb'
 
 include JSONModel
 
-JSONModel::init(:enum_source => BackendEnumSource)
+JSONModel.init(enum_source: BackendEnumSource)
 
 require_relative '../backend/app/lib/rest.rb'
 
-
-Dir[File.dirname(__FILE__) + '../backend/app/model/*.rb'].each {|file| require file }
+Dir[File.dirname(__FILE__) + '../backend/app/model/*.rb'].each { |file| require file }
 
 require_relative 'handler'
 require_relative 'schema_object'
@@ -26,12 +25,11 @@ class ASpaceYARD
   def self.subreadmes
     objects = []
     Dir.glob('{techdocs/*.md, techdocs/**/*.md}').each do |file|
-      objects << YARD::CodeObjects::ExtraFileObject.new(file.gsub(/\//, '_').upcase, IO.read(file))
+      objects << YARD::CodeObjects::ExtraFileObject.new(file.gsub(%r{/}, '_').upcase, IO.read(file))
     end
     objects
   end
 end
-
 
 module YARD
   module Templates

@@ -1,9 +1,7 @@
 class FindAndReplaceRunner < JobRunner
-
   register_for_job_type('find_and_replace_job',
-                        :create_permissions => :manage_repository,
-                        :cancel_permissions => :manage_repository)
-
+                        create_permissions: :manage_repository,
+                        cancel_permissions: :manage_repository)
 
   def run
     job_data = @json.job
@@ -24,29 +22,27 @@ class FindAndReplaceRunner < JobRunner
     target_property = job_data['property']
     target_ids = base_record.object_graph.ids_for(target_model)
 
-    find = job_data['find'] =~ /^\/.+\/$/ ? Regexp.new(job_data['find'][1..-2]) : job_data['find']
+    find = job_data['find'] =~ %r{^/.+/$} ? Regexp.new(job_data['find'][1..-2]) : job_data['find']
     replace = job_data['replace']
 
     modified_records = []
 
     begin
       DB.open(DB.supports_mvcc?,
-              :retry_on_optimistic_locking_fail => true) do
-
+              retry_on_optimistic_locking_fail: true) do
         begin
-
           target_ids.each do |id|
-
-            RequestContext.open(:current_username => @job.owner.username,
-                                :repo_id => @job.repo_id) do
+            RequestContext.open(current_username: @job.owner.username,
+                                repo_id: @job.repo_id) do
               json = target_model.to_jsonmodel(id)
 
               next unless json[target_property]
+
               result = json[target_property].gsub!(find, replace)
 
               next if result.nil?
 
-              @job.write_output("Updating #{target_model.to_s}[#{id}].#{target_property}")
+              @job.write_output("Updating #{target_model}[#{id}].#{target_property}")
 
               target_model[id].update_from_json(json)
 
@@ -62,25 +58,23 @@ class FindAndReplaceRunner < JobRunner
 
                 [:resource_id, :archival_object_id].each do |col|
                   nesting_id = nested_model[id][col]
-                  if nesting_id
-                    nesting_model = Kernel.const_get(col.to_s[0..-4].camelize)
-                    modified_records << nesting_model[nesting_id].uri
-                    break
-                  end
+                  next unless nesting_id
+
+                  nesting_model = Kernel.const_get(col.to_s[0..-4].camelize)
+                  modified_records << nesting_model[nesting_id].uri
+                  break
                 end
               end
-
             end
-
           end
 
           if modified_records.empty?
-            @job.write_output("All done, no records modified.")
+            @job.write_output('All done, no records modified.')
           else
-            @job.write_output("All done, logging modified records.")
+            @job.write_output('All done, logging modified records.')
           end
 
-          self.success!
+          success!
 
           # just reuse JobCreated api for now...
           @job.record_created_uris(modified_records.uniq)
@@ -88,10 +82,8 @@ class FindAndReplaceRunner < JobRunner
           terminal_error = e
           raise Sequel::Rollback
         end
-
       end
-
-    rescue
+    rescue StandardError
       terminal_error = $!
     end
 
@@ -101,6 +93,5 @@ class FindAndReplaceRunner < JobRunner
 
       raise terminal_error
     end
-
   end
 end

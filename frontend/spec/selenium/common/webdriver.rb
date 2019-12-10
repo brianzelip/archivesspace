@@ -38,9 +38,7 @@ module DriverMixin
 
         sleep 0.1
 
-        if try == Selenium::Config.retries - 1
-          puts "wait_until_element_gone never saw element go: #{element.inspect}"
-        end
+        puts "wait_until_element_gone never saw element go: #{element.inspect}" if try == Selenium::Config.retries - 1
       end
     rescue Selenium::WebDriver::Error::NoSuchElementError, Selenium::WebDriver::Error::StaleElementReferenceError
     end
@@ -198,9 +196,7 @@ module Selenium
             matched = find_elements(*selectors)
             elt = matched.find { |elt| elt.displayed? }
 
-            if elt.nil?
-              raise Selenium::WebDriver::Error::NoSuchElementError, 'Not visible (yet?)'
-            end
+            raise Selenium::WebDriver::Error::NoSuchElementError, 'Not visible (yet?)' if elt.nil?
 
             return elt
           rescue Selenium::WebDriver::Error::NoSuchElementError, Selenium::WebDriver::Error::StaleElementReferenceError => e
@@ -234,9 +230,7 @@ module Selenium
           begin
             elt = find_element_orig(*selectors)
 
-            if elt.nil?
-              raise Selenium::WebDriver::Error::NoSuchElementError, 'Element not found'
-            end
+            raise Selenium::WebDriver::Error::NoSuchElementError, 'Element not found' if elt.nil?
 
             return elt
           rescue Selenium::WebDriver::Error::NoSuchElementError, Selenium::WebDriver::Error::StaleElementReferenceError => e
@@ -519,9 +513,7 @@ module Selenium
           begin
             elt = find_elements(*selectors).find { |elt| elt.displayed? }
 
-            if elt.nil?
-              raise Selenium::WebDriver::Error::NoSuchElementError, 'Not visible (yet?)'
-            end
+            raise Selenium::WebDriver::Error::NoSuchElementError, 'Not visible (yet?)' if elt.nil?
 
             return elt
           rescue Selenium::WebDriver::Error::NoSuchElementError, Selenium::WebDriver::Error::StaleElementReferenceError => e

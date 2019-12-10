@@ -1,9 +1,8 @@
 require 'tempfile'
 
 class FindingAidPDF
-
-  DEPTH_1_LEVELS = ['collection', 'recordgrp', 'series']
-  DEPTH_2_LEVELS = ['subgrp', 'subseries', 'subfonds']
+  DEPTH_1_LEVELS = ['collection', 'recordgrp', 'series'].freeze
+  DEPTH_2_LEVELS = ['subgrp', 'subseries', 'subfonds'].freeze
 
   attr_reader :repo_id, :resource_id, :archivesspace, :base_url, :repo_code
 
@@ -17,9 +16,7 @@ class FindingAidPDF
     @ordered_records = archivesspace.get_record("/repositories/#{repo_id}/resources/#{resource_id}/ordered_records")
 
     # make sure finding aid title isn't only like /^\n$/
-    if @resource.finding_aid['title'] and @resource.finding_aid['title'] =~ /\w/
-      @short_title = @resource.finding_aid['title'].lstrip.split("\n")[0].strip
-    end
+    @short_title = @resource.finding_aid['title'].lstrip.split("\n")[0].strip if @resource.finding_aid['title'] && @resource.finding_aid['title'] =~ /\w/
   end
 
   def suggested_filename
@@ -46,12 +43,12 @@ class FindingAidPDF
     has_children = @ordered_records.entries.length > 1
 
     out_html = Tempfile.new
-    out_html.write(renderer.render_to_string partial: 'header', layout: false, :locals => {:record => @resource})
+    out_html.write(renderer.render_to_string(partial: 'header', layout: false, locals: { record: @resource }))
 
-    out_html.write(renderer.render_to_string partial: 'titlepage', layout: false, :locals => {:record => @resource})
+    out_html.write(renderer.render_to_string(partial: 'titlepage', layout: false, locals: { record: @resource }))
 
     # Drop the resource and filter the AOs
-    toc_aos = @ordered_records.entries.drop(1).select {|entry|
+    toc_aos = @ordered_records.entries.drop(1).select { |entry|
       if entry.depth == 1
         DEPTH_1_LEVELS.include?(entry.level)
       elsif entry.depth == 2
@@ -61,28 +58,26 @@ class FindingAidPDF
       end
     }
 
-    out_html.write(renderer.render_to_string partial: 'toc', layout: false, :locals => {:resource => @resource, :has_children => has_children, :ordered_aos => toc_aos})
+    out_html.write(renderer.render_to_string(partial: 'toc', layout: false, locals: { resource: @resource, has_children: has_children, ordered_aos: toc_aos }))
 
-    out_html.write(renderer.render_to_string partial: 'resource', layout: false, :locals => {:record => @resource, :has_children => has_children})
+    out_html.write(renderer.render_to_string(partial: 'resource', layout: false, locals: { record: @resource, has_children: has_children }))
 
     page_size = 50
 
     @ordered_records.entries.drop(1).each_slice(page_size) do |entry_set|
-      if AppConfig[:pui_pdf_timeout] && AppConfig[:pui_pdf_timeout] > 0 && (Time.now.to_i - start_time.to_i) >= AppConfig[:pui_pdf_timeout]
-        raise TimeoutError.new("PDF generation timed out.  Sorry!")
-      end
+      raise TimeoutError, 'PDF generation timed out.  Sorry!' if AppConfig[:pui_pdf_timeout] && AppConfig[:pui_pdf_timeout] > 0 && (Time.now.to_i - start_time.to_i) >= AppConfig[:pui_pdf_timeout]
 
-      uri_set = entry_set.map(&:uri).map {|s| s + "#pui"}
+      uri_set = entry_set.map(&:uri).map { |s| s + '#pui' }
       record_set = archivesspace.search_records(uri_set, {}, true).records
 
       record_set.zip(entry_set).each do |record, entry|
         next unless record.is_a?(ArchivalObject)
 
-        out_html.write(renderer.render_to_string partial: 'archival_object', layout: false, :locals => {:record => record, :level => entry.depth})
+        out_html.write(renderer.render_to_string(partial: 'archival_object', layout: false, locals: { record: record, level: entry.depth }))
       end
     end
 
-    out_html.write(renderer.render_to_string partial: 'footer', layout: false)
+    out_html.write(renderer.render_to_string(partial: 'footer', layout: false))
     out_html.close
 
     out_html

@@ -1,16 +1,15 @@
 class AgentRelatedAgentSubreport < AbstractSubreport
+  register_subreport('related_agent', ['agent'])
 
-	register_subreport('related_agent', ['agent'])
+  def initialize(parent_custom_report, agent_id)
+    super(parent_custom_report)
 
-	def initialize(parent_custom_report, agent_id)
-		super(parent_custom_report)
+    @id_type = parent_custom_report.record_type
+    @id = agent_id
+  end
 
-		@id_type = parent_custom_report.record_type
-		@id = agent_id
-	end
-
-	def query_string
-		"select
+  def query_string
+    "select
 			concat_ws('; ', person0.sort_name,
 			family0.sort_name,
 			software0.sort_name,
@@ -22,7 +21,7 @@ class AgentRelatedAgentSubreport < AbstractSubreport
 			jsonmodel_type as relationship_type,
 			description
 		from related_agents_rlshp
-			
+
 			left outer join
 				(select * from name_person where is_display_name)
 				as person0
@@ -43,7 +42,7 @@ class AgentRelatedAgentSubreport < AbstractSubreport
 				as ce0
 				on ce0.agent_corporate_entity_id
 				= agent_corporate_entity_id_0
-				
+
 			left outer join
 				(select * from name_person where is_display_name)
 				as person1
@@ -66,13 +65,13 @@ class AgentRelatedAgentSubreport < AbstractSubreport
 
 		where #{@id_type}_id_0 = #{db.literal(@id)}
 			or #{@id_type}_id_1 = #{db.literal(@id)}"
-	end
-	
-	def fix_row(row)
-		row[:relationship_type] = I18n.t("#{row[:relationship_type]}._singular")
-	end
+  end
 
-	def self.field_name
-		'related_agent'
-	end
+  def fix_row(row)
+    row[:relationship_type] = I18n.t("#{row[:relationship_type]}._singular")
+  end
+
+  def self.field_name
+    'related_agent'
+  end
 end
