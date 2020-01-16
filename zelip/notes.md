@@ -42,7 +42,7 @@ There's is this wierd thing where lots of modals get injected into the DOM as co
 
 ### 2020-01-16
 
-Planning to submit ANW-550-confirm-merge-container-profiles PR today.
+Planning to submit [ANW-550-confirm-merge-container-profiles PR](https://github.com/archivesspace/archivesspace/pull/1776) today.
 
 After listening to recent Full Stack Radio podcast re: Alpine.js, I'm rethinking my surprise, as noted yesterday, about the rendering of modals in the DOM but `display: none`d. They reference doing it. In thinking about a modal that I've made in the past (for Azellaz?), I remember putting it in the DOM as well, and toggling it on demand.
 
