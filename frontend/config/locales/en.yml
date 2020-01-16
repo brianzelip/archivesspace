@@ -1244,6 +1244,14 @@ en:
         merged: Container Profiles(s) Merged
       section:
         basic_information: Basic Information
+      bulk_operations:
+        merge: Merge Container Profiles
+        merge_instructions: Select the container profile into which all of the other listed container profile(s) will merge. Any linked records will be re-linked to this profile and all information for the other container profile(s) will be deleted.
+        merge_select_target: Select merge target
+        merge_confirm: Confirm Merge Container Profiles
+        merge_confirm_question: Are you sure you want to merge the container profiles as listed below? This action is irreversible.
+        merge_confirm_victims: "Merge the following container profile(s):" 
+        merge_confirm_target: "Into this container profile:"
     name: Name
     name_tooltip: |
         <p>REQUIRED FIELD. The name of the container profile. May be generic or specific.</p>
