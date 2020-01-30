@@ -35,6 +35,8 @@ $(function() {
       }
     });
 
+    // THIS IS WHERE THE WORK HAPPENS
+
     $(".multiselect-enabled").each(function() {
       var $multiselectEffectedWidget = $(this);
       if ($table.is($multiselectEffectedWidget.data("multiselect"))) {
