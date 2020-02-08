@@ -4,12 +4,20 @@
   <div class="col-md-12">
     <%= render_aspace_partial :partial => "shared/flash_messages" %>
   </div>
+</div>
 
-  <div class="col-md-12" style="padding: 30px;">
+<div class="row">
+  <div class="col-md-6 col-lg-4" style="padding: 30px;">
     <h2><%= I18n.t "welcome.heading" %></h2>
     <%= welcome_message %>
-    <main id="login-form">
-      
+  </div>
+  <div class="col-md-6 col-lg-4" style="padding: 30px;">
+    <main class="well" id="login-form-wrapper">
+      <h3>Please Sign In</h3>
+      <%= render_aspace_partial :partial => "shared/login" %>
+      <% if AppConfig[:allow_user_registration] %>
+        <p><%= I18n.t "navbar.register_prefix" %> <%= link_to I18n.t("navbar.register"), {:controller => "users", :action => "new"}, :class => "boring-link" %></p>
+      <% end %>
     </main>
   </div>
 </div>
