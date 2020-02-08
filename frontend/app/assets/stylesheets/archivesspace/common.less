@@ -128,6 +128,7 @@ td .btn-group {
 // atomic/functional/single purpose/utility classes
 /*
  * Bootstrap media queries:
+ * @media screen and (max-width: 767px) {}
  * @media (min-width: 768px) {}
  * @media (min-width: 992px) {}
  * @media (min-width: 1200px) {}
@@ -139,8 +140,25 @@ td .btn-group {
   margin-top: 20px;
 }
 
+.p30px {
+  padding: 30px;
+}
+
+@media screen and (max-width: 767px) {
+
+}
+
 @media (min-width: 768px) {
   .sm-mt0 {
     margin-top: 0;
+  }
+  .sm-mt20px {
+    margin-top: 20px;
+  }
+}
+
+@media (min-width: 992px) {
+  .md-mt20px {
+    margin-top: 20px;
   }
 }
