@@ -13,6 +13,7 @@
 - `frontend/app/views/shared/_header_global.html.erb`
 - `frontend/app/views/layouts/application.html.erb`
 - `frontend/app/views/welcome/index.html.erb`
+  - this is where `shared/login` gets rendered!
 - `frontend/app/helpers/welcome_helper.rb`
 - `frontend/app/views/shared/_login.html.erb`
 - `frontend/app/controllers/session_controller.rb`
@@ -24,6 +25,17 @@
 - `frontend/app/controllers/welcome_controller.rb`
 - `frontend/config/locales/help/en.yml`
 - `frontend/config/initializers/help.rb`
+- `frontend/app/assets/stylesheets/archivesspace/header.less`
+- `frontend/app/assets/stylesheets/archivesspace/form.less`
+  - need to add the following styles to the login form input button so that we can remove the class `navbar-btn` from it to decouple it from the navbar, since it will no longer be in the navbar. We should also probably decouple the i18n login data from the navbar section.
+  ```css
+  input[name='commit'] {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+  ```
+- `frontend/app/views/shared/_modal.html.erb`
+  - this partial (`shared/modal`) gets passed `shared/login`, so we def cannot put the `<main>` inside `shared/login`; best to keep the main el in the Welcome index view.
 
 ## Scope of task
 
