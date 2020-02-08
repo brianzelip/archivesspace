@@ -354,6 +354,7 @@ en:
     heading: Welcome to ArchivesSpace
     message: Your friendly archives management tool.
     message_logged_in: Your friendly archives management tool.
+    sign_in: Please Sign In
 
   breadcrumb:
     home: Home
