@@ -124,3 +124,23 @@ td .btn-group {
   &.render-singlequote:before, &.render-boldsinglequote:before {content: "'"}
   &.render-singlequote:after, &.render-boldsinglequote:after {content: "'"}
 }
+
+// atomic/functional/single purpose/utility classes
+/*
+ * Bootstrap media queries:
+ * @media (min-width: 768px) {}
+ * @media (min-width: 992px) {}
+ * @media (min-width: 1200px) {}
+ **/
+.mt0 {
+  margin-top: 0;
+}
+.mt20px {
+  margin-top: 20px;
+}
+
+@media (min-width: 768px) {
+  .sm-mt0 {
+    margin-top: 0;
+  }
+}
