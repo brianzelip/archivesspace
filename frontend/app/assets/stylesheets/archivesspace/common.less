@@ -128,53 +128,31 @@ td .btn-group {
 // atomic/functional/single purpose/utility classes
 /*
  * Bootstrap media queries:
- * @media screen and (max-width: 767px) {}
- * @media (min-width: 768px) {}
- * @media (min-width: 992px) {}
- * @media (min-width: 1200px) {}
+ * @media screen and (max-width: 767px) {} | xs
+ * @media (min-width: 768px) {} | sm
+ * @media (min-width: 992px) {} | md
+ * @media (min-width: 1200px) {} | lg
  **/
 .mt0 {
   margin-top: 0;
-}
-.mt20px {
-  margin-top: 20px;
 }
 
 .p30px {
   padding: 30px;
 }
 
-.my15px {
-  margin-right: 15px;
-  margin-left: 15px;
-}
-
-.py15px {
-  padding-right: 15px;
-  padding-left: 15px;
-}
-
-.mxn15px {
-    margin-right: -15px;
-    margin-left: -15px;
+@media (max-width: 767px) {
+  .xs-py15px {
+    padding-right: 15px;
+    padding-left: 15px;
   }
-
-@media screen and (max-width: 767px) {
-
 }
 
 @media (min-width: 768px) {
-  .sm-mt0 {
-    margin-top: 0;
-  }
-  .sm-mt20px {
-    margin-top: 20px;
-  }
   .sm-mxn15px {
     margin-right: -15px;
     margin-left: -15px;
   }
-
 }
 
 @media (min-width: 992px) {
