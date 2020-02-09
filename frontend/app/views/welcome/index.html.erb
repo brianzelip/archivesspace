@@ -7,12 +7,12 @@
 </div>
 
 <div class="row">
-  <div class="col-md-6 col-lg-4 p30px">
+  <div class="col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-0 col-lg-4 p30px">
     <h2><%= I18n.t "welcome.heading" %></h2>
     <%= welcome_message %>
   </div>
   <% if !session[:user] %>
-  <div class="col-xs-12 col-sm-8 col-md-6 col-lg-4 md-mt20px p30px">
+  <div class="col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-0 col-lg-4 md-mt20px p30px">
     <main class="well" id="login-form-wrapper">
       <h3 class="mt0"><%= I18n.t "welcome.sign_in" %></h3>
       <%= render_aspace_partial :partial => "shared/login" %>
