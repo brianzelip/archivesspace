@@ -4,7 +4,13 @@
 
 ## Related files
 
-`frontend/app/assets/javascripts/largetree.js.erb`
+- `frontend/app/assets/javascripts/largetree.js.erb`
+- `frontend/app/assets/javascripts/largetree_dragdrop.js.erb`
+- `backend/app/model/large_tree.rb`
+- `frontend/app/views/resources/edit.html.erb`
+- `frontend/app/views/shared/_largetree.html.erb`
+- `frontend/app/assets/javascripts/tree.js.erb`
+- `frontend/app/controllers/resources_controller.rb`
 
 ## Rules
 
