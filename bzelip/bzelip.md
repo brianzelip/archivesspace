@@ -16,6 +16,20 @@
 - `frontend/app/assets/javascripts/archival_object.crud.js` (found by search for '#archival_object_form')
 - `frontend/app/views/archival_objects/_show_inline.html.erb` - where the html starts getting written on the below section w/ the date string problem; I think, but am not sure, that the `<% define_template... >` bit is just an inline-template definition instead of a template being defined in its own file, then the bit at the end of this file is what actually renders the defined template from earlier in the file -- ASK LORA!
 - `frontend/app/helpers/aspace_form_helper.rb` - found via 'readonly-context' search
+- `https://github.com/archivesspace/archivesspace/blob/master/backend/app/model/archival_object.rb#L64-L82` - this is the file that Lora pointed out to me ass the real culprit in this issue; in particular, the `.first` in the following lambda:
+
+```rb
+date_label = json.has_key?('dates') && json['dates'].length > 0 ?
+  lambda {|date|
+    if date['expression']
+      date['expression']
+    elsif date['begin'] and date['end']
+      "#{date['begin']} - #{date['end']}"
+    else
+      date['begin']
+    end
+  }.call(json['dates'].first) : false
+```
 
 ## Related functions
 
