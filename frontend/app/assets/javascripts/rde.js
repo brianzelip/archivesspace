@@ -1041,6 +1041,7 @@ $(function() {
             AS.prefixed_cookie(COOKIE_NAME_VISIBLE_COLUMN, JSON.stringify(VISIBLE_COLUMN_IDS));
           }
         });
+        
         function disableRequiredColumns() {
           // Don't allow omitting required fields in RDE templates
           // by disabling the bootstratp-multiselect.js generated
