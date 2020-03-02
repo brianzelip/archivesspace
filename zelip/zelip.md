@@ -49,3 +49,5 @@ So it's not about Fill Column at all, it's actually about `initColumnShowHideWid
 The solution here is to decrease the scope of PR #1705 by moving the work from the global `populateColumnSelector()`, to the local `initColumnShowHideWidget` via a `disableRequiredColumns()`.
 
 Tests successfully against the use case in [ANW-1048](https://archivesspace.atlassian.net/browse/ANW-1048) ✌️
+
+![ANW-1052 and ANW-1048 solution preview](./rde-required-column-fix.gif)
