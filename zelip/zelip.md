@@ -23,3 +23,4 @@ test.archivesspace.org/staff
 - `frontend/app/views/shared/_rde.html.erb`
 - `frontend/app/views/digital_object_components/_rde_templates.html.erb`
 - `frontend/app/views/archival_objects/_rde_templates.html.erb`
+- `frontend/app/controllers/resources_controller.rb`
