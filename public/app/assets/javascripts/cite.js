@@ -12,10 +12,10 @@ function setupClip(modalId, btnText,target, type ) {
     var x = $modal.find('.action-btn');
     var btn;
     if (x.length == 1) {
-	btn = x[0];
-    }
-    else {
-	btn = x;
+      btn = x[0];
+        }
+        else {
+      btn = x;
     }
     $(btn).attr('id', type+ "_btn");
     $(btn).addClass('clip-btn');
