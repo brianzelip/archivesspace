@@ -207,6 +207,7 @@ en:
       assessment_survey_year: Survey Year
       assessment_record_types: Record Type
       assessment_completed: Completed
+      langcode: Language of Materials
     help:
       row_selection: Click a row to select it for bulk operations. Hold alt while clicking a checkbox to select, or unselect, multiple previous rows.
 
@@ -317,10 +318,6 @@ en:
     repo_preferences: Repository Preferences
     manage_user_access: Manage User Access
     logout: Logout
-    login: Sign In
-    login_expired_link: Please %{link} again.
-    login_fail: Login attempt failed
-    login_success: Login Successful. Redirecting...
     register: Register now
     register_prefix: Need an account?
     list_reports: Reports
@@ -359,6 +356,13 @@ en:
     heading: Welcome to ArchivesSpace
     message: Your friendly archives management tool.
     message_logged_in: Your friendly archives management tool.
+  
+  login:
+    login: Sign In
+    login_please: Please Sign In
+    login_expired_link: Please %{link} again.
+    login_fail: Login attempt failed
+    login_success: Login Successful. Redirecting...
 
   breadcrumb:
     home: Home
