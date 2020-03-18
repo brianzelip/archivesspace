@@ -77,3 +77,14 @@ OH, Oh, oh, I KNOW - let's subvert the bootstrappyness, and go with their `<a>` 
 ## DON'T FORGET
 
 - you have the NO-JS view version that needs to be updated accordingly! (`public/app/views/cite/show.html.erb`)
+
+## PR #1830 bug fixes
+
+### Related files
+
+- `public/app/models/archival_object.rb`
+- `public/app/models/digital_object.rb`
+
+The fix is to copy the changes made in `public/app/models/resource.rb` to the two .rb files above.
+
+I do not know how to create and/or view Archival Objects
