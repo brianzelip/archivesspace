@@ -227,16 +227,16 @@ function build_node_title(node) {
   }
 
   if (node.dates && node.dates.length > 0) {
-    var first_date = node.dates[0];
-
-    if (first_date.expression) {
-      title_bits.push(first_date.expression);
-    } else if (first_date.begin && first_date.end) {
-      title_bits.push(first_date.begin + '-' + first_date.end);
-    } else if (first_date.begin) {
-      title_bits.push(first_date.begin);
-    }
-  }
+    node.dates.forEach(function(date) {
+      if (date.expression) {
+        title_bits.push(date.expression);
+      } else if (date.begin && date.end) {
+        title_bits.push(date.begin + '-' + date.end);
+      } else if (date.begin) {
+        title_bits.push(date.begin);
+      };
+    });
+  };
 
   return title_bits.join(', ');
 };
