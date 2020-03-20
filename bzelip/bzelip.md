@@ -98,3 +98,15 @@ updated sample string: title, date1, bulk: date2, date3, date4
 ```
 
 - Here’s where in the largetree.js.erb that that title’s being picked up → [https://github.com/archivesspace/archivesspace/blob/master/frontend/app/assets/javascripts/largetree.js.erb#L578](largetree.js.erb#L578)
+
+## Update after back end work
+
+From Lora
+
+> I resolved ANW-172 as far as the form header goes/touching the erb template we looked at together, but that didn't resolve the tree rendering.
+>
+> I dug a bit deeper and found that that tree display string does exist in a js.erb here --> https://github.com/archivesspace/archivesspace/blob/master/frontend/app/assets/javascripts/tree_renderers.js.erb#L91-L99
+
+### More related files
+
+- `frontend/app/assets/javascripts/tree_renderers.js.erb`
