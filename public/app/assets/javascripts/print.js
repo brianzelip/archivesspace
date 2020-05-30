@@ -26,6 +26,15 @@ $(function () {
         var token = (base_token + new Date().getTime());
         form.find("input[name='token']").attr('value', token);
 
+        // ANW-1053: The callback in whenDownloadBegins() never runs
+        // due to httponly cookies. Let's reset the print button
+        // some seconds after the print button is clicked
+        function resetPrintBtn() {
+            self.find('.generating-label').hide();
+            self.find('.print-label').show();
+            self.removeAttr('disabled');
+        }
+
         self.find('.print-label').hide();
         self.find('.generating-label').show();
         self.attr('disabled', 'disabled');
@@ -39,6 +48,10 @@ $(function () {
         setTimeout(function () {
             form.submit();
         }, 0);
+
+        setTimeout(function() {
+            resetPrintBtn();
+        }, 2000)
 
         return false;
     });
