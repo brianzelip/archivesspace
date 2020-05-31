@@ -112,6 +112,13 @@ ArchivesSpace::Application.routes.draw do
     match 'resources/:id/accept_children' => 'resources#accept_children', :via => [:post]
     match 'resources/:id/merge' => 'resources#merge', :via => [:post]
     match 'resources/:id/transfer' => 'resources#transfer', :via => [:post]
+    match 'resources/:rid/getbulkfile' => 'bulk_import#get_file', :via => [:post]
+    match 'resources/:rid/getbulkfile' => 'bulk_import#get_file', :via => [:get]
+    match 'resources/:id/uploadbulkfile' => 'bulk_import#submit_file', :via => [:post]
+    
+
+    
+
 
     match 'resources/:id/tree/root' => 'resources#tree_root', :via => [:get]
     match 'resources/:id/tree/node' => 'resources#tree_node', :via => [:get]
@@ -251,6 +258,7 @@ ArchivesSpace::Application.routes.draw do
     match('top_containers/bulk_operations/browse' => 'top_containers#bulk_operations_browse', :via => [:get, :post])
     match('top_containers/bulk_operations/update' => 'top_containers#bulk_operation_update', :via => [:post])
     match('top_containers/batch_delete' => 'top_containers#batch_delete', :via => [:post])
+    match('top_containers/merge' => 'top_containers#batch_merge', :via => [:post])
     match('top_containers/:id' => 'top_containers#update', :via => [:post])
     match('top_containers/:id/delete' => 'top_containers#delete', :via => [:post])
 

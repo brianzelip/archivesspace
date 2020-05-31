@@ -6,7 +6,7 @@ class TopContainersController < ApplicationController
 
   set_access_control  "view_repository" => [:bulk_operations_browse, :bulk_operation_search, :index, :show, :typeahead],
                       "update_container_record" => [:new, :create, :edit, :update],
-                      "manage_container_record" => [:delete, :batch_delete, :bulk_operations, :bulk_operation_update, :update_barcodes, :update_locations]
+                      "manage_container_record" => [:delete, :batch_delete, :batch_merge, :bulk_operations, :bulk_operation_update, :update_barcodes, :update_locations]
 
 
   def index
@@ -69,6 +69,16 @@ class TopContainersController < ApplicationController
   end
 
 
+  def batch_merge
+      merge_list = params[:victims]
+      target = params[:target]
+      victims = merge_list - target
+      handle_merge( victims,
+                    target[0],
+                    'top_container')
+  end
+
+
   def delete
     top_container = JSONModel(:top_container).find(params[:id])
     top_container.delete
@@ -95,11 +105,12 @@ class TopContainersController < ApplicationController
 
   def typeahead
     search_params = params_for_backend_search
+    search_params["q"] = "*" + search_params["q"].gsub(/[^0-9A-Za-z]/, '').downcase + "*"
 
-    search_params["q"] = "display_string:#{search_params["q"]}"
+    search_params["q"] = "top_container_u_typeahead_utext:#{search_params["q"]}"
 
     search_params = search_params.merge(search_filter_for(params[:uri]))
-    search_params = search_params.merge("sort" => "typeahead_sort_key_u_sort asc")
+    search_params = search_params.merge("sort" => "top_container_u_icusort asc")
 
     render :json => Search.all(session[:repo_id], search_params)
   end
@@ -276,11 +287,18 @@ class TopContainersController < ApplicationController
       builder.and('empty_u_sbool', (params['empty'] == "yes" ? true : false), 'boolean')
     end
 
+    unless params['has_location'].blank?
+      builder.and('has_location_u_sbool', (params['has_location'] == "yes" ? true : false), 'boolean')
+    end
+
     unless params['barcodes'].blank?
       barcode_query = AdvancedQueryBuilder.new
 
       ASUtils.wrap(params['barcodes'].split(" ")).each do |barcode|
         barcode_query.or('barcode_u_sstr', barcode)
+
+        # Subcontainer string contains barcode
+        barcode_query.or('subcontainer_barcodes_u_sstr', barcode)
       end
 
       unless barcode_query.empty?

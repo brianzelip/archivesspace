@@ -105,6 +105,8 @@ class SearchResultData
     return I18n.t("enumerations.event_outcome.#{facet.to_s}", :default => facet) if facet_group === "outcome"
     return I18n.t("enumerations.subject_term_type.#{facet.to_s}", :default => facet) if facet_group === "first_term_type"
 
+    return I18n.t("enumerations.language_iso639_2.#{facet}", :default => facet) if facet_group === "langcode"
+
     if facet_group === "source"
       if single_type? and types[0] === "subject"
         return I18n.t("enumerations.subject_source.#{facet}", :default => facet)
@@ -148,6 +150,18 @@ class SearchResultData
 
     if facet_group === "assessment_completed"
       return I18n.t("assessment._frontend.assessment_completed.#{facet}_value")
+    end
+
+    if facet_group === "status"
+      return I18n.t("job.status_#{facet}", :default => facet)
+    end
+
+    if facet_group === "job_type"
+      return I18n.t("job.types.#{facet}", :default => facet)
+    end
+
+    if facet_group === "report_type"
+      return I18n.t("reports.#{facet}.title", :default => facet)
     end
 
     facet
@@ -251,7 +265,7 @@ class SearchResultData
   end
 
   def self.BASE_FACETS
-    ["primary_type","creators","subjects"]
+    ["primary_type","creators","subjects","langcode"]
   end
 
   def self.AGENT_FACETS
@@ -263,11 +277,11 @@ class SearchResultData
   end
 
   def self.RESOURCE_FACETS
-    ["subjects", "publish", "level", "classification_path", "primary_type"]
+    ["subjects", "publish", "level", "classification_path", "primary_type", "langcode"]
   end
 
   def self.DIGITAL_OBJECT_FACETS
-    ["subjects", "publish", "digital_object_type", "level", "primary_type"]
+    ["subjects", "publish", "digital_object_type", "level", "primary_type", "langcode"]
   end
 
   def self.CONTAINER_PROFILE_FACETS
@@ -296,6 +310,10 @@ class SearchResultData
 
   def self.ASSESSMENT_FACETS
     ['assessment_record_types', 'assessment_surveyors', 'assessment_review_required', 'assessment_reviewers', 'assessment_completed', 'assessment_inactive', 'assessment_survey_year', 'assessment_sensitive_material']
+  end
+
+  def self.JOB_FACETS
+    ["status", "job_type", "report_type", "owner"]
   end
 
 

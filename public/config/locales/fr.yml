@@ -110,6 +110,7 @@ fr:
   search_results:
     page_title: "%{count} résultats trouvés"
     results_head: "%{type} affichés: %{start} - %{end} de %{total}"
+    result: Résultats
     results: Résultats
     head_prefix: Ont été trouvés
     head_suffix: résultats
@@ -139,8 +140,6 @@ fr:
     created: Créé
     text_placeholder: Filtrer par texte
     clear_all: Tout effacer
-    created: Créé
-    modified: Modifié
     component_switch: Inclure composants
     more_facets: plus
     fewer_facets: moins

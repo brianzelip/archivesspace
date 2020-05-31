@@ -158,6 +158,18 @@ class IndexerCommon
     fullrecord
   end
 
+  # There's a problem with how translation paths get loaded when selenium tests are run
+  # Call this instead of I18n.t so that it won't cause an error when selenium tests are run
+  @@selenium = Dir.getwd.end_with? 'selenium'
+  def t(*args)
+    if @@selenium
+      args[0]
+    else
+      args << {} unless args.last.is_a?(Hash)
+      args[1][:default] ||= args[0].split('.').last
+      I18n.t(*args)
+    end
+  end
 
   def add_agents(doc, record)
     if record['record']['linked_agents']
@@ -188,7 +200,7 @@ class IndexerCommon
         elsif seen[link['ref']] == 'subject' && link['role'] != 'creator'
           # do nothing
         else
-          relator_label = link['relator'] ? I18n.t("enumerations.linked_agent_archival_record_relators.#{link['relator']}") : ''
+          relator_label = link['relator'] ? t("enumerations.linked_agent_archival_record_relators.#{link['relator']}") : ''
 
           doc["#{link['ref'].gsub(/\//, '_')}_relator_sort"] = "#{link['role']} #{relator_label}"
           seen[link['ref']] = link['role']
@@ -312,7 +324,7 @@ class IndexerCommon
       if doc['primary_type'] == 'accession'
         date = record['record']['accession_date']
         if date == '9999-12-31'
-          unknown = I18n.t('accession.accession_date_unknown')
+          unknown = t('accession.accession_date_unknown')
           doc['accession_date'] = unknown
           doc['fullrecord'] ||= ''
           doc['fullrecord'] << unknown + ' '
@@ -494,6 +506,40 @@ class IndexerCommon
       end
     }
 
+    add_document_prepare_hook {|doc, record|
+      if doc['primary_type'] == 'job'
+        report_type = record['record']['job']['report_type']
+        doc['title'] = (report_type ? t("reports.#{report_type}.title", :default => report_type) :
+          t("job.types.#{record['record']['job_type']}"))
+        doc['types'] << record['record']['job_type']
+        doc['types'] << report_type
+        doc['job_type'] = record['record']['job_type']
+        doc['report_type'] = report_type
+        doc['job_report_type'] = report_type || doc['job_type']
+        doc['status'] = record['record']['status']
+        doc['owner'] = record['record']['owner']
+        doc['time_submitted'] = Time.parse(record['record']['time_submitted']).getlocal if record['record']['time_submitted']
+        doc['time_started'] = Time.parse(record['record']['time_started']).getlocal if record['record']['time_started']
+        doc['time_finished'] = Time.parse(record['record']['time_finished']).getlocal if record['record']['time_finished']
+
+        filenames = record['record']['job']['filenames'] || []
+        doc['files'] = []
+        doc['job_data'] = []
+        files = JSONModel::HTTP::get_json("#{record['record']['uri']}/output_files")
+        files.each do |file|
+          job_id = record['record']['uri'].split('/').last
+          link = "/jobs/#{job_id}/file/#{file}"
+          doc['files'] << link
+          filename = filenames.shift
+          doc['job_data'] << (filename ? "input_file --- #{filename}" : "output_file --- #{link}")
+        end
+        record['record']['job'].reject { |k, _v| ['jsonmodel_type', 'filenames', 'report_type'].include? k }.each do |k, v|
+          doc['job_data'] << "#{k} --- #{v}"
+        end
+        doc['queue_position'] = record['record']['queue_position']
+      end
+    }
+
 
     add_document_prepare_hook {|doc, record|
       records_with_classifications = ['resource', 'accession']
@@ -566,6 +612,7 @@ class IndexerCommon
         end
 
         if record['record']['container_locations'].length > 0
+          doc['has_location_u_sbool'] = true
           record['record']['container_locations'].each do |container_location|
             if container_location['status'] == 'current'
               doc['location_uri_u_sstr'] = container_location['ref']
@@ -573,13 +620,17 @@ class IndexerCommon
               doc['location_display_string_u_sstr'] = container_location['_resolved']['title']
             end
           end
+        else
+          doc['has_location_u_sbool'] = false
         end
         doc['exported_u_sbool'] = record['record'].has_key?('exported_to_ils')
         doc['empty_u_sbool'] = record['record']['collection'].empty?
 
-        doc['typeahead_sort_key_u_sort'] = record['record']['indicator'].to_s.rjust(255, '#')
+        doc['top_container_u_typeahead_utext'] = record['record']['display_string'].gsub(/[^0-9A-Za-z]/, '').downcase
+        doc['top_container_u_icusort'] = record['record']['display_string']
         doc['barcode_u_sstr'] = record['record']['barcode']
 
+        doc['subcontainer_barcodes_u_sstr'] = record["record"]["subcontainer_barcodes"]
         doc['created_for_collection_u_sstr'] = record['record']['created_for_collection']
       end
     }
@@ -597,11 +648,11 @@ class IndexerCommon
             doc['top_container_uri_u_sstr'] << instance['sub_container']['top_container']['ref']
             if instance['sub_container']['type_2']
               doc['child_container_u_sstr'] ||= []
-              doc['child_container_u_sstr'] << "#{instance['sub_container']['type_2']} #{instance['sub_container']['indicator_2']}"
+              doc['child_container_u_sstr'] << "#{instance['sub_container']['type_2']} #{instance['sub_container']['indicator_2']} #{instance['sub_container']['barcode_2']}"
             end
             if instance['sub_container']['type_3']
               doc['grand_child_container_u_sstr'] ||= []
-              doc['grand_child_container_u_sstr'] << "#{instance['sub_container']['type_3']} #{instance['sub_container']['indicator_2']}"
+              doc['grand_child_container_u_sstr'] << "#{instance['sub_container']['type_3']} #{instance['sub_container']['indicator_3']}"
             end
           end
         }
@@ -737,6 +788,20 @@ class IndexerCommon
         doc['title_sort'] = doc['assessment_id'].to_s.rjust(10, '0')
       end
     }
+
+
+    add_document_prepare_hook {|doc, record|
+      doc['langcode'] ||= []
+      if record['record'].has_key?('lang_materials') and record['record']['lang_materials'].is_a?(Array)
+        record['record']['lang_materials'].each { |langmaterial|
+          if langmaterial.has_key?('language_and_script')
+            doc['langcode'].push(langmaterial['language_and_script']['language'])
+          end
+        }
+        doc['langcode'].uniq!
+      end
+    }
+
   end
 
 
@@ -900,7 +965,31 @@ class IndexerCommon
     out = value.gsub(/<[^>]+>/, '')
     out.gsub!(/-/, ' ')
     out.gsub!(/[^\w\s]/, '')
+    out.gsub!(/\s+/, ' ')
     out.strip
+  end
+
+  # ANW-1065
+  # iterate through the do_not_index list and scrub out that part of the JSON tree 
+  def sanitize_json(json)
+    IndexerCommonConfig::do_not_index.each do |k, v|
+      if json["jsonmodel_type"] == k
+        # subrec is a reference used to navigate inside of the JSON as specified by the v[:location] to find the part of the tree to sanitize
+        subrec = json
+
+        v[:location].each do |l|
+          unless subrec.nil?
+            subrec = subrec[l]
+          end
+        end
+
+        unless subrec.nil?
+          subrec[v[:to_clean]] = []
+        end
+      end
+    end
+
+    return json
   end
 
   def index_records(records, timing = IndexerTiming.new)
@@ -933,7 +1022,7 @@ class IndexerCommon
 
         doc['primary_type'] = record_type
         doc['types'] = [record_type]
-        doc['json'] = ASUtils.to_json(values)
+        doc['json'] = ASUtils.to_json(sanitize_json(values))
         doc['suppressed'] = values.has_key?('suppressed') && values['suppressed']
         if doc['suppressed']
           doc['publish'] = false
