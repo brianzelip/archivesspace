@@ -10,6 +10,7 @@ $(function() {
     $(this).each(function() {
       var $rde_form = $(this);
       var $table = $("table#rdeTable", $rde_form);
+      debugger
 
       if ($rde_form.hasClass("initialised")) {
         return;
