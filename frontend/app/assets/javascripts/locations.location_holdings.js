@@ -1,5 +1,16 @@
 //= require search
+
+// needs to be available on the page that loads the modal
+
 $(function() {
+
+  var $locationBrowseBtn = $('input[data-label="Location"]').siblings().find('.linker-browse-btn');
+
+  $locationBrowseBtn.on("click", function(e) {
+    setTimeout(function(){
+      $(".location-holdings").each(init_locationHoldingsSearch);
+    }, 400)
+  })
 
   // this gets the location information from the solr backend.
   // borrowed from the embedded_search js

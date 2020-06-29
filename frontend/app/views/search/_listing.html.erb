@@ -31,6 +31,10 @@
     </tbody>
   </table>
 
+  <!-- not putting js import here because this is used in modal as well
+       as in the initial page load for locations browse; so going to put it
+       in a parent of locations browse so it doesn't get included in other modals -->
+
   <%= render_aspace_partial :partial => "shared/pagination" %>
 <% else %>
   <p class="alert alert-info">
